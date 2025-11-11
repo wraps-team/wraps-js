@@ -1,4 +1,4 @@
-import { WrapsEmail } from '@wraps/email';
+import { WrapsEmail } from '@wraps-js/email';
 
 async function main() {
   const email = new WrapsEmail({

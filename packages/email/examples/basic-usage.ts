@@ -1,4 +1,4 @@
-import { WrapsEmail } from '@wraps/email';
+import { WrapsEmail } from '@wraps-js/email';
 
 async function main() {
   // Initialize client (credentials auto-detected from environment)

@@ -1,4 +1,4 @@
-# @wraps/email
+# @wraps-js/email
 
 Beautiful email SDK for AWS SES with React.email support.
 
@@ -16,13 +16,13 @@ Beautiful email SDK for AWS SES with React.email support.
 ## Installation
 
 ```bash
-pnpm add @wraps/email
+pnpm add @wraps-js/email
 ```
 
 ## Quick Start
 
 ```typescript
-import { WrapsEmail } from '@wraps/email';
+import { WrapsEmail } from '@wraps-js/email';
 
 const email = new WrapsEmail({ region: 'us-east-1' });
 
@@ -40,12 +40,12 @@ This package supports both CommonJS and ES Modules:
 
 **ESM (modern):**
 ```typescript
-import { WrapsEmail } from '@wraps/email';
+import { WrapsEmail } from '@wraps-js/email';
 ```
 
 **CommonJS (Node.js):**
 ```javascript
-const { WrapsEmail } = require('@wraps/email');
+const { WrapsEmail } = require('@wraps-js/email');
 ```
 
 ## Authentication
@@ -253,7 +253,7 @@ await email.templates.delete('welcome-email');
 ## Error Handling
 
 ```typescript
-import { WrapsEmailError, ValidationError, SESError } from '@wraps/email';
+import { WrapsEmailError, ValidationError, SESError } from '@wraps-js/email';
 
 try {
   await email.send({ ... });

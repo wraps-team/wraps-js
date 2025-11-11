@@ -1,4 +1,4 @@
-import { WrapsEmail } from '@wraps/email';
+import { WrapsEmail } from '@wraps-js/email';
 import * as React from 'react';
 
 // Example React.email component

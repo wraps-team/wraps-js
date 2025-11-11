@@ -1,4 +1,4 @@
-# Testing Guide for @wraps/email
+# Testing Guide for @wraps-js/email
 
 This guide covers how to run tests and test with AWS SES sandbox.
 
@@ -87,7 +87,7 @@ All new AWS SES accounts start in **sandbox mode**, which has the following rest
 Once you have verified addresses, you can test:
 
 ```typescript
-import { WrapsEmail } from '@wraps/email';
+import { WrapsEmail } from '@wraps-js/email';
 
 const email = new WrapsEmail({
   region: 'us-east-1', // Your SES region

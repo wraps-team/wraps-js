@@ -78,7 +78,7 @@ pnpm audit
 
 ## ✅ Package Configuration
 
-- [x] package.json name: @wraps/email
+- [x] package.json name: @wraps-js/email
 - [x] package.json version: 0.1.0
 - [x] Correct repository URL
 - [x] License specified (MIT)
@@ -167,9 +167,9 @@ Then create release on GitHub: https://github.com/wraps-team/wraps-js/releases/n
 
 After publishing:
 
-- [ ] Package appears on npm: https://www.npmjs.com/package/@wraps/email
-- [ ] Install test: `pnpm add @wraps/email` in new directory
-- [ ] Import test: `import { WrapsEmail } from '@wraps/email'`
+- [ ] Package appears on npm: https://www.npmjs.com/package/@wraps-js/email
+- [ ] Install test: `pnpm add @wraps-js/email` in new directory
+- [ ] Import test: `import { WrapsEmail } from '@wraps-js/email'`
 - [ ] Basic functionality test
 - [ ] Documentation visible on npm page
 - [ ] GitHub release created
