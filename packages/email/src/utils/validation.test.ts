@@ -177,4 +177,53 @@ describe('validateEmailParams', () => {
 
     expect(() => validateEmailParams(params)).toThrow(ValidationError);
   });
+
+  it('should throw error when both html and react are provided', () => {
+    const params: SendEmailParams = {
+      from: 'sender@example.com',
+      to: 'recipient@example.com',
+      subject: 'Test',
+      html: '<p>Test</p>',
+      react: {} as any, // Mock React element
+    };
+
+    expect(() => validateEmailParams(params)).toThrow(ValidationError);
+    expect(() => validateEmailParams(params)).toThrow('Cannot provide both "html" and "react" parameters');
+  });
+
+  it('should validate bcc addresses', () => {
+    const params: SendEmailParams = {
+      from: 'sender@example.com',
+      to: 'recipient@example.com',
+      bcc: ['valid@example.com', 'invalid-bcc'],
+      subject: 'Test',
+      html: '<p>Test</p>',
+    };
+
+    expect(() => validateEmailParams(params)).toThrow(ValidationError);
+  });
+
+  it('should validate replyTo addresses', () => {
+    const params: SendEmailParams = {
+      from: 'sender@example.com',
+      to: 'recipient@example.com',
+      replyTo: 'invalid-reply',
+      subject: 'Test',
+      html: '<p>Test</p>',
+    };
+
+    expect(() => validateEmailParams(params)).toThrow(ValidationError);
+  });
+
+  it('should validate empty email in EmailAddress object', () => {
+    const params: SendEmailParams = {
+      from: { email: '', name: 'Sender' },
+      to: 'recipient@example.com',
+      subject: 'Test',
+      html: '<p>Test</p>',
+    };
+
+    expect(() => validateEmailParams(params)).toThrow(ValidationError);
+    expect(() => validateEmailParams(params)).toThrow('Invalid email address');
+  });
 });

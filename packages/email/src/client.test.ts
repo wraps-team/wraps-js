@@ -179,6 +179,25 @@ describe('WrapsEmail', () => {
         requestId: 'template-request-id',
       });
     });
+
+    it('should send template with optional parameters', async () => {
+      mockSend.mockResolvedValue({
+        MessageId: 'template-message-id',
+        $metadata: { requestId: 'template-request-id' },
+      });
+
+      const result = await email.sendTemplate({
+        from: 'sender@example.com',
+        to: 'recipient@example.com',
+        template: 'welcome-email',
+        templateData: { name: 'John' },
+        replyTo: 'reply@example.com',
+        tags: { campaign: 'welcome' },
+        configurationSetName: 'my-config-set',
+      });
+
+      expect(result.messageId).toBe('template-message-id');
+    });
   });
 
   describe('sendBulkTemplate', () => {
@@ -217,6 +236,32 @@ describe('WrapsEmail', () => {
           destinations,
         })
       ).rejects.toThrow('Maximum 50 destinations allowed');
+    });
+
+    it('should send bulk template with optional parameters', async () => {
+      mockSend.mockResolvedValue({
+        Status: [
+          { MessageId: 'msg-1', Status: 'success' },
+        ],
+        $metadata: { requestId: 'bulk-request-id' },
+      });
+
+      const result = await email.sendBulkTemplate({
+        from: 'sender@example.com',
+        template: 'newsletter',
+        destinations: [
+          {
+            to: 'user1@example.com',
+            templateData: { name: 'User 1' },
+            replacementTags: { type: 'vip' },
+          },
+        ],
+        defaultTemplateData: { company: 'Acme Corp' },
+        tags: { campaign: 'newsletter' },
+        configurationSetName: 'newsletter-config',
+      });
+
+      expect(result.status).toHaveLength(1);
     });
   });
 
