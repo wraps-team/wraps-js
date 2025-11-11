@@ -1,0 +1,10 @@
+# Biome ignore file
+# Add files/folders that should be ignored by Biome
+
+node_modules
+dist
+build
+coverage
+.next
+.turbo
+*.min.js

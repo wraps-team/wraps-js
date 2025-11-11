@@ -1,0 +1,83 @@
+{
+  "name": "@wraps/email",
+  "version": "0.1.0",
+  "description": "Beautiful email SDK for AWS SES",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist coverage",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:integration": "INTEGRATION_TEST=true vitest run test/integration.test.ts",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm clean && pnpm build"
+  },
+  "dependencies": {
+    "@aws-sdk/client-ses": "^3.928.0"
+  },
+  "peerDependencies": {
+    "@react-email/components": ">=0.0.25",
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@react-email/components": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.5",
+    "@types/node": "^24.10.0",
+    "@types/react": "^19.2.3",
+    "@vitest/coverage-v8": "^4.0.8",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.8"
+  },
+  "keywords": [
+    "email",
+    "ses",
+    "aws",
+    "react-email",
+    "typescript"
+  ],
+  "author": "Wraps",
+  "license": "MIT",
+  "homepage": "https://github.com/wraps-team/wraps-js/tree/main/packages/email#readme",
+  "bugs": {
+    "url": "https://github.com/wraps-team/wraps-js/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wraps-team/wraps-js.git",
+    "directory": "packages/email"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
