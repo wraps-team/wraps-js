@@ -1,5 +1,5 @@
 {
-  "name": "@wraps/email",
+  "name": "@wraps-js/email",
   "version": "0.1.0",
   "description": "Beautiful email SDK for AWS SES",
   "main": "dist/index.js",
