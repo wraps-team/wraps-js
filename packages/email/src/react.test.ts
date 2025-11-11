@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
-import { renderReactEmail } from './react';
 import React from 'react';
+import { describe, expect, it, vi } from 'vitest';
+import { renderReactEmail } from './react';
 
 // Mock @react-email/components
 vi.mock('@react-email/components', () => ({
@@ -50,8 +50,6 @@ describe('renderReactEmail', () => {
 
     const component = React.createElement('div', null, 'Test');
 
-    await expect(renderReactEmail(component)).rejects.toThrow(
-      'React Email not installed'
-    );
+    await expect(renderReactEmail(component)).rejects.toThrow('React Email not installed');
   });
 });

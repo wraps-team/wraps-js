@@ -1,11 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import {
-  normalizeEmailAddress,
-  normalizeEmailAddresses,
-  validateEmailParams,
-} from './validation';
+import { describe, expect, it } from 'vitest';
 import { ValidationError } from '../errors';
-import type { SendEmailParams, EmailAddress } from '../types';
+import type { EmailAddress, SendEmailParams } from '../types';
+import { normalizeEmailAddress, normalizeEmailAddresses, validateEmailParams } from './validation';
 
 describe('normalizeEmailAddress', () => {
   it('should return string email as-is', () => {
@@ -35,10 +31,7 @@ describe('normalizeEmailAddresses', () => {
   });
 
   it('should normalize an array of string emails', () => {
-    const result = normalizeEmailAddresses([
-      'test1@example.com',
-      'test2@example.com',
-    ]);
+    const result = normalizeEmailAddresses(['test1@example.com', 'test2@example.com']);
     expect(result).toEqual(['test1@example.com', 'test2@example.com']);
   });
 
@@ -48,10 +41,7 @@ describe('normalizeEmailAddresses', () => {
       { email: 'test2@example.com' },
     ];
     const result = normalizeEmailAddresses(addresses);
-    expect(result).toEqual([
-      '"User 1" <test1@example.com>',
-      'test2@example.com',
-    ]);
+    expect(result).toEqual(['"User 1" <test1@example.com>', 'test2@example.com']);
   });
 
   it('should normalize mixed string and EmailAddress', () => {
@@ -188,7 +178,9 @@ describe('validateEmailParams', () => {
     };
 
     expect(() => validateEmailParams(params)).toThrow(ValidationError);
-    expect(() => validateEmailParams(params)).toThrow('Cannot provide both "html" and "react" parameters');
+    expect(() => validateEmailParams(params)).toThrow(
+      'Cannot provide both "html" and "react" parameters'
+    );
   });
 
   it('should validate bcc addresses', () => {

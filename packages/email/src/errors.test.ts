@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { WrapsEmailError, ValidationError, SESError } from './errors';
+import { describe, expect, it } from 'vitest';
+import { SESError, ValidationError, WrapsEmailError } from './errors';
 
 describe('WrapsEmailError', () => {
   it('should create an error with the correct name and message', () => {
@@ -33,12 +33,7 @@ describe('ValidationError', () => {
 
 describe('SESError', () => {
   it('should create an SES error with all properties', () => {
-    const error = new SESError(
-      'Rate limit exceeded',
-      'Throttling',
-      'abc-123-def',
-      true
-    );
+    const error = new SESError('Rate limit exceeded', 'Throttling', 'abc-123-def', true);
 
     expect(error).toBeInstanceOf(WrapsEmailError);
     expect(error).toBeInstanceOf(Error);
@@ -50,12 +45,7 @@ describe('SESError', () => {
   });
 
   it('should create a non-retryable SES error', () => {
-    const error = new SESError(
-      'Message rejected',
-      'MessageRejected',
-      'xyz-456',
-      false
-    );
+    const error = new SESError('Message rejected', 'MessageRejected', 'xyz-456', false);
 
     expect(error.retryable).toBe(false);
   });

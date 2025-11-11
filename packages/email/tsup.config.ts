@@ -10,9 +10,5 @@ export default defineConfig({
   treeshake: true,
   minify: false, // Keep readable for debugging
   outDir: 'dist',
-  external: [
-    '@aws-sdk/client-ses',
-    '@react-email/components',
-    'react',
-  ],
+  external: ['@aws-sdk/client-ses', '@react-email/components', 'react'],
 });

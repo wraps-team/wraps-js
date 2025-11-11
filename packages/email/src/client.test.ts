@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { WrapsEmail } from './client';
 import { SESClient } from '@aws-sdk/client-ses';
-import { ValidationError, SESError } from './errors';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { WrapsEmail } from './client';
+import { SESError, ValidationError } from './errors';
 
 // Mock the SES client
 vi.mock('@aws-sdk/client-ses', () => {
@@ -43,12 +43,8 @@ vi.mock('@aws-sdk/client-ses', () => {
 // Mock validation
 vi.mock('./utils/validation', () => ({
   validateEmailParams: vi.fn(),
-  normalizeEmailAddress: vi.fn((addr) =>
-    typeof addr === 'string' ? addr : addr.email
-  ),
-  normalizeEmailAddresses: vi.fn((addrs) =>
-    Array.isArray(addrs) ? addrs : [addrs]
-  ),
+  normalizeEmailAddress: vi.fn((addr) => (typeof addr === 'string' ? addr : addr.email)),
+  normalizeEmailAddresses: vi.fn((addrs) => (Array.isArray(addrs) ? addrs : [addrs])),
 }));
 
 // Mock react email
@@ -240,9 +236,7 @@ describe('WrapsEmail', () => {
 
     it('should send bulk template with optional parameters', async () => {
       mockSend.mockResolvedValue({
-        Status: [
-          { MessageId: 'msg-1', Status: 'success' },
-        ],
+        Status: [{ MessageId: 'msg-1', Status: 'success' }],
         $metadata: { requestId: 'bulk-request-id' },
       });
 

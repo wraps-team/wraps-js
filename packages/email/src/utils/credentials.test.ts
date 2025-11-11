@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { createSESClient } from './credentials';
 import { SESClient } from '@aws-sdk/client-ses';
+import { describe, expect, it } from 'vitest';
+import { createSESClient } from './credentials';
 
 describe('createSESClient', () => {
   it('should create SES client with default region', () => {

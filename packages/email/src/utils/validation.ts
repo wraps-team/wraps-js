@@ -4,9 +4,7 @@ import type { EmailAddress, SendEmailParams } from '../types';
 /**
  * Normalize email address to string format
  */
-export function normalizeEmailAddress(
-  address: string | EmailAddress
-): string {
+export function normalizeEmailAddress(address: string | EmailAddress): string {
   if (typeof address === 'string') {
     return address;
   }
@@ -47,58 +45,39 @@ export function validateEmailParams(params: SendEmailParams): void {
 
   // Validate that either html or react is provided (but not both)
   if (!params.html && !params.react && !params.text) {
-    throw new ValidationError(
-      'Must provide at least one of: html, text, or react',
-      'html'
-    );
+    throw new ValidationError('Must provide at least one of: html, text, or react', 'html');
   }
 
   if (params.html && params.react) {
-    throw new ValidationError(
-      'Cannot provide both "html" and "react" parameters',
-      'html'
-    );
+    throw new ValidationError('Cannot provide both "html" and "react" parameters', 'html');
   }
 
   // Validate email addresses (basic validation)
   validateEmailAddress(params.from, 'from');
 
   const toAddresses = Array.isArray(params.to) ? params.to : [params.to];
-  toAddresses.forEach((addr, idx) =>
-    validateEmailAddress(addr, `to[${idx}]`)
-  );
+  toAddresses.forEach((addr, idx) => validateEmailAddress(addr, `to[${idx}]`));
 
   if (params.cc) {
     const ccAddresses = Array.isArray(params.cc) ? params.cc : [params.cc];
-    ccAddresses.forEach((addr, idx) =>
-      validateEmailAddress(addr, `cc[${idx}]`)
-    );
+    ccAddresses.forEach((addr, idx) => validateEmailAddress(addr, `cc[${idx}]`));
   }
 
   if (params.bcc) {
     const bccAddresses = Array.isArray(params.bcc) ? params.bcc : [params.bcc];
-    bccAddresses.forEach((addr, idx) =>
-      validateEmailAddress(addr, `bcc[${idx}]`)
-    );
+    bccAddresses.forEach((addr, idx) => validateEmailAddress(addr, `bcc[${idx}]`));
   }
 
   if (params.replyTo) {
-    const replyToAddresses = Array.isArray(params.replyTo)
-      ? params.replyTo
-      : [params.replyTo];
-    replyToAddresses.forEach((addr, idx) =>
-      validateEmailAddress(addr, `replyTo[${idx}]`)
-    );
+    const replyToAddresses = Array.isArray(params.replyTo) ? params.replyTo : [params.replyTo];
+    replyToAddresses.forEach((addr, idx) => validateEmailAddress(addr, `replyTo[${idx}]`));
   }
 }
 
 /**
  * Basic email address validation
  */
-function validateEmailAddress(
-  address: string | EmailAddress,
-  field: string
-): void {
+function validateEmailAddress(address: string | EmailAddress, field: string): void {
   const email = typeof address === 'string' ? address : address.email;
 
   if (!email) {
@@ -108,9 +87,6 @@ function validateEmailAddress(
   // Basic email regex validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
-    throw new ValidationError(
-      `Invalid email format in field: ${field} (${email})`,
-      field
-    );
+    throw new ValidationError(`Invalid email format in field: ${field} (${email})`, field);
   }
 }

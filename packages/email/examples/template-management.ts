@@ -33,7 +33,10 @@ async function main() {
 
   // List all templates
   const templates = await email.templates.list();
-  console.log('Available templates:', templates.map(t => t.name));
+  console.log(
+    'Available templates:',
+    templates.map((t) => t.name)
+  );
 
   // Get template details
   const template = await email.templates.get('welcome-email');

@@ -1,36 +1,36 @@
 import {
-  SESClient,
-  SendEmailCommand,
-  SendTemplatedEmailCommand,
-  SendBulkTemplatedEmailCommand,
   CreateTemplateCommand,
-  UpdateTemplateCommand,
+  DeleteTemplateCommand,
   GetTemplateCommand,
   ListTemplatesCommand,
-  DeleteTemplateCommand,
+  type SESClient,
+  SendBulkTemplatedEmailCommand,
+  SendEmailCommand,
+  SendTemplatedEmailCommand,
+  UpdateTemplateCommand,
 } from '@aws-sdk/client-ses';
-import { createSESClient } from './utils/credentials';
+import { SESError, ValidationError, WrapsEmailError } from './errors';
 import { renderReactEmail } from './react';
-import {
-  validateEmailParams,
-  normalizeEmailAddress,
-  normalizeEmailAddresses,
-} from './utils/validation';
-import { WrapsEmailError, ValidationError, SESError } from './errors';
 import type {
-  WrapsEmailConfig,
+  CreateTemplateFromReactParams,
+  CreateTemplateParams,
+  EmailAddress,
+  SendBulkTemplateParams,
+  SendBulkTemplateResult,
   SendEmailParams,
   SendEmailResult,
   SendTemplateParams,
-  SendBulkTemplateParams,
-  SendBulkTemplateResult,
-  CreateTemplateParams,
-  CreateTemplateFromReactParams,
-  UpdateTemplateParams,
   Template,
   TemplateMetadata,
-  EmailAddress,
+  UpdateTemplateParams,
+  WrapsEmailConfig,
 } from './types';
+import { createSESClient } from './utils/credentials';
+import {
+  normalizeEmailAddress,
+  normalizeEmailAddresses,
+  validateEmailParams,
+} from './utils/validation';
 
 export class WrapsEmail {
   private sesClient: SESClient;
@@ -71,9 +71,7 @@ export class WrapsEmail {
 
     if (params.react) {
       if (params.html) {
-        throw new ValidationError(
-          'Cannot provide both "html" and "react" parameters'
-        );
+        throw new ValidationError('Cannot provide both "html" and "react" parameters');
       }
       const rendered = await renderReactEmail(params.react);
       html = rendered.html;
@@ -90,16 +88,10 @@ export class WrapsEmail {
       Source: normalizeEmailAddress(params.from),
       Destination: {
         ToAddresses: normalizeEmailAddresses(params.to),
-        CcAddresses: params.cc
-          ? normalizeEmailAddresses(params.cc)
-          : undefined,
-        BccAddresses: params.bcc
-          ? normalizeEmailAddresses(params.bcc)
-          : undefined,
+        CcAddresses: params.cc ? normalizeEmailAddresses(params.cc) : undefined,
+        BccAddresses: params.bcc ? normalizeEmailAddresses(params.bcc) : undefined,
       },
-      ReplyToAddresses: params.replyTo
-        ? normalizeEmailAddresses(params.replyTo)
-        : undefined,
+      ReplyToAddresses: params.replyTo ? normalizeEmailAddresses(params.replyTo) : undefined,
       Message: {
         Subject: {
           Data: params.subject,
@@ -133,55 +125,59 @@ export class WrapsEmail {
     try {
       const response = await this.sesClient.send(command);
 
+      if (!response.MessageId || !response.$metadata.requestId) {
+        throw new Error('Invalid response from SES: missing MessageId or requestId');
+      }
+
       return {
-        messageId: response.MessageId!,
-        requestId: response.$metadata.requestId!,
+        messageId: response.MessageId,
+        requestId: response.$metadata.requestId,
       };
     } catch (error) {
       throw this.handleSESError(error);
     }
   }
 
-  private async sendWithAttachments(
-    params: SendEmailParams
-  ): Promise<SendEmailResult> {
+  private async sendWithAttachments(_params: SendEmailParams): Promise<SendEmailResult> {
     // Implementation using nodemailer + SES transport for attachments
     // (SES SendEmail doesn't support attachments, need SendRawEmail)
     throw new Error('Attachments support coming soon');
   }
 
-  private handleSESError(error: any): Error {
-    if (error.$metadata) {
+  private handleSESError(error: unknown): Error {
+    const err = error as {
+      $metadata?: { requestId?: string };
+      $retryable?: { throttling?: boolean };
+      message?: string;
+      name?: string;
+    };
+    if (err.$metadata) {
       // AWS SDK error
       return new SESError(
-        error.message || 'SES request failed',
-        error.name || 'Unknown',
-        error.$metadata.requestId || 'unknown',
-        error.$retryable?.throttling || false
+        err.message || 'SES request failed',
+        err.name || 'Unknown',
+        err.$metadata.requestId || 'unknown',
+        err.$retryable?.throttling || false
       );
     }
-    return error;
+    return error as Error;
   }
 
   /**
    * Send email using an SES template
    */
   async sendTemplate(params: SendTemplateParams): Promise<SendEmailResult> {
-    const toAddresses: (string | EmailAddress)[] = Array.isArray(params.to) ? params.to : [params.to];
+    const toAddresses: (string | EmailAddress)[] = Array.isArray(params.to)
+      ? params.to
+      : [params.to];
     const command = new SendTemplatedEmailCommand({
       Source: normalizeEmailAddress(params.from),
       Destination: {
         ToAddresses: normalizeEmailAddresses(toAddresses),
-        CcAddresses: params.cc
-          ? normalizeEmailAddresses(params.cc)
-          : undefined,
-        BccAddresses: params.bcc
-          ? normalizeEmailAddresses(params.bcc)
-          : undefined,
+        CcAddresses: params.cc ? normalizeEmailAddresses(params.cc) : undefined,
+        BccAddresses: params.bcc ? normalizeEmailAddresses(params.bcc) : undefined,
       },
-      ReplyToAddresses: params.replyTo
-        ? normalizeEmailAddresses(params.replyTo)
-        : undefined,
+      ReplyToAddresses: params.replyTo ? normalizeEmailAddresses(params.replyTo) : undefined,
       Template: params.template,
       TemplateData: JSON.stringify(params.templateData),
       Tags: params.tags
@@ -195,9 +191,14 @@ export class WrapsEmail {
 
     try {
       const response = await this.sesClient.send(command);
+
+      if (!response.MessageId || !response.$metadata.requestId) {
+        throw new Error('Invalid response from SES: missing MessageId or requestId');
+      }
+
       return {
-        messageId: response.MessageId!,
-        requestId: response.$metadata.requestId!,
+        messageId: response.MessageId,
+        requestId: response.$metadata.requestId,
       };
     } catch (error) {
       throw this.handleSESError(error);
@@ -207,26 +208,22 @@ export class WrapsEmail {
   /**
    * Send bulk emails using an SES template (up to 50 recipients)
    */
-  async sendBulkTemplate(
-    params: SendBulkTemplateParams
-  ): Promise<SendBulkTemplateResult> {
+  async sendBulkTemplate(params: SendBulkTemplateParams): Promise<SendBulkTemplateResult> {
     if (params.destinations.length > 50) {
-      throw new ValidationError(
-        'Maximum 50 destinations allowed per bulk send'
-      );
+      throw new ValidationError('Maximum 50 destinations allowed per bulk send');
     }
 
     const command = new SendBulkTemplatedEmailCommand({
       Source: normalizeEmailAddress(params.from),
-      ReplyToAddresses: params.replyTo
-        ? normalizeEmailAddresses(params.replyTo)
-        : undefined,
+      ReplyToAddresses: params.replyTo ? normalizeEmailAddresses(params.replyTo) : undefined,
       Template: params.template,
       DefaultTemplateData: params.defaultTemplateData
         ? JSON.stringify(params.defaultTemplateData)
         : undefined,
       Destinations: params.destinations.map((dest) => {
-        const destToAddresses: (string | EmailAddress)[] = Array.isArray(dest.to) ? dest.to : [dest.to];
+        const destToAddresses: (string | EmailAddress)[] = Array.isArray(dest.to)
+          ? dest.to
+          : [dest.to];
         return {
           Destination: {
             ToAddresses: normalizeEmailAddresses(destToAddresses),
@@ -252,13 +249,17 @@ export class WrapsEmail {
     try {
       const response = await this.sesClient.send(command);
 
+      if (!response.Status || !response.$metadata.requestId) {
+        throw new Error('Invalid response from SES: missing Status or requestId');
+      }
+
       return {
-        status: response.Status!.map((s) => ({
+        status: response.Status.map((s) => ({
           messageId: s.MessageId,
           status: s.Status as 'success' | 'failure',
           error: s.Error,
         })),
-        requestId: response.$metadata.requestId!,
+        requestId: response.$metadata.requestId,
       };
     } catch (error) {
       throw this.handleSESError(error);
@@ -288,9 +289,7 @@ export class WrapsEmail {
   /**
    * Create template from React.email component
    */
-  private async createTemplateFromReact(
-    params: CreateTemplateFromReactParams
-  ): Promise<void> {
+  private async createTemplateFromReact(params: CreateTemplateFromReactParams): Promise<void> {
     const { html, text } = await renderReactEmail(params.react);
 
     await this.createTemplate({
@@ -331,13 +330,16 @@ export class WrapsEmail {
 
     try {
       const response = await this.sesClient.send(command);
-      const template = response.Template!;
+
+      if (!response.Template?.TemplateName || !response.Template.SubjectPart) {
+        throw new Error('Invalid template response from SES: missing template data');
+      }
 
       return {
-        name: template.TemplateName!,
-        subject: template.SubjectPart!,
-        htmlPart: template.HtmlPart,
-        textPart: template.TextPart,
+        name: response.Template.TemplateName,
+        subject: response.Template.SubjectPart,
+        htmlPart: response.Template.HtmlPart,
+        textPart: response.Template.TextPart,
         createdTimestamp: new Date(), // SES doesn't return timestamp in GetTemplate
       };
     } catch (error) {
@@ -356,10 +358,12 @@ export class WrapsEmail {
     try {
       const response = await this.sesClient.send(command);
 
-      return (response.TemplatesMetadata || []).map((t) => ({
-        name: t.Name!,
-        createdTimestamp: t.CreatedTimestamp!,
-      }));
+      return (response.TemplatesMetadata || [])
+        .filter((t) => t.Name && t.CreatedTimestamp)
+        .map((t) => ({
+          name: t.Name as string,
+          createdTimestamp: t.CreatedTimestamp as Date,
+        }));
     } catch (error) {
       throw this.handleSESError(error);
     }

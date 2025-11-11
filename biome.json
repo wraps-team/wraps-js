@@ -1,18 +1,13 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
-  "organizeImports": {
-    "enabled": true
-  },
+  "$schema": "https://biomejs.dev/schemas/2.3.5/schema.json",
   "linter": {
     "enabled": true,
     "rules": {
       "recommended": true,
       "complexity": {
         "noExtraBooleanCast": "error",
-        "noMultipleSpacesInRegularExpressionLiterals": "error",
         "noUselessCatch": "error",
-        "noUselessTypeConstraint": "error",
-        "noWith": "error"
+        "noUselessTypeConstraint": "error"
       },
       "correctness": {
         "noConstAssign": "error",
@@ -21,7 +16,7 @@
         "noEmptyPattern": "error",
         "noGlobalObjectCalls": "error",
         "noInvalidConstructorSuper": "error",
-        "noInvalidNewBuiltin": "error",
+        "noInvalidBuiltinInstantiation": "error",
         "noNonoctalDecimalEscape": "error",
         "noPrecisionLoss": "error",
         "noSelfAssign": "error",
@@ -67,8 +62,7 @@
         "noRedeclare": "error",
         "noShadowRestrictedNames": "error",
         "noUnsafeNegation": "error",
-        "useGetterReturn": "error",
-        "useValidTypeof": "error"
+        "useGetterReturn": "error"
       }
     }
   },
@@ -108,14 +102,6 @@
   ],
   "files": {
     "ignoreUnknown": false,
-    "ignore": [
-      "node_modules",
-      "dist",
-      "build",
-      "coverage",
-      ".next",
-      ".turbo",
-      "*.min.js"
-    ]
+    "ignore": ["node_modules", "dist", "build", "coverage", ".next", ".turbo", "*.min.js"]
   }
 }

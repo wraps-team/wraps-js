@@ -134,7 +134,7 @@ export interface SendTemplateParams {
   /**
    * Template data for variable substitution
    */
-  templateData: Record<string, any>;
+  templateData: Record<string, unknown>;
 
   /**
    * SES message tags (optional)
@@ -149,7 +149,7 @@ export interface SendTemplateParams {
 
 export interface BulkTemplateDestination {
   to: string | EmailAddress;
-  templateData: Record<string, any>;
+  templateData: Record<string, unknown>;
   replacementTags?: Record<string, string>;
 }
 
@@ -172,7 +172,7 @@ export interface SendBulkTemplateParams {
   /**
    * Default template data (optional, merged with destination-specific data)
    */
-  defaultTemplateData?: Record<string, any>;
+  defaultTemplateData?: Record<string, unknown>;
 
   /**
    * Reply-To address (optional)

@@ -21,14 +21,13 @@ export async function renderReactEmail(
     });
 
     return { html, text };
-  } catch (error: any) {
-    if (error.code === 'MODULE_NOT_FOUND') {
+  } catch (error: unknown) {
+    const err = error as { code?: string; message?: string };
+    if (err.code === 'MODULE_NOT_FOUND') {
       throw new Error(
         'React Email not installed. Install @react-email/components to use React templates.'
       );
     }
-    throw new Error(
-      `Failed to render React email component: ${error.message}`
-    );
+    throw new Error(`Failed to render React email component: ${err.message || 'Unknown error'}`);
   }
 }

@@ -1,8 +1,8 @@
-import { SESClient } from '@aws-sdk/client-ses';
+import { SESClient, type SESClientConfig } from '@aws-sdk/client-ses';
 import type { WrapsEmailConfig } from '../types';
 
 export function createSESClient(config: WrapsEmailConfig): SESClient {
-  const clientConfig: any = {
+  const clientConfig: SESClientConfig = {
     region: config.region || 'us-east-1',
   };
 

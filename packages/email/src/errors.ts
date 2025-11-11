@@ -20,12 +20,7 @@ export class SESError extends WrapsEmailError {
   public readonly requestId: string;
   public readonly retryable: boolean;
 
-  constructor(
-    message: string,
-    code: string,
-    requestId: string,
-    retryable: boolean
-  ) {
+  constructor(message: string, code: string, requestId: string, retryable: boolean) {
     super(message);
     this.name = 'SESError';
     this.code = code;
