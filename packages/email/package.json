@@ -12,7 +12,12 @@
       "require": "./dist/index.js"
     }
   },
-  "files": ["dist", "README.md", "LICENSE", "../../NOTICE"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "../../NOTICE"
+  ],
   "engines": {
     "node": ">=18.0.0"
   },
@@ -50,12 +55,18 @@
     "@biomejs/biome": "^2.3.5",
     "@types/node": "^24.10.0",
     "@types/react": "^19.2.3",
-    "@vitest/coverage-v8": "^4.0.8",
+    "@vitest/coverage-v8": "^3.2.4",
     "tsup": "^8.5.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.8"
+    "vitest": "^3.2.4"
   },
-  "keywords": ["email", "ses", "aws", "react-email", "typescript"],
+  "keywords": [
+    "email",
+    "ses",
+    "aws",
+    "react-email",
+    "typescript"
+  ],
   "author": "Wraps",
   "license": "MIT",
   "homepage": "https://github.com/wraps-team/wraps-js/tree/main/packages/email#readme",

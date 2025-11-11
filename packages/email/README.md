@@ -319,7 +319,7 @@ Main client class for sending emails via AWS SES.
 
 ## Requirements
 
-- Node.js 16+
+- Node.js 18+
 - AWS SES configured in your AWS account
 - Verified sender email addresses in SES
 
