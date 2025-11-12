@@ -145,13 +145,13 @@ packages/<package-name>/
 3. **Create a GitHub release**
    - Go to https://github.com/wraps-team/wraps-js/releases/new
    - Create a new tag (e.g., `email-v0.1.0`)
-   - Title: `@wraps-js/email v0.1.0`
+   - Title: `@wraps.dev/email v0.1.0`
    - Description: Describe the changes
    - Publish release
 
 4. **GitHub Actions will automatically publish to npm**
    - The `publish.yml` workflow will run
-   - Package will be published to npm as `@wraps-js/email`
+   - Package will be published to npm as `@wraps.dev/email`
 
 ### Manual Publishing (if needed)
 

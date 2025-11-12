@@ -78,8 +78,8 @@ pnpm audit
 
 ## ✅ Package Configuration
 
-- [x] package.json name: @wraps-js/email
-- [x] package.json version: 0.1.0
+- [x] package.json name: @wraps.dev/email
+- [x] package.json version: 0.2.0
 - [x] Correct repository URL
 - [x] License specified (MIT)
 - [x] Keywords added
@@ -135,7 +135,7 @@ See [TESTING.md](./TESTING.md) for detailed instructions.
 
 ## ✅ Final Checks
 
-- [ ] Version number correct (0.1.0)
+- [ ] Version number correct (0.2.0)
 - [ ] Changelog or release notes prepared
 - [ ] All TODOs in code addressed or documented
 - [ ] No console.log or debug code
@@ -157,8 +157,8 @@ pnpm publish --access public
 
 ### Create GitHub release
 ```bash
-git tag email-v0.1.0
-git push origin email-v0.1.0
+git tag email-v0.2.0
+git push origin email-v0.2.0
 ```
 
 Then create release on GitHub: https://github.com/wraps-team/wraps-js/releases/new
@@ -167,9 +167,9 @@ Then create release on GitHub: https://github.com/wraps-team/wraps-js/releases/n
 
 After publishing:
 
-- [ ] Package appears on npm: https://www.npmjs.com/package/@wraps-js/email
-- [ ] Install test: `pnpm add @wraps-js/email` in new directory
-- [ ] Import test: `import { WrapsEmail } from '@wraps-js/email'`
+- [ ] Package appears on npm: https://www.npmjs.com/package/@wraps.dev/email
+- [ ] Install test: `pnpm add @wraps.dev/email` in new directory
+- [ ] Import test: `import { WrapsEmail } from '@wraps.dev/email'`
 - [ ] Basic functionality test
 - [ ] Documentation visible on npm page
 - [ ] GitHub release created

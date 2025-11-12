@@ -4,7 +4,7 @@ Beautiful SDKs for building with AWS services.
 
 ## Packages
 
-### [@wraps-js/email](./packages/email)
+### [@wraps.dev/email](./packages/email)
 
 Beautiful email SDK for AWS SES with React.email support.
 
@@ -19,12 +19,12 @@ Beautiful email SDK for AWS SES with React.email support.
 
 **Installation:**
 ```bash
-npm install @wraps-js/email
+npm install @wraps.dev/email
 ```
 
 **Quick Start:**
 ```typescript
-import { WrapsEmail } from '@wraps-js/email';
+import { WrapsEmail } from '@wraps.dev/email';
 
 const email = new WrapsEmail({ region: 'us-east-1' });
 
@@ -36,11 +36,11 @@ await email.send({
 });
 ```
 
-### @wraps-js/sms (Coming Soon)
+### @wraps.dev/sms (Coming Soon)
 
 SMS SDK for AWS SNS.
 
-### @wraps-js/workflows (Coming Soon)
+### @wraps.dev/workflows (Coming Soon)
 
 Workflow orchestration SDK.
 

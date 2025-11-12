@@ -1,11 +1,11 @@
 # Quick Start Guide
 
-Get up and running with @wraps-js/email in minutes.
+Get up and running with @wraps.dev/email in minutes.
 
 ## Installation
 
 ```bash
-pnpm add @wraps-js/email
+pnpm add @wraps.dev/email
 ```
 
 ## Setup
@@ -40,7 +40,7 @@ If you're in AWS SES sandbox mode, verify your email addresses:
 ## Basic Usage
 
 ```typescript
-import { WrapsEmail } from '@wraps-js/email';
+import { WrapsEmail } from '@wraps.dev/email';
 
 // Initialize client
 const email = new WrapsEmail({
@@ -121,7 +121,7 @@ await email.sendBulkTemplate({
 ## Error Handling
 
 ```typescript
-import { ValidationError, SESError } from '@wraps-js/email';
+import { ValidationError, SESError } from '@wraps.dev/email';
 
 try {
   await email.send({ ... });
