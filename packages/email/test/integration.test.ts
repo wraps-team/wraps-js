@@ -17,6 +17,18 @@ const SKIP_INTEGRATION = !process.env.INTEGRATION_TEST;
 const TEST_FROM_EMAIL = process.env.TEST_FROM_EMAIL || 'sender@example.com';
 const TEST_TO_EMAIL = process.env.TEST_TO_EMAIL || 'recipient@example.com';
 
+/**
+ * AWS SES Mailbox Simulator addresses for testing different scenarios
+ * @see https://docs.aws.amazon.com/ses/latest/dg/send-an-email-from-console.html
+ */
+const SES_SIMULATOR = {
+  SUCCESS: 'success@simulator.amazonses.com',
+  BOUNCE: 'bounce@simulator.amazonses.com',
+  COMPLAINT: 'complaint@simulator.amazonses.com',
+  SUPPRESSION_LIST: 'suppressionlist@simulator.amazonses.com',
+  OUT_OF_OFFICE: 'ooto@simulator.amazonses.com',
+} as const;
+
 describe.skipIf(SKIP_INTEGRATION)('Integration Tests', () => {
   let email: WrapsEmail;
 
@@ -143,6 +155,103 @@ describe.skipIf(SKIP_INTEGRATION)('Integration Tests', () => {
       await email.templates.delete(TEST_TEMPLATE_NAME);
 
       console.log('✓ Template deleted:', TEST_TEMPLATE_NAME);
+    }, 30000);
+  });
+
+  describe('AWS SES Mailbox Simulator', () => {
+    it('should send to success simulator address', async () => {
+      const result = await email.send({
+        from: TEST_FROM_EMAIL,
+        to: SES_SIMULATOR.SUCCESS,
+        subject: 'Test: Successful Delivery',
+        html: '<p>This email tests successful delivery using AWS SES simulator.</p>',
+        text: 'This email tests successful delivery using AWS SES simulator.',
+      });
+
+      expect(result.messageId).toBeDefined();
+      expect(result.requestId).toBeDefined();
+      console.log('✓ Email sent to success simulator');
+      console.log('  Expected: Successful delivery');
+      console.log('  Message ID:', result.messageId);
+    }, 30000);
+
+    it('should send to bounce simulator address', async () => {
+      const result = await email.send({
+        from: TEST_FROM_EMAIL,
+        to: SES_SIMULATOR.BOUNCE,
+        subject: 'Test: Bounce Scenario',
+        html: '<p>This email tests bounce scenario using AWS SES simulator.</p>',
+        text: 'This email tests bounce scenario using AWS SES simulator.',
+      });
+
+      expect(result.messageId).toBeDefined();
+      console.log('✓ Email sent to bounce simulator');
+      console.log('  Expected: SMTP 550 5.1.1 "Unknown User" bounce');
+      console.log('  Message ID:', result.messageId);
+      console.log('  Note: Check CloudWatch or SNS for bounce notification');
+    }, 30000);
+
+    it('should send to complaint simulator address', async () => {
+      const result = await email.send({
+        from: TEST_FROM_EMAIL,
+        to: SES_SIMULATOR.COMPLAINT,
+        subject: 'Test: Complaint Scenario',
+        html: '<p>This email tests complaint scenario using AWS SES simulator.</p>',
+        text: 'This email tests complaint scenario using AWS SES simulator.',
+      });
+
+      expect(result.messageId).toBeDefined();
+      console.log('✓ Email sent to complaint simulator');
+      console.log('  Expected: Email delivered, then complaint generated');
+      console.log('  Message ID:', result.messageId);
+      console.log('  Note: Check CloudWatch or SNS for complaint notification');
+    }, 30000);
+
+    it('should send to suppression list simulator address', async () => {
+      const result = await email.send({
+        from: TEST_FROM_EMAIL,
+        to: SES_SIMULATOR.SUPPRESSION_LIST,
+        subject: 'Test: Suppression List Scenario',
+        html: '<p>This email tests suppression list scenario using AWS SES simulator.</p>',
+        text: 'This email tests suppression list scenario using AWS SES simulator.',
+      });
+
+      expect(result.messageId).toBeDefined();
+      console.log('✓ Email sent to suppression list simulator');
+      console.log('  Expected: Hard bounce (as if address is on suppression list)');
+      console.log('  Message ID:', result.messageId);
+      console.log('  Note: Check CloudWatch or SNS for suppression list bounce');
+    }, 30000);
+
+    it('should send to out-of-office simulator address', async () => {
+      const result = await email.send({
+        from: TEST_FROM_EMAIL,
+        to: SES_SIMULATOR.OUT_OF_OFFICE,
+        subject: 'Test: Out-of-Office Auto-Response',
+        html: '<p>This email tests out-of-office auto-response using AWS SES simulator.</p>',
+        text: 'This email tests out-of-office auto-response using AWS SES simulator.',
+      });
+
+      expect(result.messageId).toBeDefined();
+      console.log('✓ Email sent to out-of-office simulator');
+      console.log('  Expected: Email delivered with auto-response');
+      console.log('  Message ID:', result.messageId);
+      console.log('  Note: Check for automatic response message');
+    }, 30000);
+
+    it('should send to multiple simulator addresses', async () => {
+      const result = await email.send({
+        from: TEST_FROM_EMAIL,
+        to: [SES_SIMULATOR.SUCCESS, SES_SIMULATOR.BOUNCE],
+        subject: 'Test: Multiple Recipients (Mixed Scenarios)',
+        html: '<p>This email tests multiple recipients with different outcomes.</p>',
+        text: 'This email tests multiple recipients with different outcomes.',
+      });
+
+      expect(result.messageId).toBeDefined();
+      console.log('✓ Email sent to multiple simulator addresses');
+      console.log('  Expected: One success, one bounce');
+      console.log('  Message ID:', result.messageId);
     }, 30000);
   });
 });
