@@ -1,3 +1,4 @@
+import type { AwsCredentialIdentityProvider } from '@aws-sdk/types';
 import type React from 'react';
 
 export interface WrapsEmailConfig {
@@ -8,12 +9,15 @@ export interface WrapsEmailConfig {
 
   /**
    * AWS credentials (optional - falls back to AWS credential chain)
+   * Can be static credentials or a credential provider (e.g., from Vercel OIDC)
    */
-  credentials?: {
-    accessKeyId: string;
-    secretAccessKey: string;
-    sessionToken?: string;
-  };
+  credentials?:
+    | {
+        accessKeyId: string;
+        secretAccessKey: string;
+        sessionToken?: string;
+      }
+    | AwsCredentialIdentityProvider;
 
   /**
    * IAM Role ARN to assume (for OIDC federation or cross-account access)

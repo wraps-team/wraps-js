@@ -19,12 +19,20 @@ export function createSESClient(config: WrapsEmailConfig): SESClient {
     });
   }
   // If explicit credentials provided, use them
+  // This can be either static credentials or a credential provider (e.g., from Vercel OIDC)
   else if (config.credentials) {
-    clientConfig.credentials = {
-      accessKeyId: config.credentials.accessKeyId,
-      secretAccessKey: config.credentials.secretAccessKey,
-      sessionToken: config.credentials.sessionToken,
-    };
+    // Check if it's a credential provider (function) or static credentials (object with accessKeyId)
+    if (typeof config.credentials === 'function' || !('accessKeyId' in config.credentials)) {
+      // It's a credential provider - pass it directly to SESClient
+      clientConfig.credentials = config.credentials;
+    } else {
+      // It's static credentials - structure them correctly
+      clientConfig.credentials = {
+        accessKeyId: config.credentials.accessKeyId,
+        secretAccessKey: config.credentials.secretAccessKey,
+        sessionToken: config.credentials.sessionToken,
+      };
+    }
   }
   // Otherwise, AWS SDK will use credential chain:
   // 1. Environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
