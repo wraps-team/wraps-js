@@ -16,6 +16,18 @@ export interface WrapsEmailConfig {
   };
 
   /**
+   * IAM Role ARN to assume (for OIDC federation or cross-account access)
+   * When provided, the SDK will use STS AssumeRole to obtain temporary credentials
+   */
+  roleArn?: string;
+
+  /**
+   * Optional role session name for AssumeRole (defaults to 'wraps-email-session')
+   * Only used when roleArn is provided
+   */
+  roleSessionName?: string;
+
+  /**
    * Custom SES endpoint (for testing with LocalStack)
    */
   endpoint?: string;

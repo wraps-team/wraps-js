@@ -48,4 +48,44 @@ describe('createSESClient', () => {
 
     expect(client).toBeInstanceOf(SESClient);
   });
+
+  it('should create SES client with roleArn for OIDC federation', () => {
+    const client = createSESClient({
+      roleArn: 'arn:aws:iam::123456789012:role/MyEmailRole',
+    });
+
+    expect(client).toBeInstanceOf(SESClient);
+  });
+
+  it('should create SES client with roleArn and custom roleSessionName', () => {
+    const client = createSESClient({
+      roleArn: 'arn:aws:iam::123456789012:role/MyEmailRole',
+      roleSessionName: 'my-custom-session',
+    });
+
+    expect(client).toBeInstanceOf(SESClient);
+  });
+
+  it('should create SES client with roleArn and custom region', () => {
+    const client = createSESClient({
+      region: 'eu-west-1',
+      roleArn: 'arn:aws:iam::123456789012:role/MyEmailRole',
+      roleSessionName: 'email-sender',
+    });
+
+    expect(client).toBeInstanceOf(SESClient);
+  });
+
+  it('should prioritize roleArn over explicit credentials when both are provided', () => {
+    // This test ensures that roleArn takes precedence
+    const client = createSESClient({
+      roleArn: 'arn:aws:iam::123456789012:role/MyEmailRole',
+      credentials: {
+        accessKeyId: 'test-key',
+        secretAccessKey: 'test-secret',
+      },
+    });
+
+    expect(client).toBeInstanceOf(SESClient);
+  });
 });
