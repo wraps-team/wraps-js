@@ -1,15 +1,31 @@
+import type { SESClient } from '@aws-sdk/client-ses';
 import type { AwsCredentialIdentityProvider } from '@aws-sdk/types';
 import type React from 'react';
 
 export interface WrapsEmailConfig {
   /**
+   * Pre-configured SES client for advanced authentication scenarios
+   * When provided, takes precedence over region, credentials, roleArn, and endpoint
+   *
+   * @example
+   * ```typescript
+   * // Multi-account setup with two-step role assumption
+   * const sesClient = await createCustomSESClient();
+   * const wraps = new WrapsEmail({ client: sesClient });
+   * ```
+   */
+  client?: SESClient;
+
+  /**
    * AWS region for SES (defaults to us-east-1)
+   * Ignored if `client` is provided
    */
   region?: string;
 
   /**
    * AWS credentials (optional - falls back to AWS credential chain)
    * Can be static credentials or a credential provider (e.g., from Vercel OIDC)
+   * Ignored if `client` is provided
    */
   credentials?:
     | {
@@ -22,17 +38,20 @@ export interface WrapsEmailConfig {
   /**
    * IAM Role ARN to assume (for OIDC federation or cross-account access)
    * When provided, the SDK will use STS AssumeRole to obtain temporary credentials
+   * Ignored if `client` is provided
    */
   roleArn?: string;
 
   /**
    * Optional role session name for AssumeRole (defaults to 'wraps-email-session')
    * Only used when roleArn is provided
+   * Ignored if `client` is provided
    */
   roleSessionName?: string;
 
   /**
    * Custom SES endpoint (for testing with LocalStack)
+   * Ignored if `client` is provided
    */
   endpoint?: string;
 }

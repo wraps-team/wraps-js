@@ -88,4 +88,50 @@ describe('createSESClient', () => {
 
     expect(client).toBeInstanceOf(SESClient);
   });
+
+  it('should use pre-configured client when provided', () => {
+    const preConfiguredClient = new SESClient({ region: 'ap-southeast-1' });
+    const client = createSESClient({
+      client: preConfiguredClient,
+    });
+
+    expect(client).toBe(preConfiguredClient);
+  });
+
+  it('should prioritize pre-configured client over region', () => {
+    const preConfiguredClient = new SESClient({ region: 'ap-southeast-1' });
+    const client = createSESClient({
+      client: preConfiguredClient,
+      region: 'us-west-2', // Should be ignored
+    });
+
+    expect(client).toBe(preConfiguredClient);
+  });
+
+  it('should prioritize pre-configured client over roleArn', () => {
+    const preConfiguredClient = new SESClient({ region: 'ap-southeast-1' });
+    const client = createSESClient({
+      client: preConfiguredClient,
+      roleArn: 'arn:aws:iam::123456789012:role/MyEmailRole', // Should be ignored
+    });
+
+    expect(client).toBe(preConfiguredClient);
+  });
+
+  it('should prioritize pre-configured client over all other options', () => {
+    const preConfiguredClient = new SESClient({ region: 'ap-southeast-1' });
+    const client = createSESClient({
+      client: preConfiguredClient,
+      region: 'us-west-2', // Should be ignored
+      roleArn: 'arn:aws:iam::123456789012:role/MyEmailRole', // Should be ignored
+      credentials: {
+        // Should be ignored
+        accessKeyId: 'test-key',
+        secretAccessKey: 'test-secret',
+      },
+      endpoint: 'http://localhost:4566', // Should be ignored
+    });
+
+    expect(client).toBe(preConfiguredClient);
+  });
 });

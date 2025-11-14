@@ -3,6 +3,12 @@ import { fromTokenFile } from '@aws-sdk/credential-providers';
 import type { WrapsEmailConfig } from '../types';
 
 export function createSESClient(config: WrapsEmailConfig): SESClient {
+  // Priority 1: If pre-configured client is provided, use it directly
+  if (config.client) {
+    return config.client;
+  }
+
+  // Priority 2+: Create client based on config options
   const clientConfig: SESClientConfig = {
     region: config.region || 'us-east-1',
   };
