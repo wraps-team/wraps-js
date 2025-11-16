@@ -1,18 +1,18 @@
 export { WrapsEmail } from './client';
-export { WrapsEmailError, ValidationError, SESError } from './errors';
+export { SESError, ValidationError, WrapsEmailError } from './errors';
 export type {
-  WrapsEmailConfig,
-  EmailAddress,
   Attachment,
+  BulkTemplateDestination,
+  CreateTemplateFromReactParams,
+  CreateTemplateParams,
+  EmailAddress,
+  SendBulkTemplateParams,
+  SendBulkTemplateResult,
   SendEmailParams,
   SendEmailResult,
   SendTemplateParams,
-  BulkTemplateDestination,
-  SendBulkTemplateParams,
-  SendBulkTemplateResult,
-  CreateTemplateParams,
-  CreateTemplateFromReactParams,
-  UpdateTemplateParams,
-  TemplateMetadata,
   Template,
+  TemplateMetadata,
+  UpdateTemplateParams,
+  WrapsEmailConfig,
 } from './types';

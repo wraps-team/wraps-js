@@ -9,7 +9,7 @@ import {
   SendTemplatedEmailCommand,
   UpdateTemplateCommand,
 } from '@aws-sdk/client-ses';
-import { SESError, ValidationError, WrapsEmailError } from './errors';
+import { SESError, ValidationError } from './errors';
 import { renderReactEmail } from './react';
 import type {
   CreateTemplateFromReactParams,

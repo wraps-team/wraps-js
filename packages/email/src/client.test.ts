@@ -1,7 +1,6 @@
-import { SESClient } from '@aws-sdk/client-ses';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WrapsEmail } from './client';
-import { SESError, ValidationError } from './errors';
+import { SESError } from './errors';
 
 // Mock the SES client
 vi.mock('@aws-sdk/client-ses', () => {

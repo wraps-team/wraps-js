@@ -1,5 +1,4 @@
 import { WrapsEmail } from '@wraps.dev/email';
-import * as React from 'react';
 
 // Example React.email component
 function WelcomeEmail({ name, confirmUrl }: { name: string; confirmUrl: string }) {
