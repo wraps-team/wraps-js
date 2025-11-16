@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { ValidationError } from '../errors';
 import type { EmailAddress, SendEmailParams } from '../types';
 
@@ -75,7 +76,8 @@ export function validateEmailParams(params: SendEmailParams): void {
 }
 
 /**
- * Basic email address validation
+ * Basic email address validation using Zod
+ * Zod's email validation is safer than custom regex patterns and avoids ReDoS vulnerabilities
  */
 function validateEmailAddress(address: string | EmailAddress, field: string): void {
   const email = typeof address === 'string' ? address : address.email;
@@ -84,9 +86,11 @@ function validateEmailAddress(address: string | EmailAddress, field: string): vo
     throw new ValidationError(`Invalid email address in field: ${field}`, field);
   }
 
-  // Basic email regex validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
+  // Use Zod's built-in email validation (safer than custom regex)
+  const emailSchema = z.string().email();
+  const result = emailSchema.safeParse(email);
+
+  if (!result.success) {
     throw new ValidationError(`Invalid email format in field: ${field} (${email})`, field);
   }
 }
