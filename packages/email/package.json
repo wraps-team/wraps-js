@@ -1,6 +1,6 @@
 {
   "name": "@wraps.dev/email",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Beautiful email SDK for AWS SES",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -12,7 +12,11 @@
       "require": "./dist/index.js"
     }
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">=20.0.0"
   },
@@ -33,7 +37,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.928.0",
-    "@aws-sdk/credential-providers": "^3.928.0"
+    "@aws-sdk/credential-providers": "^3.928.0",
+    "zod": "4.1.12"
   },
   "peerDependencies": {
     "@react-email/components": ">=0.0.25",
@@ -56,7 +61,13 @@
     "typescript": "^5.9.3",
     "vitest": "^4.0.8"
   },
-  "keywords": ["email", "ses", "aws", "react-email", "typescript"],
+  "keywords": [
+    "email",
+    "ses",
+    "aws",
+    "react-email",
+    "typescript"
+  ],
   "author": "Wraps",
   "license": "MIT",
   "homepage": "https://github.com/wraps-team/wraps-js/tree/main/packages/email#readme",
