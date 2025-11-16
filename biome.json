@@ -34,8 +34,6 @@
         "useYield": "error"
       },
       "style": {
-        "noArguments": "error",
-        "noVar": "error",
         "useConst": "error"
       },
       "suspicious": {
@@ -90,7 +88,7 @@
   },
   "overrides": [
     {
-      "include": ["*.test.ts", "*.spec.ts", "examples/**"],
+      "include": ["**/*.test.ts", "**/*.spec.ts", "examples/**"],
       "linter": {
         "rules": {
           "suspicious": {
@@ -102,6 +100,14 @@
   ],
   "files": {
     "ignoreUnknown": false,
-    "ignore": ["node_modules", "dist", "build", "coverage", ".next", ".turbo", "*.min.js"]
+    "ignore": [
+      "node_modules/**",
+      "dist/**",
+      "build/**",
+      "coverage/**",
+      ".next/**",
+      ".turbo/**",
+      "**/*.min.js"
+    ]
   }
 }
