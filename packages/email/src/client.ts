@@ -6,6 +6,7 @@ import {
   type SESClient,
   SendBulkTemplatedEmailCommand,
   SendEmailCommand,
+  SendRawEmailCommand,
   SendTemplatedEmailCommand,
   UpdateTemplateCommand,
 } from '@aws-sdk/client-ses';
@@ -26,6 +27,7 @@ import type {
   WrapsEmailConfig,
 } from './types';
 import { createSESClient } from './utils/credentials';
+import { buildRawEmailMessage } from './utils/mime';
 import {
   normalizeEmailAddress,
   normalizeEmailAddresses,
@@ -138,10 +140,75 @@ export class WrapsEmail {
     }
   }
 
-  private async sendWithAttachments(_params: SendEmailParams): Promise<SendEmailResult> {
-    // Implementation using nodemailer + SES transport for attachments
-    // (SES SendEmail doesn't support attachments, need SendRawEmail)
-    throw new Error('Attachments support coming soon');
+  private async sendWithAttachments(params: SendEmailParams): Promise<SendEmailResult> {
+    // Validate that we have attachments
+    if (!params.attachments || params.attachments.length === 0) {
+      throw new ValidationError('sendWithAttachments called without attachments');
+    }
+
+    // Validate attachment count (AWS limit: 10MB total message size, max 500 MIME parts)
+    if (params.attachments.length > 100) {
+      throw new ValidationError('Maximum 100 attachments allowed per email');
+    }
+
+    // Handle React rendering if needed
+    let html = params.html;
+    let text = params.text;
+
+    if (params.react) {
+      if (params.html) {
+        throw new ValidationError('Cannot provide both "html" and "react" parameters');
+      }
+      const rendered = await renderReactEmail(params.react);
+      html = rendered.html;
+      text = text || rendered.text;
+    }
+
+    // Build raw MIME message
+    const rawMessage = buildRawEmailMessage({
+      from: params.from,
+      to: params.to,
+      cc: params.cc,
+      bcc: params.bcc,
+      replyTo: params.replyTo,
+      subject: params.subject,
+      html,
+      text,
+      attachments: params.attachments,
+    });
+
+    // Convert to Uint8Array for SES
+    const rawMessageData = new TextEncoder().encode(rawMessage);
+
+    // Build SendRawEmail command
+    const command = new SendRawEmailCommand({
+      RawMessage: {
+        Data: rawMessageData,
+      },
+      Tags: params.tags
+        ? Object.entries(params.tags).map(([Name, Value]) => ({
+            Name,
+            Value,
+          }))
+        : undefined,
+      ConfigurationSetName: params.configurationSetName,
+    });
+
+    // Send email
+    try {
+      const response = await this.sesClient.send(command);
+
+      if (!response.MessageId || !response.$metadata.requestId) {
+        throw new Error('Invalid response from SES: missing MessageId or requestId');
+      }
+
+      return {
+        messageId: response.MessageId,
+        requestId: response.$metadata.requestId,
+      };
+    } catch (error) {
+      throw this.handleSESError(error);
+    }
   }
 
   private handleSESError(error: unknown): Error {

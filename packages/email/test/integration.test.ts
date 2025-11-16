@@ -58,6 +58,58 @@ describe.skipIf(SKIP_INTEGRATION)('Integration Tests', () => {
       console.log('  Request ID:', result.requestId);
     }, 30000); // 30 second timeout
 
+    it('should send email with attachments', async () => {
+      // Create sample attachment content
+      const textContent = 'This is a test text file.\nLine 2\nLine 3';
+      const jsonContent = JSON.stringify(
+        {
+          test: true,
+          timestamp: new Date().toISOString(),
+          message: 'Integration test attachment',
+        },
+        null,
+        2
+      );
+
+      const result = await email.send({
+        from: TEST_FROM_EMAIL,
+        to: TEST_TO_EMAIL,
+        subject: 'Wraps Email SDK - Attachment Test',
+        html: `
+          <h1>Email with Attachments</h1>
+          <p>This email contains multiple file attachments:</p>
+          <ul>
+            <li>test-file.txt (plain text)</li>
+            <li>test-data.json (JSON data)</li>
+          </ul>
+          <p>This is a test of the attachment functionality.</p>
+        `,
+        text: 'This email contains test attachments. This is a test of the attachment functionality.',
+        attachments: [
+          {
+            filename: 'test-file.txt',
+            content: Buffer.from(textContent),
+            contentType: 'text/plain',
+          },
+          {
+            filename: 'test-data.json',
+            content: Buffer.from(jsonContent),
+            contentType: 'application/json',
+          },
+        ],
+      });
+
+      expect(result.messageId).toBeDefined();
+      expect(result.requestId).toBeDefined();
+
+      console.log('✓ Email with attachments sent successfully');
+      console.log('  Message ID:', result.messageId);
+      console.log('  Request ID:', result.requestId);
+      console.log('  Attachments: 2 files');
+      console.log('    - test-file.txt (text/plain)');
+      console.log('    - test-data.json (application/json)');
+    }, 30000);
+
     it('should send email with CC and BCC', async () => {
       const result = await email.send({
         from: TEST_FROM_EMAIL,

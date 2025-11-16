@@ -98,16 +98,12 @@
       }
     }
   ],
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
   "files": {
-    "ignoreUnknown": false,
-    "ignore": [
-      "node_modules/**",
-      "dist/**",
-      "build/**",
-      "coverage/**",
-      ".next/**",
-      ".turbo/**",
-      "**/*.min.js"
-    ]
+    "ignoreUnknown": false
   }
 }

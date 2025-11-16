@@ -126,21 +126,72 @@ await email.send({
 
 ### Send with attachments
 
+Send emails with file attachments (PDFs, images, documents, etc.). The SDK automatically handles MIME encoding and uses AWS SES SendRawEmail under the hood.
+
 ```typescript
+// Single attachment
 const result = await email.send({
   from: 'you@company.com',
   to: 'user@example.com',
   subject: 'Your invoice',
-  html: '<p>Invoice attached</p>',
+  html: '<p>Please find your invoice attached.</p>',
   attachments: [
     {
       filename: 'invoice.pdf',
-      content: Buffer.from('...'), // or 'base64-string'
+      content: Buffer.from('...'), // Buffer or base64 string
+      contentType: 'application/pdf', // Optional - auto-detected from filename
+    },
+  ],
+});
+
+// Multiple attachments
+await email.send({
+  from: 'you@company.com',
+  to: 'user@example.com',
+  subject: 'Monthly Report',
+  html: '<h1>Monthly Report</h1><p>Reports attached</p>',
+  attachments: [
+    {
+      filename: 'report.pdf',
+      content: pdfBuffer,
+      contentType: 'application/pdf',
+    },
+    {
+      filename: 'chart.png',
+      content: imageBuffer,
+      contentType: 'image/png',
+    },
+    {
+      filename: 'data.csv',
+      content: csvBuffer,
+      contentType: 'text/csv',
+    },
+  ],
+});
+
+// Attachment with base64 string
+await email.send({
+  from: 'you@company.com',
+  to: 'user@example.com',
+  subject: 'Document',
+  html: '<p>Document attached</p>',
+  attachments: [
+    {
+      filename: 'document.pdf',
+      content: 'JVBERi0xLjQKJeLjz9MK...', // base64 string
       contentType: 'application/pdf',
     },
   ],
 });
 ```
+
+**Supported attachment features:**
+- Automatic MIME type detection from file extension
+- Base64 encoding handled automatically
+- Up to 100 attachments per email
+- Maximum message size: 10 MB (AWS SES limit)
+- Works with both HTML and plain text emails
+- Compatible with React.email components
 
 ### Send with tags (for SES tracking)
 

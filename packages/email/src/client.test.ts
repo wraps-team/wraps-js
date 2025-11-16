@@ -15,6 +15,9 @@ vi.mock('@aws-sdk/client-ses', () => {
     SendEmailCommand: vi.fn(function (this: any, input: any) {
       Object.assign(this, input);
     }),
+    SendRawEmailCommand: vi.fn(function (this: any, input: any) {
+      Object.assign(this, input);
+    }),
     SendTemplatedEmailCommand: vi.fn(function (this: any, input: any) {
       Object.assign(this, input);
     }),
@@ -119,21 +122,138 @@ describe('WrapsEmail', () => {
       expect(result.messageId).toBe('test-message-id');
     });
 
-    it('should throw error for attachments (not implemented)', async () => {
+    it('should send email with attachments using SendRawEmail', async () => {
+      mockSend.mockResolvedValue({
+        MessageId: 'attachment-message-id',
+        $metadata: { requestId: 'attachment-request-id' },
+      });
+
+      const result = await email.send({
+        from: 'sender@example.com',
+        to: 'recipient@example.com',
+        subject: 'Test with Attachment',
+        html: '<p>Test</p>',
+        attachments: [
+          {
+            filename: 'test.pdf',
+            content: Buffer.from('PDF content'),
+            contentType: 'application/pdf',
+          },
+        ],
+      });
+
+      expect(result).toEqual({
+        messageId: 'attachment-message-id',
+        requestId: 'attachment-request-id',
+      });
+
+      expect(mockSend).toHaveBeenCalledTimes(1);
+      // Verify SendRawEmailCommand was used
+      const command = mockSend.mock.calls[0][0];
+      expect(command).toHaveProperty('RawMessage');
+    });
+
+    it('should send email with multiple attachments', async () => {
+      mockSend.mockResolvedValue({
+        MessageId: 'multi-attach-id',
+        $metadata: { requestId: 'multi-attach-request-id' },
+      });
+
+      const result = await email.send({
+        from: 'sender@example.com',
+        to: 'recipient@example.com',
+        subject: 'Multiple Attachments',
+        text: 'See attached files',
+        attachments: [
+          {
+            filename: 'doc1.pdf',
+            content: Buffer.from('First doc'),
+          },
+          {
+            filename: 'image.png',
+            content: Buffer.from('Image data'),
+            contentType: 'image/png',
+          },
+          {
+            filename: 'data.json',
+            content: Buffer.from('{"key": "value"}'),
+            contentType: 'application/json',
+          },
+        ],
+      });
+
+      expect(result.messageId).toBe('multi-attach-id');
+      expect(mockSend).toHaveBeenCalledTimes(1);
+    });
+
+    it('should send email with attachments and React component', async () => {
+      mockSend.mockResolvedValue({
+        MessageId: 'react-attach-id',
+        $metadata: { requestId: 'react-attach-request-id' },
+      });
+
+      const result = await email.send({
+        from: 'sender@example.com',
+        to: 'recipient@example.com',
+        subject: 'React with Attachment',
+        react: {} as any,
+        attachments: [
+          {
+            filename: 'receipt.pdf',
+            content: Buffer.from('Receipt data'),
+          },
+        ],
+      });
+
+      expect(result.messageId).toBe('react-attach-id');
+    });
+
+    it('should throw error for too many attachments', async () => {
+      const attachments = Array.from({ length: 101 }, (_, i) => ({
+        filename: `file${i}.txt`,
+        content: Buffer.from('test'),
+      }));
+
       await expect(
         email.send({
           from: 'sender@example.com',
           to: 'recipient@example.com',
-          subject: 'Test',
+          subject: 'Too many attachments',
           html: '<p>Test</p>',
-          attachments: [
-            {
-              filename: 'test.pdf',
-              content: Buffer.from('test'),
-            },
-          ],
+          attachments,
         })
-      ).rejects.toThrow('Attachments support coming soon');
+      ).rejects.toThrow('Maximum 100 attachments allowed');
+    });
+
+    it('should include tags and configuration set with attachments', async () => {
+      mockSend.mockResolvedValue({
+        MessageId: 'tagged-attach-id',
+        $metadata: { requestId: 'tagged-attach-request-id' },
+      });
+
+      const result = await email.send({
+        from: 'sender@example.com',
+        to: 'recipient@example.com',
+        subject: 'Tagged with Attachment',
+        html: '<p>Test</p>',
+        attachments: [
+          {
+            filename: 'doc.pdf',
+            content: Buffer.from('test'),
+          },
+        ],
+        tags: {
+          campaign: 'newsletter',
+          type: 'transactional',
+        },
+        configurationSetName: 'my-config-set',
+      });
+
+      expect(result.messageId).toBe('tagged-attach-id');
+
+      const command = mockSend.mock.calls[0][0];
+      expect(command).toHaveProperty('Tags');
+      expect(command).toHaveProperty('ConfigurationSetName', 'my-config-set');
     });
 
     it('should handle SES errors', async () => {
