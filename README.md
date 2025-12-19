@@ -36,9 +36,34 @@ await email.send({
 });
 ```
 
-### @wraps.dev/sms (Coming Soon)
+### [@wraps.dev/sms](./packages/sms)
 
-SMS SDK for AWS SNS.
+Beautiful SMS SDK for AWS End User Messaging.
+
+**Features:**
+- Send SMS from your own AWS account (BYOC model)
+- Full TypeScript support
+- OIDC authentication for Vercel, EKS, GitHub Actions
+- Batch sending to multiple recipients
+- Opt-out list management
+- Phone number validation (E.164)
+
+**Installation:**
+```bash
+npm install @wraps.dev/sms
+```
+
+**Quick Start:**
+```typescript
+import { WrapsSMS } from '@wraps.dev/sms';
+
+const sms = new WrapsSMS();
+
+await sms.send({
+  to: '+14155551234',
+  message: 'Your verification code is 123456',
+});
+```
 
 ### @wraps.dev/workflows (Coming Soon)
 

@@ -6,3 +6,4 @@ dist
 .env.local
 .claude
 coverage
+notes

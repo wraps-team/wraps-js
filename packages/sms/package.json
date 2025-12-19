@@ -1,0 +1,72 @@
+{
+  "name": "@wraps.dev/sms",
+  "version": "0.1.0",
+  "description": "Beautiful SMS SDK for AWS End User Messaging",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist coverage",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:integration": "INTEGRATION_TEST=true vitest run test/integration.test.ts",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm clean && pnpm build"
+  },
+  "dependencies": {
+    "@aws-sdk/client-pinpoint-sms-voice-v2": "^3.928.0",
+    "@aws-sdk/credential-providers": "^3.928.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.5",
+    "@types/node": "^24.10.0",
+    "@vitest/coverage-v8": "^4.0.8",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.8"
+  },
+  "keywords": [
+    "sms",
+    "aws",
+    "pinpoint",
+    "messaging",
+    "typescript"
+  ],
+  "author": "Wraps",
+  "license": "MIT",
+  "homepage": "https://github.com/wraps-team/wraps-js/tree/main/packages/sms#readme",
+  "bugs": {
+    "url": "https://github.com/wraps-team/wraps-js/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wraps-team/wraps-js.git",
+    "directory": "packages/sms"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

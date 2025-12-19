@@ -25,6 +25,7 @@ jobs:
         with:
           node-version: '20.x'
           cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Upgrade npm to latest
         run: npm install -g npm@latest
@@ -32,8 +33,47 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
+      - name: Build all packages
         run: pnpm build
 
-      - name: Publish to npm (with OIDC Trusted Publishing)
-        run: cd packages/email && npm publish --access public
+      - name: Run tests
+        run: pnpm test
+
+      - name: Determine package to publish
+        id: package
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          echo "Release tag: $TAG"
+
+          if [[ "$TAG" == email-v* ]]; then
+            echo "package=email" >> $GITHUB_OUTPUT
+            echo "version=${TAG#email-v}" >> $GITHUB_OUTPUT
+          elif [[ "$TAG" == sms-v* ]]; then
+            echo "package=sms" >> $GITHUB_OUTPUT
+            echo "version=${TAG#sms-v}" >> $GITHUB_OUTPUT
+          else
+            echo "::error::Unknown release tag format: $TAG"
+            echo "Expected format: email-vX.Y.Z or sms-vX.Y.Z"
+            exit 1
+          fi
+
+      - name: Verify package version matches tag
+        run: |
+          PACKAGE="${{ steps.package.outputs.package }}"
+          TAG_VERSION="${{ steps.package.outputs.version }}"
+          PKG_VERSION=$(node -p "require('./packages/$PACKAGE/package.json').version")
+
+          echo "Tag version: $TAG_VERSION"
+          echo "Package version: $PKG_VERSION"
+
+          if [[ "$TAG_VERSION" != "$PKG_VERSION" ]]; then
+            echo "::error::Version mismatch! Tag: $TAG_VERSION, package.json: $PKG_VERSION"
+            exit 1
+          fi
+
+      - name: Publish ${{ steps.package.outputs.package }} to npm
+        run: |
+          cd packages/${{ steps.package.outputs.package }}
+          npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
