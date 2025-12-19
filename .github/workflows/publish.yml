@@ -10,7 +10,7 @@ jobs:
 
     permissions:
       contents: read
-      id-token: write # Required for OIDC Trusted Publishing
+      id-token: write # Required for npm OIDC Trusted Publishing
 
     steps:
       - uses: actions/checkout@v4
@@ -71,9 +71,13 @@ jobs:
             exit 1
           fi
 
+      # Uses npm OIDC Trusted Publishing - no NPM_TOKEN needed
+      # Requires one-time setup on npmjs.com for each package:
+      # 1. First publish must be done manually: npm publish --access public
+      # 2. Then configure trusted publishing at:
+      #    https://www.npmjs.com/package/@wraps.dev/<pkg>/access
+      #    Add GitHub Actions: wraps-team/wraps-js, publish.yml
       - name: Publish ${{ steps.package.outputs.package }} to npm
         run: |
           cd packages/${{ steps.package.outputs.package }}
           npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
