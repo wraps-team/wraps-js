@@ -65,6 +65,40 @@ await sms.send({
 });
 ```
 
+### [@wraps.dev/client](./packages/client)
+
+Type-safe API client for the Wraps Platform.
+
+**Features:**
+- Auto-generated TypeScript types from OpenAPI schema
+- Type-safe API calls with openapi-fetch
+- Bearer token authentication
+- Full IntelliSense for endpoints, params, and responses
+
+**Installation:**
+```bash
+npm install @wraps.dev/client
+```
+
+**Quick Start:**
+```typescript
+import { createPlatformClient } from '@wraps.dev/client';
+
+const client = createPlatformClient({
+  apiKey: 'your-api-key',
+});
+
+// List contacts with full type safety
+const { data, error } = await client.GET('/v1/contacts/', {
+  params: { query: { page: '1', pageSize: '10' } },
+});
+
+// Create a contact
+await client.POST('/v1/contacts/', {
+  body: { email: 'user@example.com', emailStatus: 'active' },
+});
+```
+
 ### @wraps.dev/workflows (Coming Soon)
 
 Workflow orchestration SDK.
