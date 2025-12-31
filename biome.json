@@ -96,6 +96,15 @@
           }
         }
       }
+    },
+    {
+      "includes": ["**/schema.d.ts"],
+      "linter": {
+        "enabled": false
+      },
+      "formatter": {
+        "enabled": false
+      }
     }
   ],
   "vcs": {

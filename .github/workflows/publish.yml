@@ -51,9 +51,12 @@ jobs:
           elif [[ "$TAG" == sms-v* ]]; then
             echo "package=sms" >> $GITHUB_OUTPUT
             echo "version=${TAG#sms-v}" >> $GITHUB_OUTPUT
+          elif [[ "$TAG" == client-v* ]]; then
+            echo "package=client" >> $GITHUB_OUTPUT
+            echo "version=${TAG#client-v}" >> $GITHUB_OUTPUT
           else
             echo "::error::Unknown release tag format: $TAG"
-            echo "Expected format: email-vX.Y.Z or sms-vX.Y.Z"
+            echo "Expected format: email-vX.Y.Z, sms-vX.Y.Z, or client-vX.Y.Z"
             exit 1
           fi
 

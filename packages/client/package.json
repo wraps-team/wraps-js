@@ -1,0 +1,71 @@
+{
+  "name": "@wraps.dev/client",
+  "version": "0.1.0",
+  "description": "Type-safe API client for Wraps Platform",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "generate": "openapi-typescript https://api.wraps.dev/swagger/json -o src/schema.d.ts",
+    "build": "pnpm generate && tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm clean && pnpm build"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.14.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.5",
+    "@types/node": "^24.10.0",
+    "@vitest/coverage-v8": "^4.0.8",
+    "openapi-typescript": "^7.6.1",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.8"
+  },
+  "keywords": [
+    "wraps",
+    "api",
+    "client",
+    "openapi",
+    "typescript"
+  ],
+  "author": "Wraps",
+  "license": "MIT",
+  "homepage": "https://github.com/wraps-team/wraps-js/tree/main/packages/client#readme",
+  "bugs": {
+    "url": "https://github.com/wraps-team/wraps-js/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wraps-team/wraps-js.git",
+    "directory": "packages/client"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
