@@ -88,7 +88,7 @@
   },
   "overrides": [
     {
-      "includes": ["**/*.test.ts", "**/*.spec.ts", "examples/**"],
+      "include": ["**/*.test.ts", "**/*.spec.ts", "examples/**"],
       "linter": {
         "rules": {
           "suspicious": {
@@ -98,7 +98,7 @@
       }
     },
     {
-      "includes": ["**/schema.d.ts"],
+      "include": ["**/schema.d.ts"],
       "linter": {
         "enabled": false
       },
