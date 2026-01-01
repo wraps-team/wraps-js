@@ -275,6 +275,7 @@ export interface operations {
                         [key: string]: unknown;
                     };
                     topicIds?: string[];
+                    topicSlugs?: string[];
                 };
                 "multipart/form-data": {
                     email?: string;
@@ -285,6 +286,7 @@ export interface operations {
                         [key: string]: unknown;
                     };
                     topicIds?: string[];
+                    topicSlugs?: string[];
                 };
                 "text/plain": {
                     email?: string;
@@ -295,6 +297,7 @@ export interface operations {
                         [key: string]: unknown;
                     };
                     topicIds?: string[];
+                    topicSlugs?: string[];
                 };
             };
         };
@@ -394,6 +397,7 @@ export interface operations {
                         [key: string]: unknown;
                     };
                     topicIds?: string[];
+                    topicSlugs?: string[];
                 };
                 "multipart/form-data": {
                     email?: string;
@@ -404,6 +408,7 @@ export interface operations {
                         [key: string]: unknown;
                     };
                     topicIds?: string[];
+                    topicSlugs?: string[];
                 };
                 "text/plain": {
                     email?: string;
@@ -414,6 +419,7 @@ export interface operations {
                         [key: string]: unknown;
                     };
                     topicIds?: string[];
+                    topicSlugs?: string[];
                 };
             };
         };
