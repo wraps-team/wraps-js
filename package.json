@@ -13,10 +13,17 @@
     "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4"
+    "@biomejs/biome": "^2.3.5"
   },
   "packageManager": "pnpm@9.0.0",
-  "keywords": ["wraps", "email", "sms", "workflows", "ses", "aws"],
+  "keywords": [
+    "wraps",
+    "email",
+    "sms",
+    "workflows",
+    "ses",
+    "aws"
+  ],
   "author": "Wraps",
   "license": "MIT",
   "repository": {

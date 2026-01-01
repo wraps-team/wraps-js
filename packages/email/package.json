@@ -12,7 +12,11 @@
       "require": "./dist/index.js"
     }
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">=20.0.0"
   },
@@ -57,7 +61,13 @@
     "typescript": "^5.9.3",
     "vitest": "^4.0.8"
   },
-  "keywords": ["email", "ses", "aws", "react-email", "typescript"],
+  "keywords": [
+    "email",
+    "ses",
+    "aws",
+    "react-email",
+    "typescript"
+  ],
   "author": "Wraps",
   "license": "MIT",
   "homepage": "https://github.com/wraps-team/wraps-js/tree/main/packages/email#readme",

@@ -57,21 +57,29 @@ export function validateEmailParams(params: SendEmailParams): void {
   validateEmailAddress(params.from, 'from');
 
   const toAddresses = Array.isArray(params.to) ? params.to : [params.to];
-  toAddresses.forEach((addr, idx) => validateEmailAddress(addr, `to[${idx}]`));
+  for (const [idx, addr] of toAddresses.entries()) {
+    validateEmailAddress(addr, `to[${idx}]`);
+  }
 
   if (params.cc) {
     const ccAddresses = Array.isArray(params.cc) ? params.cc : [params.cc];
-    ccAddresses.forEach((addr, idx) => validateEmailAddress(addr, `cc[${idx}]`));
+    for (const [idx, addr] of ccAddresses.entries()) {
+      validateEmailAddress(addr, `cc[${idx}]`);
+    }
   }
 
   if (params.bcc) {
     const bccAddresses = Array.isArray(params.bcc) ? params.bcc : [params.bcc];
-    bccAddresses.forEach((addr, idx) => validateEmailAddress(addr, `bcc[${idx}]`));
+    for (const [idx, addr] of bccAddresses.entries()) {
+      validateEmailAddress(addr, `bcc[${idx}]`);
+    }
   }
 
   if (params.replyTo) {
     const replyToAddresses = Array.isArray(params.replyTo) ? params.replyTo : [params.replyTo];
-    replyToAddresses.forEach((addr, idx) => validateEmailAddress(addr, `replyTo[${idx}]`));
+    for (const [idx, addr] of replyToAddresses.entries()) {
+      validateEmailAddress(addr, `replyTo[${idx}]`);
+    }
   }
 }
 

@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { WrapsEmail } from '../src/index';
 
 /**
