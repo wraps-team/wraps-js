@@ -269,6 +269,10 @@ export interface operations {
                 "application/json": {
                     email?: string;
                     phone?: string;
+                    firstName?: string;
+                    lastName?: string;
+                    company?: string;
+                    jobTitle?: string;
                     emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
                     properties?: {
@@ -280,6 +284,10 @@ export interface operations {
                 "multipart/form-data": {
                     email?: string;
                     phone?: string;
+                    firstName?: string;
+                    lastName?: string;
+                    company?: string;
+                    jobTitle?: string;
                     emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
                     properties?: {
@@ -291,6 +299,10 @@ export interface operations {
                 "text/plain": {
                     email?: string;
                     phone?: string;
+                    firstName?: string;
+                    lastName?: string;
+                    company?: string;
+                    jobTitle?: string;
                     emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
                     properties?: {
@@ -391,6 +403,10 @@ export interface operations {
                 "application/json": {
                     email?: string;
                     phone?: string;
+                    firstName?: (string | null) | null;
+                    lastName?: (string | null) | null;
+                    company?: (string | null) | null;
+                    jobTitle?: (string | null) | null;
                     emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
                     properties?: {
@@ -402,6 +418,10 @@ export interface operations {
                 "multipart/form-data": {
                     email?: string;
                     phone?: string;
+                    firstName?: (string | null) | null;
+                    lastName?: (string | null) | null;
+                    company?: (string | null) | null;
+                    jobTitle?: (string | null) | null;
                     emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
                     properties?: {
@@ -413,6 +433,10 @@ export interface operations {
                 "text/plain": {
                     email?: string;
                     phone?: string;
+                    firstName?: (string | null) | null;
+                    lastName?: (string | null) | null;
+                    company?: (string | null) | null;
+                    jobTitle?: (string | null) | null;
                     emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
                     properties?: {
