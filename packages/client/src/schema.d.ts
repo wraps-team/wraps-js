@@ -444,6 +444,9 @@ export interface operations {
                 "application/json": {
                     channel?: "email" | "sms";
                     name?: string;
+                    audienceType?: "all" | "topic" | "segment";
+                    topicId?: string;
+                    segmentId?: string;
                     subject?: string;
                     previewText?: string;
                     from?: string;
@@ -460,6 +463,9 @@ export interface operations {
                 "multipart/form-data": {
                     channel?: "email" | "sms";
                     name?: string;
+                    audienceType?: "all" | "topic" | "segment";
+                    topicId?: string;
+                    segmentId?: string;
                     subject?: string;
                     previewText?: string;
                     from?: string;
@@ -476,6 +482,9 @@ export interface operations {
                 "text/plain": {
                     channel?: "email" | "sms";
                     name?: string;
+                    audienceType?: "all" | "topic" | "segment";
+                    topicId?: string;
+                    segmentId?: string;
                     subject?: string;
                     previewText?: string;
                     from?: string;
