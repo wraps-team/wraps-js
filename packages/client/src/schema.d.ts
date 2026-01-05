@@ -144,6 +144,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/events/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ingest event
+         * @description Send a custom event to trigger workflows and resume waiting executions
+         */
+        post: operations["postV1Events"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/events/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Batch ingest events
+         * @description Process multiple events in a single request
+         */
+        post: operations["postV1EventsBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workflows/{workflowId}/trigger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Trigger workflow
+         * @description Trigger a specific workflow for a contact. The workflow must have triggerType 'api' and be enabled.
+         */
+        post: operations["postV1WorkflowsByWorkflowIdTrigger"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workflows/{workflowId}/trigger/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Batch trigger workflow
+         * @description Trigger a workflow for multiple contacts at once. Each contact can have its own data that gets merged with common data.
+         */
+        post: operations["postV1WorkflowsByWorkflowIdTriggerBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/webhooks/ses/{awsAccountNumber}": {
         parameters: {
             query?: never;
@@ -606,6 +686,230 @@ export interface operations {
                         status: string;
                     };
                 };
+            };
+        };
+    };
+    postV1Events: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Event name (e.g., 'purchase.completed') */
+                    name: string;
+                    /** @description Contact ID */
+                    contactId?: string;
+                    /** @description Contact email (alternative to contactId) */
+                    contactEmail?: string;
+                    /** @description Event properties */
+                    properties?: {
+                        [key: string]: unknown;
+                    };
+                };
+                "multipart/form-data": {
+                    /** @description Event name (e.g., 'purchase.completed') */
+                    name: string;
+                    /** @description Contact ID */
+                    contactId?: string;
+                    /** @description Contact email (alternative to contactId) */
+                    contactEmail?: string;
+                    /** @description Event properties */
+                    properties?: {
+                        [key: string]: unknown;
+                    };
+                };
+                "text/plain": {
+                    /** @description Event name (e.g., 'purchase.completed') */
+                    name: string;
+                    /** @description Contact ID */
+                    contactId?: string;
+                    /** @description Contact email (alternative to contactId) */
+                    contactEmail?: string;
+                    /** @description Event properties */
+                    properties?: {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postV1EventsBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    events: {
+                        name: string;
+                        contactId?: string;
+                        contactEmail?: string;
+                        properties?: {
+                            [key: string]: unknown;
+                        };
+                    }[];
+                };
+                "multipart/form-data": {
+                    events: {
+                        name: string;
+                        contactId?: string;
+                        contactEmail?: string;
+                        properties?: {
+                            [key: string]: unknown;
+                        };
+                    }[];
+                };
+                "text/plain": {
+                    events: {
+                        name: string;
+                        contactId?: string;
+                        contactEmail?: string;
+                        properties?: {
+                            [key: string]: unknown;
+                        };
+                    }[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postV1WorkflowsByWorkflowIdTrigger: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Workflow ID to trigger */
+                workflowId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Contact ID */
+                    contactId?: string;
+                    /** @description Contact email (alternative to contactId) */
+                    contactEmail?: string;
+                    /** @description Data to pass to the workflow as trigger data */
+                    data?: {
+                        [key: string]: unknown;
+                    };
+                };
+                "multipart/form-data": {
+                    /** @description Contact ID */
+                    contactId?: string;
+                    /** @description Contact email (alternative to contactId) */
+                    contactEmail?: string;
+                    /** @description Data to pass to the workflow as trigger data */
+                    data?: {
+                        [key: string]: unknown;
+                    };
+                };
+                "text/plain": {
+                    /** @description Contact ID */
+                    contactId?: string;
+                    /** @description Contact email (alternative to contactId) */
+                    contactEmail?: string;
+                    /** @description Data to pass to the workflow as trigger data */
+                    data?: {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postV1WorkflowsByWorkflowIdTriggerBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Workflow ID to trigger */
+                workflowId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description List of contacts to trigger the workflow for */
+                    contacts: {
+                        contactId?: string;
+                        contactEmail?: string;
+                        data?: {
+                            [key: string]: unknown;
+                        };
+                    }[];
+                    /** @description Common data to pass to all workflow triggers */
+                    data?: {
+                        [key: string]: unknown;
+                    };
+                };
+                "multipart/form-data": {
+                    /** @description List of contacts to trigger the workflow for */
+                    contacts: {
+                        contactId?: string;
+                        contactEmail?: string;
+                        data?: {
+                            [key: string]: unknown;
+                        };
+                    }[];
+                    /** @description Common data to pass to all workflow triggers */
+                    data?: {
+                        [key: string]: unknown;
+                    };
+                };
+                "text/plain": {
+                    /** @description List of contacts to trigger the workflow for */
+                    contacts: {
+                        contactId?: string;
+                        contactEmail?: string;
+                        data?: {
+                            [key: string]: unknown;
+                        };
+                    }[];
+                    /** @description Common data to pass to all workflow triggers */
+                    data?: {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
