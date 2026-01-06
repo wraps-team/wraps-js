@@ -100,6 +100,26 @@ export interface paths {
         patch: operations["patchV1ContactsById"];
         trace?: never;
     };
+    "/v1/contacts/{id}/topics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace contact topics
+         * @description Replaces all topic subscriptions for a contact. Use PATCH to add topics without removing existing ones.
+         */
+        put: operations["putV1ContactsByIdTopics"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/batch/": {
         parameters: {
             query?: never;
@@ -522,6 +542,40 @@ export interface operations {
                     properties?: {
                         [key: string]: unknown;
                     };
+                    topicIds?: string[];
+                    topicSlugs?: string[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putV1ContactsByIdTopics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    topicIds?: string[];
+                    topicSlugs?: string[];
+                };
+                "multipart/form-data": {
+                    topicIds?: string[];
+                    topicSlugs?: string[];
+                };
+                "text/plain": {
                     topicIds?: string[];
                     topicSlugs?: string[];
                 };
