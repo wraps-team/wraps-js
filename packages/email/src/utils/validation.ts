@@ -84,11 +84,27 @@ export function validateEmailParams(params: SendEmailParams): void {
 }
 
 /**
+ * Extract email from RFC 5322 format strings like "Name <email>" or "email"
+ */
+function extractEmail(address: string): string {
+  // Match email in angle brackets: "Name <email>" or just "<email>"
+  const angleMatch = address.match(/<([^>]+)>/);
+  if (angleMatch) {
+    return angleMatch[1].trim();
+  }
+
+  // No angle brackets - treat as plain email address
+  return address.trim();
+}
+
+/**
  * Basic email address validation using Zod
  * Zod's email validation is safer than custom regex patterns and avoids ReDoS vulnerabilities
+ * Supports RFC 5322 format: "Display Name <email@example.com>" or plain "email@example.com"
  */
 function validateEmailAddress(address: string | EmailAddress, field: string): void {
-  const email = typeof address === 'string' ? address : address.email;
+  // Extract email portion from string or EmailAddress object
+  const email = typeof address === 'string' ? extractEmail(address) : address.email;
 
   if (!email) {
     throw new ValidationError(`Invalid email address in field: ${field}`, field);

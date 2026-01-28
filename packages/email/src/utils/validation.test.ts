@@ -218,4 +218,63 @@ describe('validateEmailParams', () => {
     expect(() => validateEmailParams(params)).toThrow(ValidationError);
     expect(() => validateEmailParams(params)).toThrow('Invalid email address');
   });
+
+  it('should accept RFC 5322 format with display name (Name <email>)', () => {
+    const params: SendEmailParams = {
+      from: 'Wraps <info@wraps.dev>',
+      to: 'recipient@example.com',
+      subject: 'Test',
+      html: '<p>Test</p>',
+    };
+
+    expect(() => validateEmailParams(params)).not.toThrow();
+  });
+
+  it('should accept RFC 5322 format with quoted display name ("Name" <email>)', () => {
+    const params: SendEmailParams = {
+      from: '"Wraps Team" <info@wraps.dev>',
+      to: 'recipient@example.com',
+      subject: 'Test',
+      html: '<p>Test</p>',
+    };
+
+    expect(() => validateEmailParams(params)).not.toThrow();
+  });
+
+  it('should accept RFC 5322 format with just angle brackets (<email>)', () => {
+    const params: SendEmailParams = {
+      from: '<info@wraps.dev>',
+      to: 'recipient@example.com',
+      subject: 'Test',
+      html: '<p>Test</p>',
+    };
+
+    expect(() => validateEmailParams(params)).not.toThrow();
+  });
+
+  it('should reject RFC 5322 format with invalid email inside brackets', () => {
+    const params: SendEmailParams = {
+      from: 'Wraps <invalid-email>',
+      to: 'recipient@example.com',
+      subject: 'Test',
+      html: '<p>Test</p>',
+    };
+
+    expect(() => validateEmailParams(params)).toThrow(ValidationError);
+    expect(() => validateEmailParams(params)).toThrow('Invalid email format');
+  });
+
+  it('should accept RFC 5322 format in to, cc, bcc, and replyTo fields', () => {
+    const params: SendEmailParams = {
+      from: 'sender@example.com',
+      to: 'Recipient <recipient@example.com>',
+      cc: '"CC User" <cc@example.com>',
+      bcc: 'BCC User <bcc@example.com>',
+      replyTo: '<reply@example.com>',
+      subject: 'Test',
+      html: '<p>Test</p>',
+    };
+
+    expect(() => validateEmailParams(params)).not.toThrow();
+  });
 });
