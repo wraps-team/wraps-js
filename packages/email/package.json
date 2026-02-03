@@ -1,6 +1,6 @@
 {
   "name": "@wraps.dev/email",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "Beautiful email SDK for AWS SES",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -36,8 +36,10 @@
     "prepublishOnly": "pnpm clean && pnpm build"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.928.0",
     "@aws-sdk/client-ses": "^3.928.0",
     "@aws-sdk/credential-providers": "^3.928.0",
+    "@aws-sdk/s3-request-presigner": "^3.928.0",
     "zod": "^4.1.12"
   },
   "peerDependencies": {

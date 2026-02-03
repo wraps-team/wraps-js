@@ -81,7 +81,8 @@ export interface BuildRawEmailParams {
   subject: string;
   html?: string;
   text?: string;
-  attachments: Attachment[];
+  attachments?: Attachment[];
+  customHeaders?: Record<string, string>;
 }
 
 /**
@@ -111,7 +112,53 @@ export function buildRawEmailMessage(params: BuildRawEmailParams): string {
   }
 
   lines.push(`Subject: ${params.subject}`);
+
+  // Add custom headers (e.g., In-Reply-To, References for threading)
+  if (params.customHeaders) {
+    for (const [name, value] of Object.entries(params.customHeaders)) {
+      lines.push(`${name}: ${value}`);
+    }
+  }
+
   lines.push('MIME-Version: 1.0');
+
+  const hasAttachments = params.attachments && params.attachments.length > 0;
+
+  if (!hasAttachments) {
+    // No attachments — simple message (text, html, or multipart/alternative)
+    const altBoundarySimple = generateBoundary('alt');
+
+    if (params.text && params.html) {
+      lines.push(`Content-Type: multipart/alternative; boundary="${altBoundarySimple}"`);
+      lines.push('');
+      lines.push(`--${altBoundarySimple}`);
+      lines.push('Content-Type: text/plain; charset=UTF-8');
+      lines.push('Content-Transfer-Encoding: 7bit');
+      lines.push('');
+      lines.push(params.text);
+      lines.push('');
+      lines.push(`--${altBoundarySimple}`);
+      lines.push('Content-Type: text/html; charset=UTF-8');
+      lines.push('Content-Transfer-Encoding: 7bit');
+      lines.push('');
+      lines.push(params.html);
+      lines.push('');
+      lines.push(`--${altBoundarySimple}--`);
+    } else if (params.html) {
+      lines.push('Content-Type: text/html; charset=UTF-8');
+      lines.push('Content-Transfer-Encoding: 7bit');
+      lines.push('');
+      lines.push(params.html);
+    } else if (params.text) {
+      lines.push('Content-Type: text/plain; charset=UTF-8');
+      lines.push('Content-Transfer-Encoding: 7bit');
+      lines.push('');
+      lines.push(params.text);
+    }
+
+    return lines.join('\r\n');
+  }
+
   lines.push(`Content-Type: multipart/mixed; boundary="${mainBoundary}"`);
   lines.push(''); // Blank line separates headers from body
 
@@ -157,8 +204,8 @@ export function buildRawEmailMessage(params: BuildRawEmailParams): string {
 
   lines.push('');
 
-  // Add attachments
-  for (const attachment of params.attachments) {
+  // Add attachments (guaranteed non-empty by hasAttachments guard above)
+  for (const attachment of params.attachments as Attachment[]) {
     const mimeType = getMimeType(attachment.filename, attachment.contentType);
     const encoding = attachment.encoding || 'base64';
 

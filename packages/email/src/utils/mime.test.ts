@@ -271,5 +271,89 @@ describe('MIME Message Builder', () => {
       // Quotes should be escaped
       expect(message).toContain('From: "John \\"The Boss\\" Doe" <sender@example.com>');
     });
+
+    it('should include custom headers before MIME-Version', () => {
+      const message = buildRawEmailMessage({
+        from: 'sender@example.com',
+        to: 'recipient@example.com',
+        subject: 'Re: Original thread',
+        text: 'Reply body',
+        customHeaders: {
+          'In-Reply-To': '<original-msg-id@example.com>',
+          References: '<ref1@example.com> <original-msg-id@example.com>',
+        },
+      });
+
+      expect(message).toContain('In-Reply-To: <original-msg-id@example.com>');
+      expect(message).toContain('References: <ref1@example.com> <original-msg-id@example.com>');
+
+      // Custom headers should appear before MIME-Version
+      const inReplyToIdx = message.indexOf('In-Reply-To:');
+      const mimeVersionIdx = message.indexOf('MIME-Version:');
+      expect(inReplyToIdx).toBeLessThan(mimeVersionIdx);
+    });
+
+    it('should build text-only email without attachments', () => {
+      const message = buildRawEmailMessage({
+        from: 'sender@example.com',
+        to: 'recipient@example.com',
+        subject: 'Plain text',
+        text: 'Hello world',
+      });
+
+      expect(message).toContain('From: sender@example.com');
+      expect(message).toContain('Subject: Plain text');
+      expect(message).toContain('Content-Type: text/plain; charset=UTF-8');
+      expect(message).toContain('Hello world');
+      // Should NOT have multipart/mixed wrapper
+      expect(message).not.toContain('multipart/mixed');
+    });
+
+    it('should build HTML-only email without attachments', () => {
+      const message = buildRawEmailMessage({
+        from: 'sender@example.com',
+        to: 'recipient@example.com',
+        subject: 'HTML only',
+        html: '<h1>Hello</h1>',
+      });
+
+      expect(message).toContain('Content-Type: text/html; charset=UTF-8');
+      expect(message).toContain('<h1>Hello</h1>');
+      expect(message).not.toContain('multipart/mixed');
+    });
+
+    it('should build multipart/alternative for text+html without attachments', () => {
+      const message = buildRawEmailMessage({
+        from: 'sender@example.com',
+        to: 'recipient@example.com',
+        subject: 'Both',
+        text: 'Plain version',
+        html: '<p>HTML version</p>',
+      });
+
+      expect(message).toContain('Content-Type: multipart/alternative');
+      expect(message).toContain('Content-Type: text/plain; charset=UTF-8');
+      expect(message).toContain('Content-Type: text/html; charset=UTF-8');
+      expect(message).toContain('Plain version');
+      expect(message).toContain('<p>HTML version</p>');
+      // Should NOT have multipart/mixed (no attachments)
+      expect(message).not.toContain('multipart/mixed');
+    });
+
+    it('should combine custom headers with no-attachment path', () => {
+      const message = buildRawEmailMessage({
+        from: 'sender@example.com',
+        to: 'recipient@example.com',
+        subject: 'Re: Thread',
+        text: 'Reply',
+        customHeaders: {
+          'In-Reply-To': '<msg@example.com>',
+        },
+      });
+
+      expect(message).toContain('In-Reply-To: <msg@example.com>');
+      expect(message).toContain('Content-Type: text/plain; charset=UTF-8');
+      expect(message).not.toContain('multipart/mixed');
+    });
   });
 });

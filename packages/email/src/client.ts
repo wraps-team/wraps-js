@@ -11,6 +11,7 @@ import {
   UpdateTemplateCommand,
 } from '@aws-sdk/client-ses';
 import { SESError, ValidationError } from './errors';
+import { WrapsInbox } from './inbox';
 import { renderReactEmail } from './react';
 import type {
   CreateTemplateFromReactParams,
@@ -38,6 +39,12 @@ export class WrapsEmail {
   private sesClient: SESClient;
 
   /**
+   * Inbox for reading inbound emails
+   * Only available when inboxBucketName is configured
+   */
+  public readonly inbox: WrapsInbox | null;
+
+  /**
    * Template management methods
    */
   public readonly templates: {
@@ -51,6 +58,29 @@ export class WrapsEmail {
 
   constructor(config: WrapsEmailConfig = {}) {
     this.sesClient = createSESClient(config);
+
+    // Initialize inbox if bucket name provided
+    if (config.inboxBucketName) {
+      if (config.s3Client) {
+        this.inbox = new WrapsInbox(config.s3Client, config.inboxBucketName, this.sesClient);
+      } else {
+        // Dynamically import S3Client to avoid adding it as a required dependency
+        // for users who don't use inbox
+        const { S3Client } = require('@aws-sdk/client-s3');
+        const s3Config: Record<string, unknown> = {
+          region: config.region || 'us-east-1',
+        };
+        if (config.credentials) {
+          s3Config.credentials = config.credentials;
+        }
+        if (config.endpoint) {
+          s3Config.endpoint = config.endpoint;
+        }
+        this.inbox = new WrapsInbox(new S3Client(s3Config), config.inboxBucketName, this.sesClient);
+      }
+    } else {
+      this.inbox = null;
+    }
 
     // Initialize templates namespace
     this.templates = {

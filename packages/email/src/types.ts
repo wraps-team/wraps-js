@@ -1,3 +1,4 @@
+import type { S3Client } from '@aws-sdk/client-s3';
 import type { SESClient } from '@aws-sdk/client-ses';
 import type { AwsCredentialIdentityProvider } from '@aws-sdk/types';
 import type React from 'react';
@@ -15,6 +16,18 @@ export interface WrapsEmailConfig {
    * ```
    */
   client?: SESClient;
+
+  /**
+   * Pre-configured S3 client for inbox operations
+   * When provided, takes precedence over region/credentials for inbox
+   */
+  s3Client?: S3Client;
+
+  /**
+   * S3 bucket name for inbound email storage
+   * When provided, enables the inbox API (wraps.inbox.*)
+   */
+  inboxBucketName?: string;
 
   /**
    * AWS region for SES (defaults to us-east-1)
@@ -307,4 +320,118 @@ export interface Template {
   htmlPart?: string;
   textPart?: string;
   createdTimestamp: Date;
+}
+
+// ============================================================
+// Inbox types (inbound email)
+// ============================================================
+
+export interface InboxEmailAddress {
+  address: string;
+  name: string;
+}
+
+export interface InboxAttachment {
+  id: string;
+  filename: string;
+  contentType: string;
+  size: number;
+  s3Key: string;
+  contentDisposition?: 'attachment' | 'inline';
+  cid?: string | null;
+}
+
+export interface InboxEmail {
+  emailId: string;
+  messageId: string;
+  from: InboxEmailAddress;
+  to: InboxEmailAddress[];
+  cc: InboxEmailAddress[];
+  subject: string;
+  date: string;
+  html: string | null;
+  htmlTruncated: boolean;
+  text: string | null;
+  headers: Record<string, string>;
+  attachments: InboxAttachment[];
+  spamVerdict: string | null;
+  virusVerdict: string | null;
+  rawS3Key: string;
+  receivedAt: string;
+}
+
+export interface InboxEmailSummary {
+  emailId: string;
+  key: string;
+  lastModified: Date;
+  size: number;
+}
+
+export interface InboxListOptions {
+  maxResults?: number;
+  continuationToken?: string;
+}
+
+export interface InboxListResult {
+  emails: InboxEmailSummary[];
+  nextToken?: string;
+}
+
+export interface InboxGetAttachmentOptions {
+  expiresIn?: number;
+}
+
+export interface InboxForwardOptions {
+  /**
+   * Recipient(s) to forward to
+   */
+  to: string | string[] | EmailAddress | EmailAddress[];
+
+  /**
+   * Sender address for the forwarded email (must be verified in SES)
+   */
+  from: string | EmailAddress;
+
+  /**
+   * If true (default), forward the raw MIME with rewritten headers.
+   * If false, wrap the original content in a new message with a forwarded banner.
+   */
+  passthrough?: boolean;
+
+  /**
+   * Subject prefix (default: "Fwd:" for wrapped mode)
+   */
+  addPrefix?: string;
+
+  /**
+   * Prepended text body (wrapped mode only)
+   */
+  text?: string;
+
+  /**
+   * Prepended HTML body (wrapped mode only)
+   */
+  html?: string;
+}
+
+export interface InboxReplyOptions {
+  /**
+   * Sender address for the reply (must be verified in SES)
+   */
+  from: string | EmailAddress;
+
+  /**
+   * Plain text reply body
+   */
+  text?: string;
+
+  /**
+   * HTML reply body
+   */
+  html?: string;
+
+  /**
+   * Attachments to include in the reply
+   */
+  attachments?: Attachment[];
 }
