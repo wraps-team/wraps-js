@@ -87,7 +87,7 @@ export interface WrapsBrandKit {
  *
  * @example
  * ```ts
- * import { defineConfig } from '@wraps.dev/email';
+ * import { defineConfig } from '@wraps.dev/client';
  *
  * export default defineConfig({
  *   org: 'my-company',
@@ -106,7 +106,7 @@ export function defineConfig(config: WrapsProjectConfig): WrapsProjectConfig {
  *
  * @example
  * ```ts
- * import { defineBrand } from '@wraps.dev/email';
+ * import { defineBrand } from '@wraps.dev/client';
  *
  * export default defineBrand({
  *   primaryColor: '#5046e5',

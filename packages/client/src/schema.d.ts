@@ -44,6 +44,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/connections/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List AWS connections
+         * @description Returns all AWS account connections for the authenticated organization.
+         */
+        get: operations["getV1Connections"];
+        put?: never;
+        /**
+         * Register or update an AWS connection
+         * @description Registers or updates the AWS account connection. Returns externalId for IAM role trust policy and webhookSecret for EventBridge configuration.
+         */
+        post: operations["postV1Connections"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/connections/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Disconnect an AWS account
+         * @description Clears the webhook secret for the connection. The account record is preserved.
+         */
+        delete: operations["deleteV1ConnectionsById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/contacts/": {
         parameters: {
             query?: never;
@@ -288,6 +332,154 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/templates/push": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Push a template from CLI
+         * @description Upserts a template compiled from React Email source. Used by `wraps push`.
+         */
+        post: operations["postV1TemplatesPush"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/templates/push/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Push multiple templates from CLI
+         * @description Batch upsert templates compiled from React Email source.
+         */
+        post: operations["postV1TemplatesPushBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/templates/pull": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pull templates for CLI sync
+         * @description Returns all templates pushed from CLI with their React Email source.
+         */
+        get: operations["getV1TemplatesPull"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tools/email-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check email deliverability
+         * @description Comprehensive email deliverability check for any domain. Returns SPF, DKIM, DMARC status and a grade. Optionally provide DKIM selectors for providers like AWS SES that use random selectors.
+         */
+        post: operations["postToolsEmail-check"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tools/email-check/{domain}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Check email deliverability (GET)
+         * @description Quick email deliverability check for any domain via GET request.
+         */
+        get: operations["getToolsEmail-checkByDomain"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workflow-schedules/{workflowId}/enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postV1Workflow-schedulesByWorkflowIdEnable"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workflow-schedules/{workflowId}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postV1Workflow-schedulesByWorkflowIdDisable"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workflow-schedules/{workflowId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putV1Workflow-schedulesByWorkflowId"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -313,7 +505,59 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        /**
+                         * @description Health status
+                         * @example ok
+                         */
+                        status: string;
+                        /**
+                         * Format: date-time
+                         * @description ISO 8601 timestamp
+                         */
+                        timestamp: string;
+                        /**
+                         * @description API version
+                         * @example 1.0.0
+                         */
+                        version: string;
+                    };
+                    "multipart/form-data": {
+                        /**
+                         * @description Health status
+                         * @example ok
+                         */
+                        status: string;
+                        /**
+                         * Format: date-time
+                         * @description ISO 8601 timestamp
+                         */
+                        timestamp: string;
+                        /**
+                         * @description API version
+                         * @example 1.0.0
+                         */
+                        version: string;
+                    };
+                    "text/plain": {
+                        /**
+                         * @description Health status
+                         * @example ok
+                         */
+                        status: string;
+                        /**
+                         * Format: date-time
+                         * @description ISO 8601 timestamp
+                         */
+                        timestamp: string;
+                        /**
+                         * @description API version
+                         * @example 1.0.0
+                         */
+                        version: string;
+                    };
+                };
             };
         };
     };
@@ -330,6 +574,124 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
+                content: {
+                    "application/json": {
+                        /** @description API name */
+                        name: string;
+                        /** @description API version */
+                        version: string;
+                        /** @description Documentation URL */
+                        docs: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description API name */
+                        name: string;
+                        /** @description API version */
+                        version: string;
+                        /** @description Documentation URL */
+                        docs: string;
+                    };
+                    "text/plain": {
+                        /** @description API name */
+                        name: string;
+                        /** @description API version */
+                        version: string;
+                        /** @description Documentation URL */
+                        docs: string;
+                    };
+                };
+            };
+        };
+    };
+    getV1Connections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postV1Connections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description AWS account ID (12 digits) */
+                    accountId: string;
+                    /** @description AWS region (e.g. us-east-1) */
+                    region: string;
+                    /** @description Display name for the account */
+                    name?: string;
+                    /** @description Service features config */
+                    features?: {
+                        [key: string]: unknown;
+                    };
+                };
+                "multipart/form-data": {
+                    /** @description AWS account ID (12 digits) */
+                    accountId: string;
+                    /** @description AWS region (e.g. us-east-1) */
+                    region: string;
+                    /** @description Display name for the account */
+                    name?: string;
+                    /** @description Service features config */
+                    features?: {
+                        [key: string]: unknown;
+                    };
+                };
+                "text/plain": {
+                    /** @description AWS account ID (12 digits) */
+                    accountId: string;
+                    /** @description AWS region (e.g. us-east-1) */
+                    region: string;
+                    /** @description Display name for the account */
+                    name?: string;
+                    /** @description Service features config */
+                    features?: {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteV1ConnectionsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Connection ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content?: never;
             };
         };
@@ -337,10 +699,15 @@ export interface operations {
     getV1Contacts: {
         parameters: {
             query?: {
+                /** @description Page number (1-indexed) */
                 page?: string;
+                /** @description Number of items per page (max 100) */
                 pageSize?: string;
+                /** @description Filter by email status */
                 emailStatus?: string;
+                /** @description Filter by SMS status */
                 smsStatus?: string;
+                /** @description Search by email or phone */
                 search?: string;
             };
             header?: never;
@@ -353,7 +720,167 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        contacts: {
+                            /** @description Contact ID */
+                            id: string;
+                            /** @description Email address */
+                            email: string | null;
+                            /** @description Phone number */
+                            phone: string | null;
+                            /** @description First name */
+                            firstName: string | null;
+                            /** @description Last name */
+                            lastName: string | null;
+                            /** @description Company name */
+                            company: string | null;
+                            /** @description Job title */
+                            jobTitle: string | null;
+                            /** @description Email subscription status */
+                            emailStatus: string | null;
+                            /** @description SMS subscription status */
+                            smsStatus: string | null;
+                            properties: {
+                                [key: string]: unknown;
+                            };
+                            /** @description Number of emails sent */
+                            emailsSent: number;
+                            /** @description Number of emails opened */
+                            emailsOpened: number;
+                            /** @description Number of emails clicked */
+                            emailsClicked: number;
+                            /** @description Number of SMS sent */
+                            smsSent: number;
+                            /** @description Number of SMS clicked */
+                            smsClicked: number;
+                            /**
+                             * Format: date-time
+                             * @description Creation timestamp
+                             */
+                            createdAt: string;
+                            /**
+                             * Format: date-time
+                             * @description Last update timestamp
+                             */
+                            updatedAt: string;
+                        }[];
+                        /** @description Total number of contacts matching filter */
+                        total: number;
+                        /** @description Current page number */
+                        page: number;
+                        /** @description Number of items per page */
+                        pageSize: number;
+                        /** @description Total number of pages */
+                        totalPages: number;
+                    };
+                    "multipart/form-data": {
+                        contacts: {
+                            /** @description Contact ID */
+                            id: string;
+                            /** @description Email address */
+                            email: string | null;
+                            /** @description Phone number */
+                            phone: string | null;
+                            /** @description First name */
+                            firstName: string | null;
+                            /** @description Last name */
+                            lastName: string | null;
+                            /** @description Company name */
+                            company: string | null;
+                            /** @description Job title */
+                            jobTitle: string | null;
+                            /** @description Email subscription status */
+                            emailStatus: string | null;
+                            /** @description SMS subscription status */
+                            smsStatus: string | null;
+                            properties: {
+                                [key: string]: unknown;
+                            };
+                            /** @description Number of emails sent */
+                            emailsSent: number;
+                            /** @description Number of emails opened */
+                            emailsOpened: number;
+                            /** @description Number of emails clicked */
+                            emailsClicked: number;
+                            /** @description Number of SMS sent */
+                            smsSent: number;
+                            /** @description Number of SMS clicked */
+                            smsClicked: number;
+                            /**
+                             * Format: date-time
+                             * @description Creation timestamp
+                             */
+                            createdAt: string;
+                            /**
+                             * Format: date-time
+                             * @description Last update timestamp
+                             */
+                            updatedAt: string;
+                        }[];
+                        /** @description Total number of contacts matching filter */
+                        total: number;
+                        /** @description Current page number */
+                        page: number;
+                        /** @description Number of items per page */
+                        pageSize: number;
+                        /** @description Total number of pages */
+                        totalPages: number;
+                    };
+                    "text/plain": {
+                        contacts: {
+                            /** @description Contact ID */
+                            id: string;
+                            /** @description Email address */
+                            email: string | null;
+                            /** @description Phone number */
+                            phone: string | null;
+                            /** @description First name */
+                            firstName: string | null;
+                            /** @description Last name */
+                            lastName: string | null;
+                            /** @description Company name */
+                            company: string | null;
+                            /** @description Job title */
+                            jobTitle: string | null;
+                            /** @description Email subscription status */
+                            emailStatus: string | null;
+                            /** @description SMS subscription status */
+                            smsStatus: string | null;
+                            properties: {
+                                [key: string]: unknown;
+                            };
+                            /** @description Number of emails sent */
+                            emailsSent: number;
+                            /** @description Number of emails opened */
+                            emailsOpened: number;
+                            /** @description Number of emails clicked */
+                            emailsClicked: number;
+                            /** @description Number of SMS sent */
+                            smsSent: number;
+                            /** @description Number of SMS clicked */
+                            smsClicked: number;
+                            /**
+                             * Format: date-time
+                             * @description Creation timestamp
+                             */
+                            createdAt: string;
+                            /**
+                             * Format: date-time
+                             * @description Last update timestamp
+                             */
+                            updatedAt: string;
+                        }[];
+                        /** @description Total number of contacts matching filter */
+                        total: number;
+                        /** @description Current page number */
+                        page: number;
+                        /** @description Number of items per page */
+                        pageSize: number;
+                        /** @description Total number of pages */
+                        totalPages: number;
+                    };
+                };
             };
         };
     };
@@ -367,58 +894,265 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @description Email address */
                     email?: string;
+                    /** @description Phone number */
                     phone?: string;
+                    /** @description First name */
                     firstName?: string;
+                    /** @description Last name */
                     lastName?: string;
+                    /** @description Company name */
                     company?: string;
+                    /** @description Job title */
                     jobTitle?: string;
+                    /** @description Email subscription status */
                     emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
+                    /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
+                    /** @description Custom properties */
                     properties?: {
                         [key: string]: unknown;
                     };
+                    /** @description Topic IDs to subscribe */
                     topicIds?: string[];
+                    /** @description Topic slugs to subscribe */
                     topicSlugs?: string[];
                 };
                 "multipart/form-data": {
+                    /** @description Email address */
                     email?: string;
+                    /** @description Phone number */
                     phone?: string;
+                    /** @description First name */
                     firstName?: string;
+                    /** @description Last name */
                     lastName?: string;
+                    /** @description Company name */
                     company?: string;
+                    /** @description Job title */
                     jobTitle?: string;
+                    /** @description Email subscription status */
                     emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
+                    /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
+                    /** @description Custom properties */
                     properties?: {
                         [key: string]: unknown;
                     };
+                    /** @description Topic IDs to subscribe */
                     topicIds?: string[];
+                    /** @description Topic slugs to subscribe */
                     topicSlugs?: string[];
                 };
                 "text/plain": {
+                    /** @description Email address */
                     email?: string;
+                    /** @description Phone number */
                     phone?: string;
+                    /** @description First name */
                     firstName?: string;
+                    /** @description Last name */
                     lastName?: string;
+                    /** @description Company name */
                     company?: string;
+                    /** @description Job title */
                     jobTitle?: string;
+                    /** @description Email subscription status */
                     emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
+                    /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
+                    /** @description Custom properties */
                     properties?: {
                         [key: string]: unknown;
                     };
+                    /** @description Topic IDs to subscribe */
                     topicIds?: string[];
+                    /** @description Topic slugs to subscribe */
                     topicSlugs?: string[];
                 };
             };
         };
         responses: {
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        /** @description Contact ID */
+                        id: string;
+                        /** @description Email address */
+                        email: string | null;
+                        /** @description Phone number */
+                        phone: string | null;
+                        /** @description First name */
+                        firstName: string | null;
+                        /** @description Last name */
+                        lastName: string | null;
+                        /** @description Company name */
+                        company: string | null;
+                        /** @description Job title */
+                        jobTitle: string | null;
+                        /** @description Email subscription status */
+                        emailStatus: string | null;
+                        /** @description SMS subscription status */
+                        smsStatus: string | null;
+                        properties: {
+                            [key: string]: unknown;
+                        };
+                        /** @description Number of emails sent */
+                        emailsSent: number;
+                        /** @description Number of emails opened */
+                        emailsOpened: number;
+                        /** @description Number of emails clicked */
+                        emailsClicked: number;
+                        /** @description Number of SMS sent */
+                        smsSent: number;
+                        /** @description Number of SMS clicked */
+                        smsClicked: number;
+                        /**
+                         * Format: date-time
+                         * @description Creation timestamp
+                         */
+                        createdAt: string;
+                        /**
+                         * Format: date-time
+                         * @description Last update timestamp
+                         */
+                        updatedAt: string;
+                        /** @description Topic IDs pending confirmation */
+                        pendingTopics?: string[];
+                    };
+                    "multipart/form-data": {
+                        /** @description Contact ID */
+                        id: string;
+                        /** @description Email address */
+                        email: string | null;
+                        /** @description Phone number */
+                        phone: string | null;
+                        /** @description First name */
+                        firstName: string | null;
+                        /** @description Last name */
+                        lastName: string | null;
+                        /** @description Company name */
+                        company: string | null;
+                        /** @description Job title */
+                        jobTitle: string | null;
+                        /** @description Email subscription status */
+                        emailStatus: string | null;
+                        /** @description SMS subscription status */
+                        smsStatus: string | null;
+                        properties: {
+                            [key: string]: unknown;
+                        };
+                        /** @description Number of emails sent */
+                        emailsSent: number;
+                        /** @description Number of emails opened */
+                        emailsOpened: number;
+                        /** @description Number of emails clicked */
+                        emailsClicked: number;
+                        /** @description Number of SMS sent */
+                        smsSent: number;
+                        /** @description Number of SMS clicked */
+                        smsClicked: number;
+                        /**
+                         * Format: date-time
+                         * @description Creation timestamp
+                         */
+                        createdAt: string;
+                        /**
+                         * Format: date-time
+                         * @description Last update timestamp
+                         */
+                        updatedAt: string;
+                        /** @description Topic IDs pending confirmation */
+                        pendingTopics?: string[];
+                    };
+                    "text/plain": {
+                        /** @description Contact ID */
+                        id: string;
+                        /** @description Email address */
+                        email: string | null;
+                        /** @description Phone number */
+                        phone: string | null;
+                        /** @description First name */
+                        firstName: string | null;
+                        /** @description Last name */
+                        lastName: string | null;
+                        /** @description Company name */
+                        company: string | null;
+                        /** @description Job title */
+                        jobTitle: string | null;
+                        /** @description Email subscription status */
+                        emailStatus: string | null;
+                        /** @description SMS subscription status */
+                        smsStatus: string | null;
+                        properties: {
+                            [key: string]: unknown;
+                        };
+                        /** @description Number of emails sent */
+                        emailsSent: number;
+                        /** @description Number of emails opened */
+                        emailsOpened: number;
+                        /** @description Number of emails clicked */
+                        emailsClicked: number;
+                        /** @description Number of SMS sent */
+                        smsSent: number;
+                        /** @description Number of SMS clicked */
+                        smsClicked: number;
+                        /**
+                         * Format: date-time
+                         * @description Creation timestamp
+                         */
+                        createdAt: string;
+                        /**
+                         * Format: date-time
+                         * @description Last update timestamp
+                         */
+                        updatedAt: string;
+                        /** @description Topic IDs pending confirmation */
+                        pendingTopics?: string[];
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
             };
         };
     };
@@ -432,12 +1166,15 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @description Contact IDs to delete (max 100) */
                     ids: string[];
                 };
                 "multipart/form-data": {
+                    /** @description Contact IDs to delete (max 100) */
                     ids: string[];
                 };
                 "text/plain": {
+                    /** @description Contact IDs to delete (max 100) */
                     ids: string[];
                 };
             };
@@ -447,7 +1184,42 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        /** @description Number of contacts deleted */
+                        deleted: number;
+                    };
+                    "multipart/form-data": {
+                        success: boolean;
+                        /** @description Number of contacts deleted */
+                        deleted: number;
+                    };
+                    "text/plain": {
+                        success: boolean;
+                        /** @description Number of contacts deleted */
+                        deleted: number;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
             };
         };
     };
@@ -456,6 +1228,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Contact ID */
                 id: string;
             };
             cookie?: never;
@@ -466,7 +1239,174 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        /** @description Contact ID */
+                        id: string;
+                        /** @description Email address */
+                        email: string | null;
+                        /** @description Phone number */
+                        phone: string | null;
+                        /** @description First name */
+                        firstName: string | null;
+                        /** @description Last name */
+                        lastName: string | null;
+                        /** @description Company name */
+                        company: string | null;
+                        /** @description Job title */
+                        jobTitle: string | null;
+                        /** @description Email subscription status */
+                        emailStatus: string | null;
+                        /** @description SMS subscription status */
+                        smsStatus: string | null;
+                        properties: {
+                            [key: string]: unknown;
+                        };
+                        /** @description Number of emails sent */
+                        emailsSent: number;
+                        /** @description Number of emails opened */
+                        emailsOpened: number;
+                        /** @description Number of emails clicked */
+                        emailsClicked: number;
+                        /** @description Number of SMS sent */
+                        smsSent: number;
+                        /** @description Number of SMS clicked */
+                        smsClicked: number;
+                        /**
+                         * Format: date-time
+                         * @description Creation timestamp
+                         */
+                        createdAt: string;
+                        /**
+                         * Format: date-time
+                         * @description Last update timestamp
+                         */
+                        updatedAt: string;
+                        topics: {
+                            topicId: string;
+                            topicName: string;
+                            status: string;
+                            subscribedAt: string | null;
+                        }[];
+                    };
+                    "multipart/form-data": {
+                        /** @description Contact ID */
+                        id: string;
+                        /** @description Email address */
+                        email: string | null;
+                        /** @description Phone number */
+                        phone: string | null;
+                        /** @description First name */
+                        firstName: string | null;
+                        /** @description Last name */
+                        lastName: string | null;
+                        /** @description Company name */
+                        company: string | null;
+                        /** @description Job title */
+                        jobTitle: string | null;
+                        /** @description Email subscription status */
+                        emailStatus: string | null;
+                        /** @description SMS subscription status */
+                        smsStatus: string | null;
+                        properties: {
+                            [key: string]: unknown;
+                        };
+                        /** @description Number of emails sent */
+                        emailsSent: number;
+                        /** @description Number of emails opened */
+                        emailsOpened: number;
+                        /** @description Number of emails clicked */
+                        emailsClicked: number;
+                        /** @description Number of SMS sent */
+                        smsSent: number;
+                        /** @description Number of SMS clicked */
+                        smsClicked: number;
+                        /**
+                         * Format: date-time
+                         * @description Creation timestamp
+                         */
+                        createdAt: string;
+                        /**
+                         * Format: date-time
+                         * @description Last update timestamp
+                         */
+                        updatedAt: string;
+                        topics: {
+                            topicId: string;
+                            topicName: string;
+                            status: string;
+                            subscribedAt: string | null;
+                        }[];
+                    };
+                    "text/plain": {
+                        /** @description Contact ID */
+                        id: string;
+                        /** @description Email address */
+                        email: string | null;
+                        /** @description Phone number */
+                        phone: string | null;
+                        /** @description First name */
+                        firstName: string | null;
+                        /** @description Last name */
+                        lastName: string | null;
+                        /** @description Company name */
+                        company: string | null;
+                        /** @description Job title */
+                        jobTitle: string | null;
+                        /** @description Email subscription status */
+                        emailStatus: string | null;
+                        /** @description SMS subscription status */
+                        smsStatus: string | null;
+                        properties: {
+                            [key: string]: unknown;
+                        };
+                        /** @description Number of emails sent */
+                        emailsSent: number;
+                        /** @description Number of emails opened */
+                        emailsOpened: number;
+                        /** @description Number of emails clicked */
+                        emailsClicked: number;
+                        /** @description Number of SMS sent */
+                        smsSent: number;
+                        /** @description Number of SMS clicked */
+                        smsClicked: number;
+                        /**
+                         * Format: date-time
+                         * @description Creation timestamp
+                         */
+                        createdAt: string;
+                        /**
+                         * Format: date-time
+                         * @description Last update timestamp
+                         */
+                        updatedAt: string;
+                        topics: {
+                            topicId: string;
+                            topicName: string;
+                            status: string;
+                            subscribedAt: string | null;
+                        }[];
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
             };
         };
     };
@@ -475,6 +1415,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Contact ID */
                 id: string;
             };
             cookie?: never;
@@ -485,7 +1426,36 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                    "multipart/form-data": {
+                        success: boolean;
+                    };
+                    "text/plain": {
+                        success: boolean;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
             };
         };
     };
@@ -494,6 +1464,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Contact ID */
                 id: string;
             };
             cookie?: never;
@@ -501,48 +1472,81 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @description Email address */
                     email?: string;
+                    /** @description Phone number */
                     phone?: string;
-                    firstName?: (string | null) | null;
-                    lastName?: (string | null) | null;
-                    company?: (string | null) | null;
-                    jobTitle?: (string | null) | null;
+                    /** @description First name */
+                    firstName?: string | null;
+                    /** @description Last name */
+                    lastName?: string | null;
+                    /** @description Company name */
+                    company?: string | null;
+                    /** @description Job title */
+                    jobTitle?: string | null;
+                    /** @description Email subscription status */
                     emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
+                    /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
+                    /** @description Custom properties */
                     properties?: {
                         [key: string]: unknown;
                     };
+                    /** @description Topic IDs to subscribe */
                     topicIds?: string[];
+                    /** @description Topic slugs to subscribe */
                     topicSlugs?: string[];
                 };
                 "multipart/form-data": {
+                    /** @description Email address */
                     email?: string;
+                    /** @description Phone number */
                     phone?: string;
-                    firstName?: (string | null) | null;
-                    lastName?: (string | null) | null;
-                    company?: (string | null) | null;
-                    jobTitle?: (string | null) | null;
+                    /** @description First name */
+                    firstName?: string | null;
+                    /** @description Last name */
+                    lastName?: string | null;
+                    /** @description Company name */
+                    company?: string | null;
+                    /** @description Job title */
+                    jobTitle?: string | null;
+                    /** @description Email subscription status */
                     emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
+                    /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
+                    /** @description Custom properties */
                     properties?: {
                         [key: string]: unknown;
                     };
+                    /** @description Topic IDs to subscribe */
                     topicIds?: string[];
+                    /** @description Topic slugs to subscribe */
                     topicSlugs?: string[];
                 };
                 "text/plain": {
+                    /** @description Email address */
                     email?: string;
+                    /** @description Phone number */
                     phone?: string;
-                    firstName?: (string | null) | null;
-                    lastName?: (string | null) | null;
-                    company?: (string | null) | null;
-                    jobTitle?: (string | null) | null;
+                    /** @description First name */
+                    firstName?: string | null;
+                    /** @description Last name */
+                    lastName?: string | null;
+                    /** @description Company name */
+                    company?: string | null;
+                    /** @description Job title */
+                    jobTitle?: string | null;
+                    /** @description Email subscription status */
                     emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
+                    /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
+                    /** @description Custom properties */
                     properties?: {
                         [key: string]: unknown;
                     };
+                    /** @description Topic IDs to subscribe */
                     topicIds?: string[];
+                    /** @description Topic slugs to subscribe */
                     topicSlugs?: string[];
                 };
             };
@@ -552,7 +1556,162 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        /** @description Contact ID */
+                        id: string;
+                        /** @description Email address */
+                        email: string | null;
+                        /** @description Phone number */
+                        phone: string | null;
+                        /** @description First name */
+                        firstName: string | null;
+                        /** @description Last name */
+                        lastName: string | null;
+                        /** @description Company name */
+                        company: string | null;
+                        /** @description Job title */
+                        jobTitle: string | null;
+                        /** @description Email subscription status */
+                        emailStatus: string | null;
+                        /** @description SMS subscription status */
+                        smsStatus: string | null;
+                        properties: {
+                            [key: string]: unknown;
+                        };
+                        /** @description Number of emails sent */
+                        emailsSent: number;
+                        /** @description Number of emails opened */
+                        emailsOpened: number;
+                        /** @description Number of emails clicked */
+                        emailsClicked: number;
+                        /** @description Number of SMS sent */
+                        smsSent: number;
+                        /** @description Number of SMS clicked */
+                        smsClicked: number;
+                        /**
+                         * Format: date-time
+                         * @description Creation timestamp
+                         */
+                        createdAt: string;
+                        /**
+                         * Format: date-time
+                         * @description Last update timestamp
+                         */
+                        updatedAt: string;
+                        /** @description Topic IDs pending confirmation */
+                        pendingTopics?: string[];
+                    };
+                    "multipart/form-data": {
+                        /** @description Contact ID */
+                        id: string;
+                        /** @description Email address */
+                        email: string | null;
+                        /** @description Phone number */
+                        phone: string | null;
+                        /** @description First name */
+                        firstName: string | null;
+                        /** @description Last name */
+                        lastName: string | null;
+                        /** @description Company name */
+                        company: string | null;
+                        /** @description Job title */
+                        jobTitle: string | null;
+                        /** @description Email subscription status */
+                        emailStatus: string | null;
+                        /** @description SMS subscription status */
+                        smsStatus: string | null;
+                        properties: {
+                            [key: string]: unknown;
+                        };
+                        /** @description Number of emails sent */
+                        emailsSent: number;
+                        /** @description Number of emails opened */
+                        emailsOpened: number;
+                        /** @description Number of emails clicked */
+                        emailsClicked: number;
+                        /** @description Number of SMS sent */
+                        smsSent: number;
+                        /** @description Number of SMS clicked */
+                        smsClicked: number;
+                        /**
+                         * Format: date-time
+                         * @description Creation timestamp
+                         */
+                        createdAt: string;
+                        /**
+                         * Format: date-time
+                         * @description Last update timestamp
+                         */
+                        updatedAt: string;
+                        /** @description Topic IDs pending confirmation */
+                        pendingTopics?: string[];
+                    };
+                    "text/plain": {
+                        /** @description Contact ID */
+                        id: string;
+                        /** @description Email address */
+                        email: string | null;
+                        /** @description Phone number */
+                        phone: string | null;
+                        /** @description First name */
+                        firstName: string | null;
+                        /** @description Last name */
+                        lastName: string | null;
+                        /** @description Company name */
+                        company: string | null;
+                        /** @description Job title */
+                        jobTitle: string | null;
+                        /** @description Email subscription status */
+                        emailStatus: string | null;
+                        /** @description SMS subscription status */
+                        smsStatus: string | null;
+                        properties: {
+                            [key: string]: unknown;
+                        };
+                        /** @description Number of emails sent */
+                        emailsSent: number;
+                        /** @description Number of emails opened */
+                        emailsOpened: number;
+                        /** @description Number of emails clicked */
+                        emailsClicked: number;
+                        /** @description Number of SMS sent */
+                        smsSent: number;
+                        /** @description Number of SMS clicked */
+                        smsClicked: number;
+                        /**
+                         * Format: date-time
+                         * @description Creation timestamp
+                         */
+                        createdAt: string;
+                        /**
+                         * Format: date-time
+                         * @description Last update timestamp
+                         */
+                        updatedAt: string;
+                        /** @description Topic IDs pending confirmation */
+                        pendingTopics?: string[];
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
             };
         };
     };
@@ -561,6 +1720,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Contact ID */
                 id: string;
             };
             cookie?: never;
@@ -568,15 +1728,21 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @description Topic IDs to subscribe */
                     topicIds?: string[];
+                    /** @description Topic slugs to subscribe */
                     topicSlugs?: string[];
                 };
                 "multipart/form-data": {
+                    /** @description Topic IDs to subscribe */
                     topicIds?: string[];
+                    /** @description Topic slugs to subscribe */
                     topicSlugs?: string[];
                 };
                 "text/plain": {
+                    /** @description Topic IDs to subscribe */
                     topicIds?: string[];
+                    /** @description Topic slugs to subscribe */
                     topicSlugs?: string[];
                 };
             };
@@ -586,7 +1752,54 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        topics: {
+                            topicId: string;
+                            topicName: string;
+                            status: string;
+                            subscribedAt: string | null;
+                        }[];
+                        pendingTopics?: string[];
+                    };
+                    "multipart/form-data": {
+                        topics: {
+                            topicId: string;
+                            topicName: string;
+                            status: string;
+                            subscribedAt: string | null;
+                        }[];
+                        pendingTopics?: string[];
+                    };
+                    "text/plain": {
+                        topics: {
+                            topicId: string;
+                            topicName: string;
+                            status: string;
+                            subscribedAt: string | null;
+                        }[];
+                        pendingTopics?: string[];
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
             };
         };
     };
@@ -600,60 +1813,120 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @description Channel to send through */
                     channel?: "email" | "sms";
+                    /** @description Name for the batch send */
                     name?: string;
+                    /** @description Audience targeting type */
                     audienceType?: "all" | "topic" | "segment";
+                    /** @description Topic ID to target */
                     topicId?: string;
+                    /** @description Segment ID to target */
                     segmentId?: string;
+                    /** @description Email subject line */
                     subject?: string;
+                    /** @description Email preview text */
                     previewText?: string;
+                    /** @description From email address */
                     from?: string;
+                    /** @description From display name */
                     fromName?: string;
+                    /** @description Reply-to email address */
                     replyTo?: string;
+                    /** @description Email template ID */
                     templateId?: string;
+                    /** @description Raw HTML content (if not using template) */
                     htmlContent?: string;
+                    /** @description SMS body text */
                     body?: string;
+                    /** @description SMS sender ID */
                     senderId?: string;
+                    /**
+                     * Format: date-time
+                     * @description ISO 8601 datetime for scheduled send
+                     */
                     scheduledFor?: string;
+                    /** @description AWS account ID to use for sending */
                     awsAccountId: string;
+                    /** @description Pre-counted recipient count */
                     totalRecipients?: number;
                 };
                 "multipart/form-data": {
+                    /** @description Channel to send through */
                     channel?: "email" | "sms";
+                    /** @description Name for the batch send */
                     name?: string;
+                    /** @description Audience targeting type */
                     audienceType?: "all" | "topic" | "segment";
+                    /** @description Topic ID to target */
                     topicId?: string;
+                    /** @description Segment ID to target */
                     segmentId?: string;
+                    /** @description Email subject line */
                     subject?: string;
+                    /** @description Email preview text */
                     previewText?: string;
+                    /** @description From email address */
                     from?: string;
+                    /** @description From display name */
                     fromName?: string;
+                    /** @description Reply-to email address */
                     replyTo?: string;
+                    /** @description Email template ID */
                     templateId?: string;
+                    /** @description Raw HTML content (if not using template) */
                     htmlContent?: string;
+                    /** @description SMS body text */
                     body?: string;
+                    /** @description SMS sender ID */
                     senderId?: string;
+                    /**
+                     * Format: date-time
+                     * @description ISO 8601 datetime for scheduled send
+                     */
                     scheduledFor?: string;
+                    /** @description AWS account ID to use for sending */
                     awsAccountId: string;
+                    /** @description Pre-counted recipient count */
                     totalRecipients?: number;
                 };
                 "text/plain": {
+                    /** @description Channel to send through */
                     channel?: "email" | "sms";
+                    /** @description Name for the batch send */
                     name?: string;
+                    /** @description Audience targeting type */
                     audienceType?: "all" | "topic" | "segment";
+                    /** @description Topic ID to target */
                     topicId?: string;
+                    /** @description Segment ID to target */
                     segmentId?: string;
+                    /** @description Email subject line */
                     subject?: string;
+                    /** @description Email preview text */
                     previewText?: string;
+                    /** @description From email address */
                     from?: string;
+                    /** @description From display name */
                     fromName?: string;
+                    /** @description Reply-to email address */
                     replyTo?: string;
+                    /** @description Email template ID */
                     templateId?: string;
+                    /** @description Raw HTML content (if not using template) */
                     htmlContent?: string;
+                    /** @description SMS body text */
                     body?: string;
+                    /** @description SMS sender ID */
                     senderId?: string;
+                    /**
+                     * Format: date-time
+                     * @description ISO 8601 datetime for scheduled send
+                     */
                     scheduledFor?: string;
+                    /** @description AWS account ID to use for sending */
                     awsAccountId: string;
+                    /** @description Pre-counted recipient count */
                     totalRecipients?: number;
                 };
             };
@@ -665,24 +1938,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        /** @description Batch ID */
                         id: string;
+                        /** @description Batch status (queued, scheduled, processing, completed, failed, cancelled) */
                         status: string;
+                        /** @description Channel (email or sms) */
                         channel: string;
+                        /** @description Total number of recipients */
                         totalRecipients: number;
+                        /**
+                         * Format: date-time
+                         * @description Creation timestamp
+                         */
                         createdAt: string;
                     };
                     "multipart/form-data": {
+                        /** @description Batch ID */
                         id: string;
+                        /** @description Batch status (queued, scheduled, processing, completed, failed, cancelled) */
                         status: string;
+                        /** @description Channel (email or sms) */
                         channel: string;
+                        /** @description Total number of recipients */
                         totalRecipients: number;
+                        /**
+                         * Format: date-time
+                         * @description Creation timestamp
+                         */
                         createdAt: string;
                     };
                     "text/plain": {
+                        /** @description Batch ID */
                         id: string;
+                        /** @description Batch status (queued, scheduled, processing, completed, failed, cancelled) */
                         status: string;
+                        /** @description Channel (email or sms) */
                         channel: string;
+                        /** @description Total number of recipients */
                         totalRecipients: number;
+                        /**
+                         * Format: date-time
+                         * @description Creation timestamp
+                         */
                         createdAt: string;
                     };
                 };
@@ -694,6 +1991,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Batch ID */
                 id: string;
             };
             cookie?: never;
@@ -704,7 +2002,47 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        id: string;
+                        status: string;
+                        channel: string;
+                        name: string | null;
+                        totalRecipients: number;
+                        processedRecipients: number;
+                        sent: number;
+                        failed: number;
+                        startedAt: string | null;
+                        completedAt: string | null;
+                        createdAt: string;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        status: string;
+                        channel: string;
+                        name: string | null;
+                        totalRecipients: number;
+                        processedRecipients: number;
+                        sent: number;
+                        failed: number;
+                        startedAt: string | null;
+                        completedAt: string | null;
+                        createdAt: string;
+                    };
+                    "text/plain": {
+                        id: string;
+                        status: string;
+                        channel: string;
+                        name: string | null;
+                        totalRecipients: number;
+                        processedRecipients: number;
+                        sent: number;
+                        failed: number;
+                        startedAt: string | null;
+                        completedAt: string | null;
+                        createdAt: string;
+                    };
+                };
             };
         };
     };
@@ -713,6 +2051,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Batch ID to cancel */
                 id: string;
             };
             cookie?: never;
@@ -795,7 +2134,51 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        /** @description Number of workflows triggered */
+                        workflowsTriggered: number;
+                        /** @description Number of executions resumed */
+                        executionsResumed: number;
+                    };
+                    "multipart/form-data": {
+                        success: boolean;
+                        /** @description Number of workflows triggered */
+                        workflowsTriggered: number;
+                        /** @description Number of executions resumed */
+                        executionsResumed: number;
+                    };
+                    "text/plain": {
+                        success: boolean;
+                        /** @description Number of workflows triggered */
+                        workflowsTriggered: number;
+                        /** @description Number of executions resumed */
+                        executionsResumed: number;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
             };
         };
     };
@@ -809,6 +2192,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @description List of events to process */
                     events: {
                         name: string;
                         contactId?: string;
@@ -819,6 +2203,7 @@ export interface operations {
                     }[];
                 };
                 "multipart/form-data": {
+                    /** @description List of events to process */
                     events: {
                         name: string;
                         contactId?: string;
@@ -829,6 +2214,7 @@ export interface operations {
                     }[];
                 };
                 "text/plain": {
+                    /** @description List of events to process */
                     events: {
                         name: string;
                         contactId?: string;
@@ -845,7 +2231,41 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        /** @description Number of events processed */
+                        processed: number;
+                        /** @description Total workflows triggered */
+                        workflowsTriggered: number;
+                        /** @description Total executions resumed */
+                        executionsResumed: number;
+                        /** @description Error messages if any */
+                        errors: string[];
+                    };
+                    "multipart/form-data": {
+                        success: boolean;
+                        /** @description Number of events processed */
+                        processed: number;
+                        /** @description Total workflows triggered */
+                        workflowsTriggered: number;
+                        /** @description Total executions resumed */
+                        executionsResumed: number;
+                        /** @description Error messages if any */
+                        errors: string[];
+                    };
+                    "text/plain": {
+                        success: boolean;
+                        /** @description Number of events processed */
+                        processed: number;
+                        /** @description Total workflows triggered */
+                        workflowsTriggered: number;
+                        /** @description Total executions resumed */
+                        executionsResumed: number;
+                        /** @description Error messages if any */
+                        errors: string[];
+                    };
+                };
             };
         };
     };
@@ -866,7 +2286,7 @@ export interface operations {
                     contactId?: string;
                     /** @description Contact email (alternative to contactId) */
                     contactEmail?: string;
-                    /** @description Data to pass to the workflow as trigger data */
+                    /** @description Data to pass to the workflow */
                     data?: {
                         [key: string]: unknown;
                     };
@@ -876,7 +2296,7 @@ export interface operations {
                     contactId?: string;
                     /** @description Contact email (alternative to contactId) */
                     contactEmail?: string;
-                    /** @description Data to pass to the workflow as trigger data */
+                    /** @description Data to pass to the workflow */
                     data?: {
                         [key: string]: unknown;
                     };
@@ -886,7 +2306,7 @@ export interface operations {
                     contactId?: string;
                     /** @description Contact email (alternative to contactId) */
                     contactEmail?: string;
-                    /** @description Data to pass to the workflow as trigger data */
+                    /** @description Data to pass to the workflow */
                     data?: {
                         [key: string]: unknown;
                     };
@@ -898,7 +2318,32 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        message?: string;
+                        workflowId?: string;
+                        workflowName?: string;
+                        contactId?: string;
+                        error?: string;
+                    };
+                    "multipart/form-data": {
+                        success: boolean;
+                        message?: string;
+                        workflowId?: string;
+                        workflowName?: string;
+                        contactId?: string;
+                        error?: string;
+                    };
+                    "text/plain": {
+                        success: boolean;
+                        message?: string;
+                        workflowId?: string;
+                        workflowName?: string;
+                        contactId?: string;
+                        error?: string;
+                    };
+                };
             };
         };
     };
@@ -963,7 +2408,38 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        workflowId?: string;
+                        workflowName?: string;
+                        /** @description Number of contacts triggered */
+                        triggered?: number;
+                        /** @description Error messages if any */
+                        errors?: string[];
+                        error?: string;
+                    };
+                    "multipart/form-data": {
+                        success: boolean;
+                        workflowId?: string;
+                        workflowName?: string;
+                        /** @description Number of contacts triggered */
+                        triggered?: number;
+                        /** @description Error messages if any */
+                        errors?: string[];
+                        error?: string;
+                    };
+                    "text/plain": {
+                        success: boolean;
+                        workflowId?: string;
+                        workflowName?: string;
+                        /** @description Number of contacts triggered */
+                        triggered?: number;
+                        /** @description Error messages if any */
+                        errors?: string[];
+                        error?: string;
+                    };
+                };
             };
         };
     };
@@ -972,6 +2448,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description 12-digit AWS account ID */
                 awsAccountNumber: string;
             };
             cookie?: never;
@@ -982,7 +2459,80 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        /** @description Processing status */
+                        status: string;
+                        eventType?: string;
+                        messageId?: string;
+                        reason?: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Processing status */
+                        status: string;
+                        eventType?: string;
+                        messageId?: string;
+                        reason?: string;
+                    };
+                    "text/plain": {
+                        /** @description Processing status */
+                        status: string;
+                        eventType?: string;
+                        messageId?: string;
+                        reason?: string;
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        details?: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                        details?: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                        details?: string;
+                    };
+                };
             };
         };
     };
@@ -991,7 +2541,1056 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Unsubscribe token */
                 token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description HTML confirmation page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                    "multipart/form-data": string;
+                    "text/plain": string;
+                };
+            };
+            /** @description HTML error page */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                    "multipart/form-data": string;
+                    "text/plain": string;
+                };
+            };
+            /** @description HTML not found page */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                    "multipart/form-data": string;
+                    "text/plain": string;
+                };
+            };
+        };
+    };
+    postUnsubscribeByToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Unsubscribe token */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": unknown;
+                "multipart/form-data": unknown;
+                "text/plain": unknown;
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        message?: string;
+                        contactId?: string;
+                        topicId?: string;
+                    };
+                    "multipart/form-data": {
+                        success: boolean;
+                        message?: string;
+                        contactId?: string;
+                        topicId?: string;
+                    };
+                    "text/plain": {
+                        success: boolean;
+                        message?: string;
+                        contactId?: string;
+                        topicId?: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
+    postV1TemplatesPush: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Template slug (filename without extension) */
+                    slug: string;
+                    /** @description React Email TSX source code */
+                    source: string;
+                    /** @description Compiled HTML output */
+                    compiledHtml: string;
+                    /** @description Compiled plain text output */
+                    compiledText: string;
+                    /** @description Email subject line */
+                    subject: string;
+                    /** @description Preview/preheader text */
+                    previewText?: string;
+                    /** @description Email type for compliance */
+                    emailType: "marketing" | "transactional";
+                    /** @description Template variables */
+                    variables: unknown[];
+                    /** @description SHA256 hash of source file */
+                    sourceHash: string;
+                    /** @description SES template name */
+                    sesTemplateName: string;
+                    /** @description Path in project (e.g. templates/welcome.tsx) */
+                    cliProjectPath?: string;
+                    /** @description Force overwrite even if edited on dashboard */
+                    force?: boolean;
+                };
+                "multipart/form-data": {
+                    /** @description Template slug (filename without extension) */
+                    slug: string;
+                    /** @description React Email TSX source code */
+                    source: string;
+                    /** @description Compiled HTML output */
+                    compiledHtml: string;
+                    /** @description Compiled plain text output */
+                    compiledText: string;
+                    /** @description Email subject line */
+                    subject: string;
+                    /** @description Preview/preheader text */
+                    previewText?: string;
+                    /** @description Email type for compliance */
+                    emailType: "marketing" | "transactional";
+                    /** @description Template variables */
+                    variables: unknown[];
+                    /** @description SHA256 hash of source file */
+                    sourceHash: string;
+                    /** @description SES template name */
+                    sesTemplateName: string;
+                    /** @description Path in project (e.g. templates/welcome.tsx) */
+                    cliProjectPath?: string;
+                    /** @description Force overwrite even if edited on dashboard */
+                    force?: boolean;
+                };
+                "text/plain": {
+                    /** @description Template slug (filename without extension) */
+                    slug: string;
+                    /** @description React Email TSX source code */
+                    source: string;
+                    /** @description Compiled HTML output */
+                    compiledHtml: string;
+                    /** @description Compiled plain text output */
+                    compiledText: string;
+                    /** @description Email subject line */
+                    subject: string;
+                    /** @description Preview/preheader text */
+                    previewText?: string;
+                    /** @description Email type for compliance */
+                    emailType: "marketing" | "transactional";
+                    /** @description Template variables */
+                    variables: unknown[];
+                    /** @description SHA256 hash of source file */
+                    sourceHash: string;
+                    /** @description SES template name */
+                    sesTemplateName: string;
+                    /** @description Path in project (e.g. templates/welcome.tsx) */
+                    cliProjectPath?: string;
+                    /** @description Force overwrite even if edited on dashboard */
+                    force?: boolean;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postV1TemplatesPushBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    templates: {
+                        slug: string;
+                        source: string;
+                        compiledHtml: string;
+                        compiledText: string;
+                        subject: string;
+                        previewText?: string;
+                        emailType: "marketing" | "transactional";
+                        variables: unknown[];
+                        sourceHash: string;
+                        sesTemplateName: string;
+                        cliProjectPath?: string;
+                        force?: boolean;
+                    }[];
+                };
+                "multipart/form-data": {
+                    templates: {
+                        slug: string;
+                        source: string;
+                        compiledHtml: string;
+                        compiledText: string;
+                        subject: string;
+                        previewText?: string;
+                        emailType: "marketing" | "transactional";
+                        variables: unknown[];
+                        sourceHash: string;
+                        sesTemplateName: string;
+                        cliProjectPath?: string;
+                        force?: boolean;
+                    }[];
+                };
+                "text/plain": {
+                    templates: {
+                        slug: string;
+                        source: string;
+                        compiledHtml: string;
+                        compiledText: string;
+                        subject: string;
+                        previewText?: string;
+                        emailType: "marketing" | "transactional";
+                        variables: unknown[];
+                        sourceHash: string;
+                        sesTemplateName: string;
+                        cliProjectPath?: string;
+                        force?: boolean;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getV1TemplatesPull: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postToolsEmail-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Domain to check */
+                    domain: string;
+                    /** @description Quick mode (skip blacklist checks) */
+                    quick?: boolean;
+                    /** @description Single DKIM selector to check */
+                    dkimSelector?: string;
+                    /** @description Multiple DKIM selectors to check */
+                    dkimSelectors?: string[];
+                };
+                "multipart/form-data": {
+                    /** @description Domain to check */
+                    domain: string;
+                    /** @description Quick mode (skip blacklist checks) */
+                    quick?: boolean;
+                    /** @description Single DKIM selector to check */
+                    dkimSelector?: string;
+                    /** @description Multiple DKIM selectors to check */
+                    dkimSelectors?: string[];
+                };
+                "text/plain": {
+                    /** @description Domain to check */
+                    domain: string;
+                    /** @description Quick mode (skip blacklist checks) */
+                    quick?: boolean;
+                    /** @description Single DKIM selector to check */
+                    dkimSelector?: string;
+                    /** @description Multiple DKIM selectors to check */
+                    dkimSelectors?: string[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        domain?: string;
+                        checkedAt?: string;
+                        duration?: number;
+                        score?: {
+                            grade: string;
+                            score: number;
+                            maxScore: number;
+                            breakdown: {
+                                [key: string]: unknown;
+                            };
+                        };
+                        spf?: {
+                            exists: boolean;
+                            valid: boolean;
+                            record: string | null;
+                            lookupCount: number;
+                            lookupLimit: number;
+                            allMechanism: string | null;
+                            includes: string[];
+                            hasPtr: boolean;
+                            warnings: string[];
+                        };
+                        dkim?: {
+                            found: boolean;
+                            selectorsFound: {
+                                selector: string;
+                                keyType: string | null;
+                                keyBits: number | null;
+                                testMode: boolean;
+                            }[];
+                            selectorsChecked: number;
+                            warnings: string[];
+                        };
+                        dmarc?: {
+                            exists: boolean;
+                            valid: boolean;
+                            record: string | null;
+                            policy: string | null;
+                            subdomainPolicy: string | null;
+                            reportingEnabled: boolean;
+                            pct: number | null;
+                            alignmentSpf: string | null;
+                            alignmentDkim: string | null;
+                            ruaAddresses: string[];
+                            warnings: string[];
+                        };
+                        mx?: {
+                            exists: boolean;
+                            hasRedundancy: boolean;
+                            records: {
+                                exchange: string;
+                                priority: number;
+                                resolves: boolean;
+                                ipv4Count: number;
+                                ipv6Count: number;
+                            }[];
+                        };
+                        domainAge?: {
+                            ageInDays: number | null;
+                            createdAt: string | null;
+                            expiresAt: string | null;
+                            daysUntilExpiry: number | null;
+                            registrar: string | null;
+                            source: string | null;
+                            privacyEnabled: boolean;
+                        };
+                        ipv6?: {
+                            mxHasIpv6: boolean;
+                            spfIncludesIpv6: boolean;
+                            mxIpv6Count: number;
+                        };
+                        reverseDns?: {
+                            allHavePtr: boolean;
+                            allConfirm: boolean;
+                            count: number;
+                        };
+                        blacklist?: {
+                            checked: boolean;
+                            overallClean: boolean;
+                            domainListings: {
+                                blacklist: string;
+                                priority: string;
+                                delistUrl: string | null;
+                            }[];
+                            ipListings: {
+                                blacklist: string;
+                                priority: string;
+                                target: string;
+                                delistUrl: string | null;
+                            }[];
+                        };
+                        issues?: {
+                            check: string;
+                            reason: string;
+                            points: number;
+                            severity: string;
+                        }[];
+                        bonuses?: {
+                            check: string;
+                            reason: string;
+                            points: number;
+                        }[];
+                        error?: string;
+                    };
+                    "multipart/form-data": {
+                        success: boolean;
+                        domain?: string;
+                        checkedAt?: string;
+                        duration?: number;
+                        score?: {
+                            grade: string;
+                            score: number;
+                            maxScore: number;
+                            breakdown: {
+                                [key: string]: unknown;
+                            };
+                        };
+                        spf?: {
+                            exists: boolean;
+                            valid: boolean;
+                            record: string | null;
+                            lookupCount: number;
+                            lookupLimit: number;
+                            allMechanism: string | null;
+                            includes: string[];
+                            hasPtr: boolean;
+                            warnings: string[];
+                        };
+                        dkim?: {
+                            found: boolean;
+                            selectorsFound: {
+                                selector: string;
+                                keyType: string | null;
+                                keyBits: number | null;
+                                testMode: boolean;
+                            }[];
+                            selectorsChecked: number;
+                            warnings: string[];
+                        };
+                        dmarc?: {
+                            exists: boolean;
+                            valid: boolean;
+                            record: string | null;
+                            policy: string | null;
+                            subdomainPolicy: string | null;
+                            reportingEnabled: boolean;
+                            pct: number | null;
+                            alignmentSpf: string | null;
+                            alignmentDkim: string | null;
+                            ruaAddresses: string[];
+                            warnings: string[];
+                        };
+                        mx?: {
+                            exists: boolean;
+                            hasRedundancy: boolean;
+                            records: {
+                                exchange: string;
+                                priority: number;
+                                resolves: boolean;
+                                ipv4Count: number;
+                                ipv6Count: number;
+                            }[];
+                        };
+                        domainAge?: {
+                            ageInDays: number | null;
+                            createdAt: string | null;
+                            expiresAt: string | null;
+                            daysUntilExpiry: number | null;
+                            registrar: string | null;
+                            source: string | null;
+                            privacyEnabled: boolean;
+                        };
+                        ipv6?: {
+                            mxHasIpv6: boolean;
+                            spfIncludesIpv6: boolean;
+                            mxIpv6Count: number;
+                        };
+                        reverseDns?: {
+                            allHavePtr: boolean;
+                            allConfirm: boolean;
+                            count: number;
+                        };
+                        blacklist?: {
+                            checked: boolean;
+                            overallClean: boolean;
+                            domainListings: {
+                                blacklist: string;
+                                priority: string;
+                                delistUrl: string | null;
+                            }[];
+                            ipListings: {
+                                blacklist: string;
+                                priority: string;
+                                target: string;
+                                delistUrl: string | null;
+                            }[];
+                        };
+                        issues?: {
+                            check: string;
+                            reason: string;
+                            points: number;
+                            severity: string;
+                        }[];
+                        bonuses?: {
+                            check: string;
+                            reason: string;
+                            points: number;
+                        }[];
+                        error?: string;
+                    };
+                    "text/plain": {
+                        success: boolean;
+                        domain?: string;
+                        checkedAt?: string;
+                        duration?: number;
+                        score?: {
+                            grade: string;
+                            score: number;
+                            maxScore: number;
+                            breakdown: {
+                                [key: string]: unknown;
+                            };
+                        };
+                        spf?: {
+                            exists: boolean;
+                            valid: boolean;
+                            record: string | null;
+                            lookupCount: number;
+                            lookupLimit: number;
+                            allMechanism: string | null;
+                            includes: string[];
+                            hasPtr: boolean;
+                            warnings: string[];
+                        };
+                        dkim?: {
+                            found: boolean;
+                            selectorsFound: {
+                                selector: string;
+                                keyType: string | null;
+                                keyBits: number | null;
+                                testMode: boolean;
+                            }[];
+                            selectorsChecked: number;
+                            warnings: string[];
+                        };
+                        dmarc?: {
+                            exists: boolean;
+                            valid: boolean;
+                            record: string | null;
+                            policy: string | null;
+                            subdomainPolicy: string | null;
+                            reportingEnabled: boolean;
+                            pct: number | null;
+                            alignmentSpf: string | null;
+                            alignmentDkim: string | null;
+                            ruaAddresses: string[];
+                            warnings: string[];
+                        };
+                        mx?: {
+                            exists: boolean;
+                            hasRedundancy: boolean;
+                            records: {
+                                exchange: string;
+                                priority: number;
+                                resolves: boolean;
+                                ipv4Count: number;
+                                ipv6Count: number;
+                            }[];
+                        };
+                        domainAge?: {
+                            ageInDays: number | null;
+                            createdAt: string | null;
+                            expiresAt: string | null;
+                            daysUntilExpiry: number | null;
+                            registrar: string | null;
+                            source: string | null;
+                            privacyEnabled: boolean;
+                        };
+                        ipv6?: {
+                            mxHasIpv6: boolean;
+                            spfIncludesIpv6: boolean;
+                            mxIpv6Count: number;
+                        };
+                        reverseDns?: {
+                            allHavePtr: boolean;
+                            allConfirm: boolean;
+                            count: number;
+                        };
+                        blacklist?: {
+                            checked: boolean;
+                            overallClean: boolean;
+                            domainListings: {
+                                blacklist: string;
+                                priority: string;
+                                delistUrl: string | null;
+                            }[];
+                            ipListings: {
+                                blacklist: string;
+                                priority: string;
+                                target: string;
+                                delistUrl: string | null;
+                            }[];
+                        };
+                        issues?: {
+                            check: string;
+                            reason: string;
+                            points: number;
+                            severity: string;
+                        }[];
+                        bonuses?: {
+                            check: string;
+                            reason: string;
+                            points: number;
+                        }[];
+                        error?: string;
+                    };
+                };
+            };
+        };
+    };
+    "getToolsEmail-checkByDomain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Domain to check */
+                domain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        domain?: string;
+                        checkedAt?: string;
+                        duration?: number;
+                        score?: {
+                            grade: string;
+                            score: number;
+                            maxScore: number;
+                            breakdown: {
+                                [key: string]: unknown;
+                            };
+                        };
+                        spf?: {
+                            exists: boolean;
+                            valid: boolean;
+                            record: string | null;
+                            lookupCount: number;
+                            lookupLimit: number;
+                            allMechanism: string | null;
+                            includes: string[];
+                            hasPtr: boolean;
+                            warnings: string[];
+                        };
+                        dkim?: {
+                            found: boolean;
+                            selectorsFound: {
+                                selector: string;
+                                keyType: string | null;
+                                keyBits: number | null;
+                                testMode: boolean;
+                            }[];
+                            selectorsChecked: number;
+                            warnings: string[];
+                        };
+                        dmarc?: {
+                            exists: boolean;
+                            valid: boolean;
+                            record: string | null;
+                            policy: string | null;
+                            subdomainPolicy: string | null;
+                            reportingEnabled: boolean;
+                            pct: number | null;
+                            alignmentSpf: string | null;
+                            alignmentDkim: string | null;
+                            ruaAddresses: string[];
+                            warnings: string[];
+                        };
+                        mx?: {
+                            exists: boolean;
+                            hasRedundancy: boolean;
+                            records: {
+                                exchange: string;
+                                priority: number;
+                                resolves: boolean;
+                                ipv4Count: number;
+                                ipv6Count: number;
+                            }[];
+                        };
+                        domainAge?: {
+                            ageInDays: number | null;
+                            createdAt: string | null;
+                            expiresAt: string | null;
+                            daysUntilExpiry: number | null;
+                            registrar: string | null;
+                            source: string | null;
+                            privacyEnabled: boolean;
+                        };
+                        ipv6?: {
+                            mxHasIpv6: boolean;
+                            spfIncludesIpv6: boolean;
+                            mxIpv6Count: number;
+                        };
+                        reverseDns?: {
+                            allHavePtr: boolean;
+                            allConfirm: boolean;
+                            count: number;
+                        };
+                        blacklist?: {
+                            checked: boolean;
+                            overallClean: boolean;
+                            domainListings: {
+                                blacklist: string;
+                                priority: string;
+                                delistUrl: string | null;
+                            }[];
+                            ipListings: {
+                                blacklist: string;
+                                priority: string;
+                                target: string;
+                                delistUrl: string | null;
+                            }[];
+                        };
+                        issues?: {
+                            check: string;
+                            reason: string;
+                            points: number;
+                            severity: string;
+                        }[];
+                        bonuses?: {
+                            check: string;
+                            reason: string;
+                            points: number;
+                        }[];
+                        error?: string;
+                    };
+                    "multipart/form-data": {
+                        success: boolean;
+                        domain?: string;
+                        checkedAt?: string;
+                        duration?: number;
+                        score?: {
+                            grade: string;
+                            score: number;
+                            maxScore: number;
+                            breakdown: {
+                                [key: string]: unknown;
+                            };
+                        };
+                        spf?: {
+                            exists: boolean;
+                            valid: boolean;
+                            record: string | null;
+                            lookupCount: number;
+                            lookupLimit: number;
+                            allMechanism: string | null;
+                            includes: string[];
+                            hasPtr: boolean;
+                            warnings: string[];
+                        };
+                        dkim?: {
+                            found: boolean;
+                            selectorsFound: {
+                                selector: string;
+                                keyType: string | null;
+                                keyBits: number | null;
+                                testMode: boolean;
+                            }[];
+                            selectorsChecked: number;
+                            warnings: string[];
+                        };
+                        dmarc?: {
+                            exists: boolean;
+                            valid: boolean;
+                            record: string | null;
+                            policy: string | null;
+                            subdomainPolicy: string | null;
+                            reportingEnabled: boolean;
+                            pct: number | null;
+                            alignmentSpf: string | null;
+                            alignmentDkim: string | null;
+                            ruaAddresses: string[];
+                            warnings: string[];
+                        };
+                        mx?: {
+                            exists: boolean;
+                            hasRedundancy: boolean;
+                            records: {
+                                exchange: string;
+                                priority: number;
+                                resolves: boolean;
+                                ipv4Count: number;
+                                ipv6Count: number;
+                            }[];
+                        };
+                        domainAge?: {
+                            ageInDays: number | null;
+                            createdAt: string | null;
+                            expiresAt: string | null;
+                            daysUntilExpiry: number | null;
+                            registrar: string | null;
+                            source: string | null;
+                            privacyEnabled: boolean;
+                        };
+                        ipv6?: {
+                            mxHasIpv6: boolean;
+                            spfIncludesIpv6: boolean;
+                            mxIpv6Count: number;
+                        };
+                        reverseDns?: {
+                            allHavePtr: boolean;
+                            allConfirm: boolean;
+                            count: number;
+                        };
+                        blacklist?: {
+                            checked: boolean;
+                            overallClean: boolean;
+                            domainListings: {
+                                blacklist: string;
+                                priority: string;
+                                delistUrl: string | null;
+                            }[];
+                            ipListings: {
+                                blacklist: string;
+                                priority: string;
+                                target: string;
+                                delistUrl: string | null;
+                            }[];
+                        };
+                        issues?: {
+                            check: string;
+                            reason: string;
+                            points: number;
+                            severity: string;
+                        }[];
+                        bonuses?: {
+                            check: string;
+                            reason: string;
+                            points: number;
+                        }[];
+                        error?: string;
+                    };
+                    "text/plain": {
+                        success: boolean;
+                        domain?: string;
+                        checkedAt?: string;
+                        duration?: number;
+                        score?: {
+                            grade: string;
+                            score: number;
+                            maxScore: number;
+                            breakdown: {
+                                [key: string]: unknown;
+                            };
+                        };
+                        spf?: {
+                            exists: boolean;
+                            valid: boolean;
+                            record: string | null;
+                            lookupCount: number;
+                            lookupLimit: number;
+                            allMechanism: string | null;
+                            includes: string[];
+                            hasPtr: boolean;
+                            warnings: string[];
+                        };
+                        dkim?: {
+                            found: boolean;
+                            selectorsFound: {
+                                selector: string;
+                                keyType: string | null;
+                                keyBits: number | null;
+                                testMode: boolean;
+                            }[];
+                            selectorsChecked: number;
+                            warnings: string[];
+                        };
+                        dmarc?: {
+                            exists: boolean;
+                            valid: boolean;
+                            record: string | null;
+                            policy: string | null;
+                            subdomainPolicy: string | null;
+                            reportingEnabled: boolean;
+                            pct: number | null;
+                            alignmentSpf: string | null;
+                            alignmentDkim: string | null;
+                            ruaAddresses: string[];
+                            warnings: string[];
+                        };
+                        mx?: {
+                            exists: boolean;
+                            hasRedundancy: boolean;
+                            records: {
+                                exchange: string;
+                                priority: number;
+                                resolves: boolean;
+                                ipv4Count: number;
+                                ipv6Count: number;
+                            }[];
+                        };
+                        domainAge?: {
+                            ageInDays: number | null;
+                            createdAt: string | null;
+                            expiresAt: string | null;
+                            daysUntilExpiry: number | null;
+                            registrar: string | null;
+                            source: string | null;
+                            privacyEnabled: boolean;
+                        };
+                        ipv6?: {
+                            mxHasIpv6: boolean;
+                            spfIncludesIpv6: boolean;
+                            mxIpv6Count: number;
+                        };
+                        reverseDns?: {
+                            allHavePtr: boolean;
+                            allConfirm: boolean;
+                            count: number;
+                        };
+                        blacklist?: {
+                            checked: boolean;
+                            overallClean: boolean;
+                            domainListings: {
+                                blacklist: string;
+                                priority: string;
+                                delistUrl: string | null;
+                            }[];
+                            ipListings: {
+                                blacklist: string;
+                                priority: string;
+                                target: string;
+                                delistUrl: string | null;
+                            }[];
+                        };
+                        issues?: {
+                            check: string;
+                            reason: string;
+                            points: number;
+                            severity: string;
+                        }[];
+                        bonuses?: {
+                            check: string;
+                            reason: string;
+                            points: number;
+                        }[];
+                        error?: string;
+                    };
+                };
+            };
+        };
+    };
+    "postV1Workflow-schedulesByWorkflowIdEnable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflowId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    cronExpression: string;
+                    timezone?: string;
+                };
+                "multipart/form-data": {
+                    cronExpression: string;
+                    timezone?: string;
+                };
+                "text/plain": {
+                    cronExpression: string;
+                    timezone?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postV1Workflow-schedulesByWorkflowIdDisable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflowId: string;
             };
             cookie?: never;
         };
@@ -1005,20 +3604,29 @@ export interface operations {
             };
         };
     };
-    postUnsubscribeByToken: {
+    "putV1Workflow-schedulesByWorkflowId": {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                token: string;
+                workflowId: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": unknown;
-                "multipart/form-data": unknown;
-                "text/plain": unknown;
+                "application/json": {
+                    cronExpression: string;
+                    timezone?: string;
+                };
+                "multipart/form-data": {
+                    cronExpression: string;
+                    timezone?: string;
+                };
+                "text/plain": {
+                    cronExpression: string;
+                    timezone?: string;
+                };
             };
         };
         responses: {
