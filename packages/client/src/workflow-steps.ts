@@ -6,9 +6,7 @@
  */
 
 import type {
-  ConditionOperator,
   ConditionStepConfig,
-  DelayStepConfig,
   DurationConfig,
   ExitStepConfig,
   SendEmailStepConfig,
@@ -104,10 +102,7 @@ export function sendEmail(
  * sendSms('otp', { message: 'Your code is {{otp}}' })
  * ```
  */
-export function sendSms(
-  id: string,
-  config: SendSmsStepConfig & { name?: string }
-): StepDefinition {
+export function sendSms(id: string, config: SendSmsStepConfig & { name?: string }): StepDefinition {
   const { name, ...stepConfig } = config;
   return {
     id,
@@ -131,10 +126,7 @@ export function sendSms(
  * delay('wait-30-min', { minutes: 30 })
  * ```
  */
-export function delay(
-  id: string,
-  duration: DurationConfig & { name?: string }
-): StepDefinition {
+export function delay(id: string, duration: DurationConfig & { name?: string }): StepDefinition {
   const { name, ...durationConfig } = duration;
   const normalized = normalizeDuration(durationConfig);
   return {
@@ -223,8 +215,7 @@ export function waitForEmailEngagement(
   return {
     id,
     type: 'wait_for_email_engagement',
-    name:
-      name ?? `Wait for email ${engagementType}: ${emailStepId}`,
+    name: name ?? `Wait for email ${engagementType}: ${emailStepId}`,
     config: {
       type: 'wait_for_email_engagement',
       timeoutSeconds: durationToSeconds(timeout),
@@ -241,10 +232,7 @@ export function waitForEmailEngagement(
  * exit('cancelled', { reason: 'User unsubscribed', markAs: 'cancelled' })
  * ```
  */
-export function exit(
-  id: string,
-  config?: ExitStepConfig & { name?: string }
-): StepDefinition {
+export function exit(id: string, config?: ExitStepConfig & { name?: string }): StepDefinition {
   const { name, ...exitConfig } = config ?? {};
   return {
     id,

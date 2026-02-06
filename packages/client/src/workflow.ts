@@ -127,9 +127,7 @@ export type ConditionOperator =
 /**
  * Email template reference (by slug) or inline content
  */
-export type EmailContent =
-  | { template: string }
-  | { subject: string; body: string };
+export type EmailContent = { template: string } | { subject: string; body: string };
 
 /**
  * SMS template reference or inline message
@@ -396,8 +394,6 @@ export interface WorkflowDefinition {
  * });
  * ```
  */
-export function defineWorkflow(
-  definition: WorkflowDefinition
-): WorkflowDefinition {
+export function defineWorkflow(definition: WorkflowDefinition): WorkflowDefinition {
   return definition;
 }
