@@ -28,3 +28,17 @@ export class SESError extends WrapsEmailError {
     this.retryable = retryable;
   }
 }
+
+export class DynamoDBError extends WrapsEmailError {
+  public readonly code: string;
+  public readonly requestId: string;
+  public readonly retryable: boolean;
+
+  constructor(message: string, code: string, requestId: string, retryable: boolean) {
+    super(message);
+    this.name = 'DynamoDBError';
+    this.code = code;
+    this.requestId = requestId;
+    this.retryable = retryable;
+  }
+}

@@ -11,8 +11,10 @@ import {
   UpdateTemplateCommand,
 } from '@aws-sdk/client-ses';
 import { SESError, ValidationError } from './errors';
+import { WrapsEmailEvents } from './events';
 import { WrapsInbox } from './inbox';
 import { renderReactEmail } from './react';
+import { WrapsEmailSuppression } from './suppression';
 import type {
   CreateTemplateFromReactParams,
   CreateTemplateParams,
@@ -43,6 +45,18 @@ export class WrapsEmail {
    * Only available when inboxBucketName is configured
    */
   public readonly inbox: WrapsInbox | null;
+
+  /**
+   * Email event history from DynamoDB
+   * Only available when historyTableName is configured
+   */
+  public readonly events: WrapsEmailEvents | null;
+
+  /**
+   * Suppression list management (SES v2)
+   * Always available when credentials are configured
+   */
+  public readonly suppression: WrapsEmailSuppression;
 
   /**
    * Template management methods
@@ -80,6 +94,48 @@ export class WrapsEmail {
       }
     } else {
       this.inbox = null;
+    }
+
+    // Initialize events API (requires historyTableName)
+    if (config.historyTableName) {
+      if (config.dynamodbClient) {
+        this.events = new WrapsEmailEvents(config.dynamodbClient, config.historyTableName);
+      } else {
+        const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+        const { DynamoDBDocumentClient } = require('@aws-sdk/lib-dynamodb');
+        const dynamoConfig: Record<string, unknown> = {
+          region: config.region || 'us-east-1',
+        };
+        if (config.credentials) {
+          dynamoConfig.credentials = config.credentials;
+        }
+        if (config.endpoint) {
+          dynamoConfig.endpoint = config.endpoint;
+        }
+        const docClient = DynamoDBDocumentClient.from(new DynamoDBClient(dynamoConfig), {
+          marshallOptions: { removeUndefinedValues: true },
+        });
+        this.events = new WrapsEmailEvents(docClient, config.historyTableName);
+      }
+    } else {
+      this.events = null;
+    }
+
+    // Initialize suppression API (always available)
+    if (config.sesv2Client) {
+      this.suppression = new WrapsEmailSuppression(config.sesv2Client);
+    } else {
+      const { SESv2Client } = require('@aws-sdk/client-sesv2');
+      const sesv2Config: Record<string, unknown> = {
+        region: config.region || 'us-east-1',
+      };
+      if (config.credentials) {
+        sesv2Config.credentials = config.credentials;
+      }
+      if (config.endpoint) {
+        sesv2Config.endpoint = config.endpoint;
+      }
+      this.suppression = new WrapsEmailSuppression(new SESv2Client(sesv2Config));
     }
 
     // Initialize templates namespace

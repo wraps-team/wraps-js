@@ -1,5 +1,7 @@
 import type { S3Client } from '@aws-sdk/client-s3';
 import type { SESClient } from '@aws-sdk/client-ses';
+import type { SESv2Client } from '@aws-sdk/client-sesv2';
+import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import type { AwsCredentialIdentityProvider } from '@aws-sdk/types';
 import type React from 'react';
 
@@ -67,6 +69,24 @@ export interface WrapsEmailConfig {
    * Ignored if `client` is provided
    */
   endpoint?: string;
+
+  /**
+   * DynamoDB table name for email event history
+   * When provided, enables the events API (wraps.events.*)
+   */
+  historyTableName?: string;
+
+  /**
+   * Pre-configured DynamoDB DocumentClient for events
+   * When provided, takes precedence over region/credentials for events
+   */
+  dynamodbClient?: DynamoDBDocumentClient;
+
+  /**
+   * Pre-configured SES v2 client for suppression list
+   * When provided, takes precedence over region/credentials for suppression
+   */
+  sesv2Client?: SESv2Client;
 }
 
 export interface EmailAddress {
@@ -434,4 +454,76 @@ export interface InboxReplyOptions {
    * Attachments to include in the reply
    */
   attachments?: Attachment[];
+}
+
+// ============================================================
+// Email Events types (event history from DynamoDB)
+// ============================================================
+
+export interface EmailEvent {
+  type: string;
+  timestamp: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface EmailStatus {
+  messageId: string;
+  from: string;
+  to: string[];
+  subject: string;
+  /** Derived from the latest event: sent → delivered → opened → clicked, or bounced/complained/suppressed */
+  status: 'sent' | 'delivered' | 'bounced' | 'complained' | 'suppressed' | 'opened' | 'clicked';
+  sentAt: number;
+  lastEventAt: number;
+  events: EmailEvent[];
+}
+
+export interface EmailListOptions {
+  /** Required. The AWS account ID for GSI query. */
+  accountId: string;
+  /** Only events after this time */
+  startTime?: Date;
+  /** Only events before this time */
+  endTime?: Date;
+  /** Max results per page (default 50) */
+  maxResults?: number;
+  /** Pagination token from previous response */
+  continuationToken?: string;
+}
+
+export interface EmailListResult {
+  emails: EmailStatus[];
+  nextToken?: string;
+}
+
+// ============================================================
+// Suppression List types
+// ============================================================
+
+export type SuppressionReason = 'BOUNCE' | 'COMPLAINT';
+
+export interface SuppressionEntry {
+  email: string;
+  reason: SuppressionReason;
+  lastUpdated: Date;
+  messageId?: string;
+  feedbackId?: string;
+}
+
+export interface SuppressionListOptions {
+  /** Filter by reason */
+  reason?: SuppressionReason;
+  /** Only entries added after this date */
+  startDate?: Date;
+  /** Only entries added before this date */
+  endDate?: Date;
+  /** Max results per page (default 100, max 1000) */
+  maxResults?: number;
+  /** Pagination token from previous response */
+  continuationToken?: string;
+}
+
+export interface SuppressionListResult {
+  entries: SuppressionEntry[];
+  nextToken?: string;
 }

@@ -10,5 +10,15 @@ export default defineConfig({
   treeshake: true,
   minify: false, // Keep readable for debugging
   outDir: 'dist',
-  external: ['@aws-sdk/client-ses', '@react-email/components', 'react'],
+  external: [
+    '@aws-sdk/client-dynamodb',
+    '@aws-sdk/client-s3',
+    '@aws-sdk/client-ses',
+    '@aws-sdk/client-sesv2',
+    '@aws-sdk/credential-providers',
+    '@aws-sdk/lib-dynamodb',
+    '@aws-sdk/s3-request-presigner',
+    '@react-email/components',
+    'react',
+  ],
 });
