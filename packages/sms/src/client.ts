@@ -6,7 +6,7 @@ import {
   PutOptedOutNumberCommand,
   SendTextMessageCommand,
 } from '@aws-sdk/client-pinpoint-sms-voice-v2';
-import { OptedOutError, SMSError } from './errors';
+import { OptedOutError, RateLimitError, SMSError } from './errors';
 import type {
   BatchMessageResult,
   BatchOptions,
@@ -354,6 +354,11 @@ export class WrapsSMS {
       }
     }
 
+    // Detect throttling / rate limit errors
+    if (err.name === 'ThrottlingException' || err.$retryable?.throttling) {
+      return new RateLimitError(err.message || 'Rate limit exceeded');
+    }
+
     if (err.$metadata) {
       // AWS SDK error
       return new SMSError(
@@ -364,7 +369,7 @@ export class WrapsSMS {
       );
     }
 
-    return error as Error;
+    return error instanceof Error ? error : new SMSError(String(error), 'Unknown', 'unknown', false);
   }
 
   /**

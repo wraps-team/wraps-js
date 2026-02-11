@@ -241,7 +241,8 @@ export interface BatchMessageResult {
  */
 export interface BatchResult {
   /**
-   * Unique batch identifier
+   * Client-generated correlation ID (not an AWS identifier).
+   * Use this to correlate batch operations in your application logs.
    */
   batchId: string;
 
