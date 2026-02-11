@@ -1,10 +1,12 @@
 export { WrapsEmail } from './client';
-export { DynamoDBError, SESError, ValidationError, WrapsEmailError } from './errors';
+export { BatchError, DynamoDBError, SESError, ValidationError, WrapsEmailError } from './errors';
 export { WrapsEmailEvents } from './events';
 export { WrapsInbox } from './inbox';
 export { WrapsEmailSuppression } from './suppression';
 export type {
   Attachment,
+  BatchEmailEntry,
+  BatchEntryResult,
   BulkTemplateDestination,
   CreateTemplateFromReactParams,
   CreateTemplateParams,
@@ -22,6 +24,8 @@ export type {
   InboxListOptions,
   InboxListResult,
   InboxReplyOptions,
+  SendBatchParams,
+  SendBatchResult,
   SendBulkTemplateParams,
   SendBulkTemplateResult,
   SendEmailParams,

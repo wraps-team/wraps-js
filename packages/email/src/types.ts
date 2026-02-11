@@ -267,6 +267,97 @@ export interface SendBulkTemplateResult {
   requestId: string;
 }
 
+// ============================================================
+// Batch sending types (sendBatch)
+// ============================================================
+
+export interface BatchEmailEntry {
+  /**
+   * Recipient email address
+   */
+  to: string | EmailAddress;
+
+  /**
+   * Email subject for this entry
+   */
+  subject: string;
+
+  /**
+   * HTML body (mutually exclusive with 'react')
+   *
+   * **Note:** Literal `{{` and `}}` in HTML content will be interpreted as
+   * SES template placeholders. Escape them if needed.
+   */
+  html?: string;
+
+  /**
+   * Plain text body (optional)
+   */
+  text?: string;
+
+  /**
+   * React.email component (mutually exclusive with 'html')
+   */
+  react?: React.ReactElement;
+
+  /**
+   * Per-entry SES message tags (replaces default tags for this entry)
+   */
+  tags?: Record<string, string>;
+}
+
+export interface SendBatchParams {
+  /**
+   * Sender email address (must be verified in SES)
+   */
+  from: string | EmailAddress;
+
+  /**
+   * List of recipients with unique content (max 100)
+   */
+  entries: BatchEmailEntry[];
+
+  /**
+   * Reply-To address (optional, shared across all entries)
+   */
+  replyTo?: string | string[] | EmailAddress | EmailAddress[];
+
+  /**
+   * Default SES message tags (optional, can be overridden per entry)
+   */
+  tags?: Record<string, string>;
+
+  /**
+   * Configuration set name (optional)
+   */
+  configurationSetName?: string;
+}
+
+export interface BatchEntryResult {
+  /** Index of the entry in the original entries array */
+  index: number;
+
+  /** SES message ID (present on success) */
+  messageId?: string;
+
+  /** Whether this entry was sent successfully */
+  status: 'success' | 'failure';
+
+  /** Error message (present on failure) */
+  error?: string;
+}
+
+export interface SendBatchResult {
+  /** Per-entry results in the same order as the input entries */
+  results: BatchEntryResult[];
+
+  /** Number of entries sent successfully */
+  successCount: number;
+
+  /** Number of entries that failed */
+  failureCount: number;
+}
+
 export interface CreateTemplateParams {
   /**
    * Template name (unique identifier)

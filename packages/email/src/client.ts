@@ -10,6 +10,8 @@ import {
   SendTemplatedEmailCommand,
   UpdateTemplateCommand,
 } from '@aws-sdk/client-ses';
+import type { SESv2Client } from '@aws-sdk/client-sesv2';
+import { sendBatch as sendBatchImpl } from './batch';
 import { SESError, ValidationError } from './errors';
 import { WrapsEmailEvents } from './events';
 import { WrapsInbox } from './inbox';
@@ -19,6 +21,8 @@ import type {
   CreateTemplateFromReactParams,
   CreateTemplateParams,
   EmailAddress,
+  SendBatchParams,
+  SendBatchResult,
   SendBulkTemplateParams,
   SendBulkTemplateResult,
   SendEmailParams,
@@ -39,6 +43,7 @@ import {
 
 export class WrapsEmail {
   private sesClient: SESClient;
+  private sesv2Client: SESv2Client;
 
   /**
    * Inbox for reading inbound emails
@@ -121,11 +126,11 @@ export class WrapsEmail {
       this.events = null;
     }
 
-    // Initialize suppression API (always available)
+    // Initialize SES v2 client (used by suppression and batch)
     if (config.sesv2Client) {
-      this.suppression = new WrapsEmailSuppression(config.sesv2Client);
+      this.sesv2Client = config.sesv2Client;
     } else {
-      const { SESv2Client } = require('@aws-sdk/client-sesv2');
+      const { SESv2Client: SESv2ClientClass } = require('@aws-sdk/client-sesv2');
       const sesv2Config: Record<string, unknown> = {
         region: config.region || 'us-east-1',
       };
@@ -135,8 +140,9 @@ export class WrapsEmail {
       if (config.endpoint) {
         sesv2Config.endpoint = config.endpoint;
       }
-      this.suppression = new WrapsEmailSuppression(new SESv2Client(sesv2Config));
+      this.sesv2Client = new SESv2ClientClass(sesv2Config);
     }
+    this.suppression = new WrapsEmailSuppression(this.sesv2Client);
 
     // Initialize templates namespace
     this.templates = {
@@ -420,6 +426,34 @@ export class WrapsEmail {
   }
 
   /**
+   * Send batch emails with unique content per recipient (max 100 entries).
+   *
+   * Unlike `sendBulkTemplate()` which requires a pre-created SES template,
+   * `sendBatch()` lets you provide different subject/html/text per recipient
+   * inline without creating a template first.
+   *
+   * Uses SES v2 `SendBulkEmailCommand` with inline template content.
+   *
+   * **Note:** Literal `{{` and `}}` in HTML content will be interpreted as
+   * SES template placeholders.
+   *
+   * @example
+   * ```typescript
+   * const result = await wraps.sendBatch({
+   *   from: 'hello@example.com',
+   *   entries: [
+   *     { to: 'alice@example.com', subject: 'Hi Alice', html: '<p>Hello Alice!</p>' },
+   *     { to: 'bob@example.com', subject: 'Hi Bob', html: '<p>Hello Bob!</p>' },
+   *   ],
+   * });
+   * console.log(result.successCount); // 2
+   * ```
+   */
+  async sendBatch(params: SendBatchParams): Promise<SendBatchResult> {
+    return sendBatchImpl(this.sesv2Client, params);
+  }
+
+  /**
    * Create a new SES template
    */
   private async createTemplate(params: CreateTemplateParams): Promise<void> {
@@ -542,5 +576,6 @@ export class WrapsEmail {
    */
   destroy(): void {
     this.sesClient.destroy();
+    this.sesv2Client.destroy();
   }
 }

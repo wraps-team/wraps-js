@@ -42,3 +42,22 @@ export class DynamoDBError extends WrapsEmailError {
     this.retryable = retryable;
   }
 }
+
+export class BatchError extends WrapsEmailError {
+  public readonly results: import('./types').BatchEntryResult[];
+  public readonly successCount: number;
+  public readonly failureCount: number;
+
+  constructor(
+    message: string,
+    results: import('./types').BatchEntryResult[],
+    successCount: number,
+    failureCount: number
+  ) {
+    super(message);
+    this.name = 'BatchError';
+    this.results = results;
+    this.successCount = successCount;
+    this.failureCount = failureCount;
+  }
+}
