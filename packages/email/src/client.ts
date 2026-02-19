@@ -34,6 +34,7 @@ import type {
   WrapsEmailConfig,
 } from './types';
 import { createSESClient } from './utils/credentials';
+import { htmlToPlainText } from './utils/html-to-text';
 import { buildRawEmailMessage } from './utils/mime';
 import {
   normalizeEmailAddress,
@@ -169,7 +170,12 @@ export class WrapsEmail {
       }
       const rendered = await renderReactEmail(params.react);
       html = rendered.html;
-      text = text || rendered.text; // Use provided text or fallback to rendered
+      text = text || rendered.text;
+    }
+
+    // Auto-generate plain text from HTML when not explicitly provided
+    if (html && !text) {
+      text = htmlToPlainText(html);
     }
 
     // Handle attachments (requires SES v2 SendRawEmail)
@@ -254,6 +260,11 @@ export class WrapsEmail {
       const rendered = await renderReactEmail(params.react);
       html = rendered.html;
       text = text || rendered.text;
+    }
+
+    // Auto-generate plain text from HTML when not explicitly provided
+    if (html && !text) {
+      text = htmlToPlainText(html);
     }
 
     // Build raw MIME message

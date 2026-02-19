@@ -3,6 +3,7 @@ export { BatchError, DynamoDBError, SESError, ValidationError, WrapsEmailError }
 export { WrapsEmailEvents } from './events';
 export { WrapsInbox } from './inbox';
 export { WrapsEmailSuppression } from './suppression';
+export { htmlToPlainText } from './utils/html-to-text';
 export type {
   Attachment,
   BatchEmailEntry,

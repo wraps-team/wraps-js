@@ -1,6 +1,7 @@
 import { SendBulkEmailCommand, type SESv2Client } from '@aws-sdk/client-sesv2';
 import { SESError, ValidationError } from './errors';
 import { renderReactEmail } from './react';
+import { htmlToPlainText } from './utils/html-to-text';
 import type {
   BatchEmailEntry,
   BatchEntryResult,
@@ -58,6 +59,11 @@ async function resolveEntries(entries: BatchEmailEntry[]): Promise<ResolvedEntry
       const rendered = await renderReactEmail(entry.react);
       html = rendered.html;
       text = text || rendered.text;
+    }
+
+    // Auto-generate plain text from HTML when not explicitly provided
+    if (html && !text) {
+      text = htmlToPlainText(html);
     }
 
     resolved.push({
