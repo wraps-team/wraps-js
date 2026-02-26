@@ -43,7 +43,7 @@ vi.mock('@aws-sdk/client-pinpoint-sms-voice-v2', () => ({
 
 // Import after mocking
 import { WrapsSMS } from './client';
-import { SMSError, ValidationError } from './errors';
+import { RateLimitError, SMSError, ValidationError } from './errors';
 import { calculateSegments, validatePhoneNumber } from './utils/validation';
 
 describe('WrapsSMS', () => {
@@ -181,7 +181,7 @@ describe('WrapsSMS', () => {
           to: '+14155551234',
           message: 'Hello',
         })
-      ).rejects.toThrow(SMSError);
+      ).rejects.toThrow(RateLimitError);
     });
   });
 
