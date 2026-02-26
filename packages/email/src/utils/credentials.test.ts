@@ -1,8 +1,11 @@
 import { SESClient } from '@aws-sdk/client-ses';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { createSESClient } from './credentials';
 
 describe('createSESClient', () => {
+  afterEach(() => {
+    delete process.env.VERCEL_OIDC_TOKEN;
+  });
   it('should create SES client with default region', () => {
     const client = createSESClient({});
 
@@ -84,6 +87,24 @@ describe('createSESClient', () => {
         accessKeyId: 'test-key',
         secretAccessKey: 'test-secret',
       },
+    });
+
+    expect(client).toBeInstanceOf(SESClient);
+  });
+
+  it('should use fromWebToken when VERCEL_OIDC_TOKEN is set with roleArn', () => {
+    process.env.VERCEL_OIDC_TOKEN = 'test-oidc-token';
+    const client = createSESClient({
+      roleArn: 'arn:aws:iam::123456789012:role/MyEmailRole',
+    });
+
+    expect(client).toBeInstanceOf(SESClient);
+  });
+
+  it('should use fromTokenFile when roleArn is set without VERCEL_OIDC_TOKEN', () => {
+    delete process.env.VERCEL_OIDC_TOKEN;
+    const client = createSESClient({
+      roleArn: 'arn:aws:iam::123456789012:role/MyEmailRole',
     });
 
     expect(client).toBeInstanceOf(SESClient);

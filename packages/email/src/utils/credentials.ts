@@ -1,5 +1,5 @@
 import { SESClient, type SESClientConfig } from '@aws-sdk/client-ses';
-import { fromTokenFile } from '@aws-sdk/credential-providers';
+import { fromTokenFile, fromWebToken } from '@aws-sdk/credential-providers';
 import type { WrapsEmailConfig } from '../types';
 
 export function createSESClient(config: WrapsEmailConfig): SESClient {
@@ -15,14 +15,23 @@ export function createSESClient(config: WrapsEmailConfig): SESClient {
 
   // If roleArn is provided, use AssumeRoleWithWebIdentity for OIDC federation
   if (config.roleArn) {
-    // fromTokenFile automatically reads from AWS_WEB_IDENTITY_TOKEN_FILE environment variable
-    // This is commonly set in EKS, GitHub Actions, and other OIDC-enabled environments
-    clientConfig.credentials = fromTokenFile({
-      roleArn: config.roleArn,
-      roleSessionName: config.roleSessionName || 'wraps-email-session',
-      // Optionally specify a custom token file path (defaults to AWS_WEB_IDENTITY_TOKEN_FILE env var)
-      // webIdentityTokenFile: process.env.AWS_WEB_IDENTITY_TOKEN_FILE,
-    });
+    const roleSessionName = config.roleSessionName || 'wraps-email-session';
+    const vercelToken = process.env.VERCEL_OIDC_TOKEN;
+
+    if (vercelToken) {
+      // Vercel provides OIDC tokens via environment variable, not a token file
+      clientConfig.credentials = fromWebToken({
+        roleArn: config.roleArn,
+        roleSessionName,
+        webIdentityToken: vercelToken,
+      });
+    } else {
+      // EKS, GitHub Actions, and other OIDC environments use AWS_WEB_IDENTITY_TOKEN_FILE
+      clientConfig.credentials = fromTokenFile({
+        roleArn: config.roleArn,
+        roleSessionName,
+      });
+    }
   }
   // If explicit credentials provided, use them
   // This can be either static credentials or a credential provider (e.g., from Vercel OIDC)
