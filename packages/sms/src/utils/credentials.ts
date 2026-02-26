@@ -19,8 +19,10 @@ export function createSMSClient(config: WrapsSMSConfig): PinpointSMSVoiceV2Clien
     region: config.region || 'us-east-1',
   };
 
-  // If roleArn is provided, use AssumeRoleWithWebIdentity for OIDC federation
-  if (config.roleArn) {
+  // Resolve roleArn from config or AWS_ROLE_ARN environment variable
+  const roleArn = config.roleArn || process.env.AWS_ROLE_ARN;
+
+  if (roleArn) {
     const roleSessionName = config.roleSessionName || 'wraps-sms-session';
 
     if (process.env.VERCEL) {
@@ -28,7 +30,7 @@ export function createSMSClient(config: WrapsSMSConfig): PinpointSMSVoiceV2Clien
       try {
         const { awsCredentialsProvider } = require('@vercel/oidc-aws-credentials-provider');
         clientConfig.credentials = awsCredentialsProvider({
-          roleArn: config.roleArn,
+          roleArn,
           roleSessionName,
         });
       } catch {
@@ -39,7 +41,7 @@ export function createSMSClient(config: WrapsSMSConfig): PinpointSMSVoiceV2Clien
     } else {
       // EKS, GitHub Actions, and other OIDC environments use AWS_WEB_IDENTITY_TOKEN_FILE
       clientConfig.credentials = fromTokenFile({
-        roleArn: config.roleArn,
+        roleArn,
         roleSessionName,
       });
     }
