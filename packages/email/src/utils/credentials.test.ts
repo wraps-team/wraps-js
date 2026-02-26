@@ -4,7 +4,7 @@ import { createSESClient } from './credentials';
 
 describe('createSESClient', () => {
   afterEach(() => {
-    delete process.env.VERCEL_OIDC_TOKEN;
+    delete process.env.VERCEL;
   });
   it('should create SES client with default region', () => {
     const client = createSESClient({});
@@ -92,8 +92,8 @@ describe('createSESClient', () => {
     expect(client).toBeInstanceOf(SESClient);
   });
 
-  it('should use fromWebToken when VERCEL_OIDC_TOKEN is set with roleArn', () => {
-    process.env.VERCEL_OIDC_TOKEN = 'test-oidc-token';
+  it('should use Vercel OIDC provider when VERCEL env is set with roleArn', () => {
+    process.env.VERCEL = '1';
     const client = createSESClient({
       roleArn: 'arn:aws:iam::123456789012:role/MyEmailRole',
     });
@@ -101,8 +101,8 @@ describe('createSESClient', () => {
     expect(client).toBeInstanceOf(SESClient);
   });
 
-  it('should use fromTokenFile when roleArn is set without VERCEL_OIDC_TOKEN', () => {
-    delete process.env.VERCEL_OIDC_TOKEN;
+  it('should use fromTokenFile when roleArn is set without VERCEL env', () => {
+    delete process.env.VERCEL;
     const client = createSESClient({
       roleArn: 'arn:aws:iam::123456789012:role/MyEmailRole',
     });

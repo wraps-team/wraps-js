@@ -1,5 +1,5 @@
 import { SESClient, type SESClientConfig } from '@aws-sdk/client-ses';
-import { fromTokenFile, fromWebToken } from '@aws-sdk/credential-providers';
+import { fromTokenFile } from '@aws-sdk/credential-providers';
 import type { WrapsEmailConfig } from '../types';
 
 export function createSESClient(config: WrapsEmailConfig): SESClient {
@@ -16,15 +16,20 @@ export function createSESClient(config: WrapsEmailConfig): SESClient {
   // If roleArn is provided, use AssumeRoleWithWebIdentity for OIDC federation
   if (config.roleArn) {
     const roleSessionName = config.roleSessionName || 'wraps-email-session';
-    const vercelToken = process.env.VERCEL_OIDC_TOKEN;
 
-    if (vercelToken) {
-      // Vercel provides OIDC tokens via environment variable, not a token file
-      clientConfig.credentials = fromWebToken({
-        roleArn: config.roleArn,
-        roleSessionName,
-        webIdentityToken: vercelToken,
-      });
+    if (process.env.VERCEL) {
+      // Vercel uses @vercel/oidc-aws-credentials-provider for OIDC token exchange
+      try {
+        const { awsCredentialsProvider } = require('@vercel/oidc-aws-credentials-provider');
+        clientConfig.credentials = awsCredentialsProvider({
+          roleArn: config.roleArn,
+          roleSessionName,
+        });
+      } catch {
+        throw new Error(
+          'On Vercel with roleArn requires @vercel/oidc-aws-credentials-provider. Install it: pnpm add @vercel/oidc-aws-credentials-provider',
+        );
+      }
     } else {
       // EKS, GitHub Actions, and other OIDC environments use AWS_WEB_IDENTITY_TOKEN_FILE
       clientConfig.credentials = fromTokenFile({
@@ -34,7 +39,6 @@ export function createSESClient(config: WrapsEmailConfig): SESClient {
     }
   }
   // If explicit credentials provided, use them
-  // This can be either static credentials or a credential provider (e.g., from Vercel OIDC)
   else if (config.credentials) {
     // Check if it's a credential provider (function) or static credentials (object with accessKeyId)
     if (typeof config.credentials === 'function' || !('accessKeyId' in config.credentials)) {

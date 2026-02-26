@@ -1,6 +1,6 @@
 {
   "name": "@wraps.dev/email",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "description": "Beautiful email SDK for AWS SES",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -61,6 +61,7 @@
     "@biomejs/biome": "^2.3.5",
     "@types/node": "^24.10.0",
     "@types/react": "^19.2.3",
+    "@vercel/oidc-aws-credentials-provider": "3.0.7",
     "@vitest/coverage-v8": "^4.0.8",
     "tsup": "^8.5.0",
     "typescript": "^5.9.3",
