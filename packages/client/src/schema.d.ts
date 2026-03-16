@@ -392,6 +392,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workflows/push": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Push a workflow from CLI
+         * @description Upserts a workflow parsed from TypeScript source. Used by `wraps email workflows push`.
+         */
+        post: operations["postV1WorkflowsPush"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workflows/push/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Push multiple workflows from CLI
+         * @description Batch upsert workflows parsed from TypeScript source.
+         */
+        post: operations["postV1WorkflowsPushBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workflows/pull": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pull workflows for CLI sync
+         * @description Returns all workflows pushed from CLI with their TypeScript source.
+         */
+        get: operations["getV1WorkflowsPull"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tools/email-check": {
         parameters: {
             query?: never;
@@ -2098,6 +2158,13 @@ export interface operations {
                     contactId?: string;
                     /** @description Contact email (alternative to contactId) */
                     contactEmail?: string;
+                    /** @description Contact name (used when createIfMissing is true to set firstName) */
+                    contactName?: string;
+                    /**
+                     * @description If true and contact doesn't exist, create a new contact with the provided email
+                     * @default false
+                     */
+                    createIfMissing?: boolean;
                     /** @description Event properties */
                     properties?: {
                         [key: string]: unknown;
@@ -2110,6 +2177,13 @@ export interface operations {
                     contactId?: string;
                     /** @description Contact email (alternative to contactId) */
                     contactEmail?: string;
+                    /** @description Contact name (used when createIfMissing is true to set firstName) */
+                    contactName?: string;
+                    /**
+                     * @description If true and contact doesn't exist, create a new contact with the provided email
+                     * @default false
+                     */
+                    createIfMissing?: boolean;
                     /** @description Event properties */
                     properties?: {
                         [key: string]: unknown;
@@ -2122,6 +2196,13 @@ export interface operations {
                     contactId?: string;
                     /** @description Contact email (alternative to contactId) */
                     contactEmail?: string;
+                    /** @description Contact name (used when createIfMissing is true to set firstName) */
+                    contactName?: string;
+                    /**
+                     * @description If true and contact doesn't exist, create a new contact with the provided email
+                     * @default false
+                     */
+                    createIfMissing?: boolean;
                     /** @description Event properties */
                     properties?: {
                         [key: string]: unknown;
@@ -2137,6 +2218,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         success: boolean;
+                        /** @description Whether a new contact was created */
+                        contactCreated: boolean;
                         /** @description Number of workflows triggered */
                         workflowsTriggered: number;
                         /** @description Number of executions resumed */
@@ -2144,6 +2227,8 @@ export interface operations {
                     };
                     "multipart/form-data": {
                         success: boolean;
+                        /** @description Whether a new contact was created */
+                        contactCreated: boolean;
                         /** @description Number of workflows triggered */
                         workflowsTriggered: number;
                         /** @description Number of executions resumed */
@@ -2151,6 +2236,8 @@ export interface operations {
                     };
                     "text/plain": {
                         success: boolean;
+                        /** @description Whether a new contact was created */
+                        contactCreated: boolean;
                         /** @description Number of workflows triggered */
                         workflowsTriggered: number;
                         /** @description Number of executions resumed */
@@ -2827,6 +2914,252 @@ export interface operations {
         };
     };
     getV1TemplatesPull: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postV1WorkflowsPush: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Workflow slug (filename without extension) */
+                    slug: string;
+                    /** @description Workflow display name */
+                    name: string;
+                    /** @description Workflow description */
+                    description?: string;
+                    /** @description Original TypeScript source code */
+                    sourceTs: string;
+                    /** @description SHA256 hash of source file */
+                    sourceHash: string;
+                    /** @description Flat array of workflow steps */
+                    steps: unknown[];
+                    /** @description Flat array of step transitions */
+                    transitions: unknown[];
+                    /** @description Trigger type */
+                    triggerType: string;
+                    /** @description Trigger configuration */
+                    triggerConfig?: unknown;
+                    settings?: {
+                        allowReentry?: boolean;
+                        reentryDelaySeconds?: number;
+                        maxConcurrentExecutions?: number;
+                        contactCooldownSeconds?: number;
+                    };
+                    defaults?: {
+                        from?: string;
+                        fromName?: string;
+                        replyTo?: string;
+                        senderId?: string;
+                    };
+                    /** @description Path in project (e.g. workflows/onboarding.ts) */
+                    cliProjectPath?: string;
+                    /** @description Force overwrite even if edited on dashboard */
+                    force?: boolean;
+                };
+                "multipart/form-data": {
+                    /** @description Workflow slug (filename without extension) */
+                    slug: string;
+                    /** @description Workflow display name */
+                    name: string;
+                    /** @description Workflow description */
+                    description?: string;
+                    /** @description Original TypeScript source code */
+                    sourceTs: string;
+                    /** @description SHA256 hash of source file */
+                    sourceHash: string;
+                    /** @description Flat array of workflow steps */
+                    steps: unknown[];
+                    /** @description Flat array of step transitions */
+                    transitions: unknown[];
+                    /** @description Trigger type */
+                    triggerType: string;
+                    /** @description Trigger configuration */
+                    triggerConfig?: unknown;
+                    settings?: {
+                        allowReentry?: boolean;
+                        reentryDelaySeconds?: number;
+                        maxConcurrentExecutions?: number;
+                        contactCooldownSeconds?: number;
+                    };
+                    defaults?: {
+                        from?: string;
+                        fromName?: string;
+                        replyTo?: string;
+                        senderId?: string;
+                    };
+                    /** @description Path in project (e.g. workflows/onboarding.ts) */
+                    cliProjectPath?: string;
+                    /** @description Force overwrite even if edited on dashboard */
+                    force?: boolean;
+                };
+                "text/plain": {
+                    /** @description Workflow slug (filename without extension) */
+                    slug: string;
+                    /** @description Workflow display name */
+                    name: string;
+                    /** @description Workflow description */
+                    description?: string;
+                    /** @description Original TypeScript source code */
+                    sourceTs: string;
+                    /** @description SHA256 hash of source file */
+                    sourceHash: string;
+                    /** @description Flat array of workflow steps */
+                    steps: unknown[];
+                    /** @description Flat array of step transitions */
+                    transitions: unknown[];
+                    /** @description Trigger type */
+                    triggerType: string;
+                    /** @description Trigger configuration */
+                    triggerConfig?: unknown;
+                    settings?: {
+                        allowReentry?: boolean;
+                        reentryDelaySeconds?: number;
+                        maxConcurrentExecutions?: number;
+                        contactCooldownSeconds?: number;
+                    };
+                    defaults?: {
+                        from?: string;
+                        fromName?: string;
+                        replyTo?: string;
+                        senderId?: string;
+                    };
+                    /** @description Path in project (e.g. workflows/onboarding.ts) */
+                    cliProjectPath?: string;
+                    /** @description Force overwrite even if edited on dashboard */
+                    force?: boolean;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postV1WorkflowsPushBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    workflows: {
+                        slug: string;
+                        name: string;
+                        description?: string;
+                        sourceTs: string;
+                        sourceHash: string;
+                        steps: unknown[];
+                        transitions: unknown[];
+                        triggerType: string;
+                        triggerConfig?: unknown;
+                        settings?: {
+                            allowReentry?: boolean;
+                            reentryDelaySeconds?: number;
+                            maxConcurrentExecutions?: number;
+                            contactCooldownSeconds?: number;
+                        };
+                        defaults?: {
+                            from?: string;
+                            fromName?: string;
+                            replyTo?: string;
+                            senderId?: string;
+                        };
+                        cliProjectPath?: string;
+                        force?: boolean;
+                    }[];
+                };
+                "multipart/form-data": {
+                    workflows: {
+                        slug: string;
+                        name: string;
+                        description?: string;
+                        sourceTs: string;
+                        sourceHash: string;
+                        steps: unknown[];
+                        transitions: unknown[];
+                        triggerType: string;
+                        triggerConfig?: unknown;
+                        settings?: {
+                            allowReentry?: boolean;
+                            reentryDelaySeconds?: number;
+                            maxConcurrentExecutions?: number;
+                            contactCooldownSeconds?: number;
+                        };
+                        defaults?: {
+                            from?: string;
+                            fromName?: string;
+                            replyTo?: string;
+                            senderId?: string;
+                        };
+                        cliProjectPath?: string;
+                        force?: boolean;
+                    }[];
+                };
+                "text/plain": {
+                    workflows: {
+                        slug: string;
+                        name: string;
+                        description?: string;
+                        sourceTs: string;
+                        sourceHash: string;
+                        steps: unknown[];
+                        transitions: unknown[];
+                        triggerType: string;
+                        triggerConfig?: unknown;
+                        settings?: {
+                            allowReentry?: boolean;
+                            reentryDelaySeconds?: number;
+                            maxConcurrentExecutions?: number;
+                            contactCooldownSeconds?: number;
+                        };
+                        defaults?: {
+                            from?: string;
+                            fromName?: string;
+                            replyTo?: string;
+                            senderId?: string;
+                        };
+                        cliProjectPath?: string;
+                        force?: boolean;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getV1WorkflowsPull: {
         parameters: {
             query?: never;
             header?: never;

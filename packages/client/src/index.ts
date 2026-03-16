@@ -1,4 +1,11 @@
-export type { PlatformClient, WrapsPlatformConfig } from './client';
+export type {
+  BatchTrackEvent,
+  BatchTrackResult,
+  PlatformClient,
+  TrackOptions,
+  TrackResult,
+  WrapsPlatformConfig,
+} from './client';
 export { createPlatformClient } from './client';
 // Project configuration
 export {
@@ -12,6 +19,8 @@ export type { operations, paths } from './schema.d.ts';
 
 // Workflow definitions
 export {
+  type CascadeChannel,
+  type CascadeConfig,
   type ConditionOperator,
   type ConditionStepConfig,
   type DelayStepConfig,
@@ -38,6 +47,7 @@ export {
 } from './workflow';
 
 export {
+  cascade,
   condition,
   delay,
   exit,

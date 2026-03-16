@@ -6,6 +6,7 @@
  */
 
 import type {
+  CascadeConfig,
   ConditionStepConfig,
   DurationConfig,
   ExitStepConfig,
@@ -343,4 +344,111 @@ export function webhook(
     name: name ?? `Webhook: ${config.url}`,
     config: { type: 'webhook', method: 'POST', ...webhookConfig },
   };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ORCHESTRATION
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Create a cross-channel cascade that tries channels in order.
+ * Stops when engagement is detected on any channel.
+ *
+ * Returns an array of step definitions that get flattened into the workflow.
+ *
+ * @example
+ * ```ts
+ * cascade('notify-user', {
+ *   channels: [
+ *     {
+ *       type: 'email',
+ *       template: 'welcome-email',
+ *       waitFor: { hours: 2 },
+ *       engagement: 'opened',
+ *     },
+ *     {
+ *       type: 'sms',
+ *       template: 'welcome-sms',
+ *     },
+ *   ],
+ * })
+ * ```
+ *
+ * Expands to: sendEmail → waitForEmailEngagement → condition (engaged?) → yes: exit → no: sendSms
+ */
+export function cascade(
+  id: string,
+  config: CascadeConfig
+): StepDefinition[] {
+  const { channels } = config;
+  const steps: StepDefinition[] = [];
+
+  for (let i = 0; i < channels.length; i++) {
+    const channel = channels[i];
+    const isLast = i === channels.length - 1;
+    const channelId = `${id}-${channel.type}${i > 0 ? `-${i}` : ''}`;
+
+    // 1. Send the message on this channel
+    if (channel.type === 'email') {
+      steps.push(
+        sendEmail(channelId, {
+          template: channel.template,
+          subject: channel.subject,
+          from: channel.from,
+          fromName: channel.fromName,
+          name: `Cascade: send ${channel.template}`,
+        })
+      );
+    } else {
+      steps.push(
+        sendSms(channelId, {
+          template: channel.template,
+          message: channel.message,
+          senderId: channel.senderId,
+          name: `Cascade: send ${channel.template || 'SMS'}`,
+        })
+      );
+    }
+
+    // 2. If not the last channel, wait for engagement and check
+    if (!isLast && channel.waitFor) {
+      if (channel.type === 'email') {
+        // Wait for email engagement
+        const waitId = `${channelId}-wait`;
+        steps.push(
+          waitForEmailEngagement(waitId, {
+            emailStepId: channelId,
+            engagementType: channel.engagement ?? 'opened',
+            timeout: channel.waitFor,
+            name: `Cascade: wait for ${channel.engagement ?? 'opened'}`,
+          })
+        );
+
+        // Check if engaged → exit cascade, otherwise continue to next channel
+        const checkId = `${channelId}-check`;
+        steps.push(
+          condition(checkId, {
+            field: `steps.${waitId}.engaged`,
+            operator: 'equals',
+            value: true,
+            name: `Cascade: ${channel.type} engaged?`,
+            branches: {
+              yes: [exit(`${id}-engaged`, { reason: `Engaged via ${channel.type}` })],
+            },
+          })
+        );
+      } else {
+        // For SMS, just delay before trying next channel
+        const waitId = `${channelId}-wait`;
+        steps.push(
+          delay(waitId, {
+            ...channel.waitFor,
+            name: `Cascade: wait before next channel`,
+          })
+        );
+      }
+    }
+  }
+
+  return steps;
 }

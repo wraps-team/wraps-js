@@ -372,6 +372,44 @@ export interface WorkflowDefinition {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// CASCADE TYPES
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * A channel in a cascade sequence.
+ * Channels are tried in order — if engagement is detected, the cascade stops.
+ */
+export interface CascadeChannel {
+  /** Channel type */
+  type: 'email' | 'sms';
+  /** Template to send */
+  template: string;
+  /** How long to wait for engagement before falling back to the next channel */
+  waitFor?: DurationConfig;
+  /** What counts as "engaged" — email only (default: 'opened') */
+  engagement?: 'opened' | 'clicked';
+  /** SMS: inline message (alternative to template) */
+  message?: string;
+  /** SMS: sender ID override */
+  senderId?: string;
+  /** Email: subject override */
+  subject?: string;
+  /** Email: sender address override */
+  from?: string;
+  /** Email: sender name override */
+  fromName?: string;
+}
+
+/**
+ * Configuration for a cross-channel cascade.
+ * Channels are tried in order — the cascade stops when engagement is detected.
+ */
+export interface CascadeConfig {
+  /** Ordered list of channels to try — first channel is tried first, falls back to next */
+  channels: CascadeChannel[];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // DEFINE WORKFLOW
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -395,5 +433,8 @@ export interface WorkflowDefinition {
  * ```
  */
 export function defineWorkflow(definition: WorkflowDefinition): WorkflowDefinition {
-  return definition;
+  return {
+    ...definition,
+    steps: definition.steps.flat(Infinity) as StepDefinition[],
+  };
 }

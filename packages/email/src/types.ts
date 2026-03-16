@@ -463,7 +463,8 @@ export interface InboxEmail {
   html: string | null;
   htmlTruncated: boolean;
   text: string | null;
-  headers: Record<string, string>;
+  // biome-ignore lint/suspicious/noExplicitAny: mailparser returns nested objects for some headers (e.g. list)
+  headers: Record<string, any>;
   attachments: InboxAttachment[];
   spamVerdict: string | null;
   virusVerdict: string | null;
