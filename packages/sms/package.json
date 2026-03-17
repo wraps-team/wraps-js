@@ -1,6 +1,6 @@
 {
   "name": "@wraps.dev/sms",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Send SMS via AWS End User Messaging with TypeScript. Batch sending, opt-out management, phone number provisioning, and segment calculation. Your AWS account, no vendor lock-in.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
