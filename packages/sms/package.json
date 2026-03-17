@@ -1,7 +1,7 @@
 {
   "name": "@wraps.dev/sms",
   "version": "0.1.5",
-  "description": "Beautiful SMS SDK for AWS End User Messaging",
+  "description": "Send SMS via AWS End User Messaging with TypeScript. Batch sending, opt-out management, phone number provisioning, and segment calculation. Your AWS account, no vendor lock-in.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -51,10 +51,21 @@
   },
   "keywords": [
     "sms",
+    "send-sms",
+    "text-message",
     "aws",
     "pinpoint",
+    "end-user-messaging",
     "messaging",
-    "typescript"
+    "typescript",
+    "sms-api",
+    "sms-sdk",
+    "otp",
+    "verification-code",
+    "notifications",
+    "node",
+    "nodejs",
+    "wraps"
   ],
   "author": "Wraps",
   "license": "MIT",

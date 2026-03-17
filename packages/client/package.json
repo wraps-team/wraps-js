@@ -1,7 +1,7 @@
 {
   "name": "@wraps.dev/client",
   "version": "0.7.0",
-  "description": "Type-safe API client for Wraps Platform",
+  "description": "TypeScript client for the Wraps Platform. Manage email templates, workflows, contacts, segments, broadcasts, and event tracking across email and SMS channels.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -49,10 +49,18 @@
   },
   "keywords": [
     "wraps",
-    "api",
-    "client",
+    "api-client",
     "openapi",
-    "typescript"
+    "typescript",
+    "email-platform",
+    "workflow-automation",
+    "email-templates",
+    "contacts",
+    "segments",
+    "broadcasts",
+    "email-marketing",
+    "node",
+    "nodejs"
   ],
   "author": "Wraps",
   "license": "MIT",

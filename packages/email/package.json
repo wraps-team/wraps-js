@@ -1,7 +1,7 @@
 {
   "name": "@wraps.dev/email",
   "version": "0.10.3",
-  "description": "Beautiful email SDK for AWS SES",
+  "description": "Send email via AWS SES with TypeScript. Templates, batch sending, inbound email, attachments, React Email support, and event tracking. Your AWS account, no vendor lock-in.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -69,10 +69,23 @@
   },
   "keywords": [
     "email",
+    "send-email",
     "ses",
     "aws",
+    "aws-ses",
     "react-email",
-    "typescript"
+    "typescript",
+    "transactional-email",
+    "email-api",
+    "email-sdk",
+    "mailer",
+    "smtp",
+    "batch-email",
+    "inbound-email",
+    "email-templates",
+    "node",
+    "nodejs",
+    "wraps"
   ],
   "author": "Wraps",
   "license": "MIT",
