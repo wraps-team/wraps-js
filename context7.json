@@ -1,0 +1,30 @@
+{
+  "projectTitle": "Wraps JS SDKs",
+  "description": "TypeScript SDKs for AWS services: @wraps.dev/email (SES), @wraps.dev/sms (End User Messaging), @wraps.dev/client (Platform API). BYOC — calls AWS APIs directly in the user's account.",
+  "folders": [
+    "packages/email/src",
+    "packages/email/examples",
+    "packages/sms/src",
+    "packages/sms/examples",
+    "packages/client/src"
+  ],
+  "excludeFolders": [
+    "node_modules",
+    "**/dist",
+    "**/__tests__",
+    "**/test"
+  ],
+  "excludeFiles": [
+    "*.test.ts",
+    "*.spec.ts",
+    "*.map",
+    "pnpm-lock.yaml"
+  ],
+  "rules": [
+    "BYOC (Bring Your Own Credentials) — SDKs call AWS APIs directly in the user's account, not a managed service",
+    "Credential resolution order: pre-configured AWS client > OIDC role > explicit credentials > AWS credential chain",
+    "AWS SDK packages (@aws-sdk/*) are peer dependencies — never bundle them",
+    "Dual CJS + ESM output via tsup",
+    "All public methods require JSDoc with @example, @throws, @param, @returns"
+  ]
+}
