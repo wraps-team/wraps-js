@@ -1,6 +1,6 @@
 {
   "name": "@wraps.dev/client",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "TypeScript client for the Wraps Platform. Manage email templates, workflows, contacts, segments, broadcasts, and event tracking across email and SMS channels.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
