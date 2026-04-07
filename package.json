@@ -18,7 +18,9 @@
   "packageManager": "pnpm@9.0.0",
   "pnpm": {
     "overrides": {
-      "fast-xml-parser": ">=5.3.4"
+      "fast-xml-parser": ">=5.3.4",
+      "vite": "^7.3.2",
+      "rollup": "^4.59.0"
     }
   },
   "keywords": [
