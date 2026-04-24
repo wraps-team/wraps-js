@@ -6,6 +6,8 @@ export interface TrackOptions {
   contactId?: string;
   /** Contact email (alternative to contactId) */
   contactEmail?: string;
+  /** Contact externalId (alternative to contactId/contactEmail) */
+  contactExternalId?: string;
   /** Contact name (used when createIfMissing is true) */
   contactName?: string;
   /** If true and contact doesn't exist, create a new contact */
@@ -31,6 +33,8 @@ export interface BatchTrackEvent {
   contactId?: string;
   /** Contact email (alternative to contactId) */
   contactEmail?: string;
+  /** Contact externalId (alternative to contactId/contactEmail) */
+  contactExternalId?: string;
   /** Event properties */
   properties?: Record<string, unknown>;
 }

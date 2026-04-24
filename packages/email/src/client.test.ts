@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WrapsEmail } from './client';
-import { SESError } from './errors';
+import { SESError, ValidationError } from './errors';
 
 // Mock the SES client
 vi.mock('@aws-sdk/client-ses', () => {
@@ -48,6 +48,12 @@ vi.mock('./utils/validation', () => ({
   normalizeEmailAddress: vi.fn((addr) => (typeof addr === 'string' ? addr : addr.email)),
   normalizeEmailAddresses: vi.fn((addrs) => (Array.isArray(addrs) ? addrs : [addrs])),
 }));
+
+// Shared SSM mock for reply-threading tests. We pass a pre-configured
+// ssmClient into `WrapsEmail` to avoid the `require('@aws-sdk/client-ssm')`
+// path (which vi.mock cannot intercept when tsx compiles down to CJS).
+const mockSsmSend = vi.fn();
+const mockSsmClient = { send: mockSsmSend } as any;
 
 // Mock react email
 vi.mock('./react', () => ({
@@ -478,5 +484,198 @@ describe('WrapsEmail', () => {
 
       expect(mockDestroy).toHaveBeenCalled();
     });
+  });
+});
+
+describe('WrapsEmail reply threading', () => {
+  let email: WrapsEmail;
+  let mockSend: any;
+
+  function ssmValue(byte: number): string {
+    const secret = Buffer.alloc(32, byte);
+    return JSON.stringify({ kid: 1, current: secret.toString('base64') });
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSsmSend.mockReset();
+    email = new WrapsEmail({
+      region: 'us-east-1',
+      replyThreading: {
+        parameterPrefix: '/wraps/email/reply-secret/',
+        ssmClient: mockSsmClient,
+      },
+    });
+    mockSend = (email as any).sesClient.send;
+  });
+
+  it('signs reply-to with r.mail.{fromDomain} when conversationId is set', async () => {
+    mockSsmSend.mockResolvedValue({ Parameter: { Value: ssmValue(0x11) } });
+    mockSend.mockResolvedValue({
+      MessageId: 'm-1',
+      $metadata: { requestId: 'r-1' },
+    });
+
+    const convId = 'AAAAAAAAAAA';
+    const result = await email.send({
+      from: 'agent@support.foo.com',
+      to: 'user@example.com',
+      subject: 'Hi',
+      html: '<p>Hi</p>',
+      conversationId: convId,
+    });
+
+    expect(mockSend).toHaveBeenCalledTimes(1);
+    const command = mockSend.mock.calls[0][0];
+    expect(command.ReplyToAddresses).toHaveLength(1);
+    expect(command.ReplyToAddresses[0]).toMatch(/@r\.mail\.support\.foo\.com$/);
+    expect(result.conversationId).toBe(convId);
+    expect(result.sendId).toBeDefined();
+    expect(result.messageId).toBe('m-1');
+  });
+
+  it('signs per-domain correctly when two sends use different From domains', async () => {
+    mockSsmSend.mockImplementation((cmd: any) => {
+      const name = cmd?.input?.Name ?? cmd?.Name;
+      if (name === '/wraps/email/reply-secret/support.foo.com') {
+        return Promise.resolve({ Parameter: { Value: ssmValue(0x22) } });
+      }
+      if (name === '/wraps/email/reply-secret/sales.foo.com') {
+        return Promise.resolve({ Parameter: { Value: ssmValue(0x33) } });
+      }
+      return Promise.reject(new Error(`unexpected ${name}`));
+    });
+    mockSend.mockResolvedValue({
+      MessageId: 'm-2',
+      $metadata: { requestId: 'r-2' },
+    });
+
+    await email.send({
+      from: 'a@support.foo.com',
+      to: 'u@example.com',
+      subject: 's',
+      html: '<p/>',
+      conversationId: 'BBBBBBBBBBB',
+    });
+    await email.send({
+      from: 'b@sales.foo.com',
+      to: 'u@example.com',
+      subject: 's',
+      html: '<p/>',
+      conversationId: 'CCCCCCCCCCC',
+    });
+
+    const cmds = mockSend.mock.calls.map((c: any[]) => c[0]);
+    expect(cmds[0].ReplyToAddresses[0]).toMatch(/@r\.mail\.support\.foo\.com$/);
+    expect(cmds[1].ReplyToAddresses[0]).toMatch(/@r\.mail\.sales\.foo\.com$/);
+  });
+
+  it('throws ValidationError when both replyTo and conversationId are set', async () => {
+    mockSsmSend.mockResolvedValue({ Parameter: { Value: ssmValue(0x44) } });
+    mockSend.mockResolvedValue({
+      MessageId: 'm-3',
+      $metadata: { requestId: 'r-3' },
+    });
+
+    await expect(
+      email.send({
+        from: 'a@foo.com',
+        to: 'u@example.com',
+        subject: 's',
+        html: '<p/>',
+        replyTo: 'x@y.com',
+        conversationId: 'DDDDDDDDDDD',
+      })
+    ).rejects.toThrow(ValidationError);
+  });
+
+  it('returns { conversationId, sendId } from send() when signed', async () => {
+    mockSsmSend.mockResolvedValue({ Parameter: { Value: ssmValue(0x55) } });
+    mockSend.mockResolvedValue({
+      MessageId: 'm-4',
+      $metadata: { requestId: 'r-4' },
+    });
+
+    const convId = 'EEEEEEEEEEE';
+    const result = await email.send({
+      from: 'a@foo.com',
+      to: 'u@example.com',
+      subject: 's',
+      html: '<p/>',
+      conversationId: convId,
+    });
+
+    expect(result.conversationId).toBe(convId);
+    expect(result.sendId).toMatch(/^[A-Za-z0-9_-]{11}$/);
+    expect(result.messageId).toBe('m-4');
+    expect(result.requestId).toBe('r-4');
+  });
+
+  it('sendTemplate signs reply-to when conversationId is passed', async () => {
+    mockSsmSend.mockResolvedValue({ Parameter: { Value: ssmValue(0x66) } });
+    mockSend.mockResolvedValue({
+      MessageId: 'tm-1',
+      $metadata: { requestId: 'tr-1' },
+    });
+
+    const convId = 'FFFFFFFFFFF';
+    const result = await email.sendTemplate({
+      from: 'a@foo.com',
+      to: 'u@example.com',
+      template: 't',
+      templateData: {},
+      conversationId: convId,
+    });
+
+    const command = mockSend.mock.calls[0][0];
+    expect(command.ReplyToAddresses[0]).toMatch(/@r\.mail\.foo\.com$/);
+    expect(result.conversationId).toBe(convId);
+    expect(result.sendId).toBeDefined();
+  });
+
+  it('sendBulkTemplate signs reply-to when conversationId is passed', async () => {
+    mockSsmSend.mockResolvedValue({ Parameter: { Value: ssmValue(0x77) } });
+    mockSend.mockResolvedValue({
+      Status: [{ MessageId: 'bm-1', Status: 'success' }],
+      $metadata: { requestId: 'br-1' },
+    });
+
+    const convId = 'GGGGGGGGGGG';
+    const result = await email.sendBulkTemplate({
+      from: 'a@foo.com',
+      template: 't',
+      destinations: [{ to: 'u@example.com', templateData: {} }],
+      conversationId: convId,
+    });
+
+    const command = mockSend.mock.calls[0][0];
+    expect(command.ReplyToAddresses[0]).toMatch(/@r\.mail\.foo\.com$/);
+    expect(result.conversationId).toBe(convId);
+    expect(result.sendId).toBeDefined();
+  });
+
+  it('sendWithAttachments signs reply-to via raw MIME Reply-To header when conversationId is passed', async () => {
+    mockSsmSend.mockResolvedValue({ Parameter: { Value: ssmValue(0x88) } });
+    mockSend.mockResolvedValue({
+      MessageId: 'am-1',
+      $metadata: { requestId: 'ar-1' },
+    });
+
+    const convId = 'HHHHHHHHHHH';
+    const result = await email.send({
+      from: 'a@foo.com',
+      to: 'u@example.com',
+      subject: 's',
+      html: '<p/>',
+      attachments: [{ filename: 't.txt', content: Buffer.from('hi') }],
+      conversationId: convId,
+    });
+
+    const command = mockSend.mock.calls[0][0];
+    expect(command).toHaveProperty('RawMessage');
+    const rawMime = new TextDecoder().decode(command.RawMessage.Data as Uint8Array);
+    expect(rawMime).toMatch(/Reply-To:.*@r\.mail\.foo\.com/);
+    expect(result.conversationId).toBe(convId);
+    expect(result.sendId).toBeDefined();
   });
 });

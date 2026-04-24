@@ -10,6 +10,7 @@ Beautiful email SDK for AWS SES with React.email support.
 - Automatic AWS credential chain resolution
 - Template management (create, update, delete, list)
 - Bulk email sending (up to 50 recipients)
+- Signed reply threading for agent-style inbound (conversation id survives any email client)
 - Zero vendor lock-in - just a thin wrapper around AWS SES
 - **Dual CJS + ESM builds** - works with any bundler or Node.js
 
@@ -207,6 +208,120 @@ await email.send({
   },
 });
 ```
+
+## Reply threading
+
+When an agent or user replies to a message you sent, you need to know which conversation the reply belongs to — without trusting the `From:` address and without parsing `In-Reply-To` headers clients love to drop. Reply threading mints a signed `Reply-To` address per send (e.g. `t_eyJ...@r.mail.yourapp.com`). The Wraps-deployed inbound Lambda verifies the signature, extracts the conversation id, and publishes it on the `email.received` event so your handler can look up state in O(1).
+
+**Prerequisite:** reply threading ships as part of the Wraps CLI inbound stack. Run `wraps email reply init --domain yourapp.com` once per sending domain — it provisions the signing secret in SSM, the `r.mail.{domain}` MX record, and the inbound Lambda that verifies tokens. See the [Reply threading guide](https://wraps.dev/docs/guides/reply-threading) for the full CLI flow.
+
+### Configure the client
+
+```typescript
+import { WrapsEmail } from '@wraps.dev/email';
+
+const email = new WrapsEmail({
+  region: 'us-east-1',
+  replyThreading: {
+    // Defaults shown — all fields optional
+    parameterPrefix: '/wraps/email/reply-secret/', // SSM prefix written by the CLI
+    ttlSeconds: 90 * 86_400,                       // 90 days; 0 = infinite
+    cacheTtlMs: 5 * 60 * 1000,                     // per-domain secret cache
+    // replyDomain: 'r.mail.yourapp.com',          // defaults to r.mail.{fromDomain}
+  },
+});
+```
+
+One `WrapsEmail` instance handles any number of sending domains — the per-domain signing secret is fetched from SSM on first use and cached for `cacheTtlMs`.
+
+### Send a threaded message
+
+```typescript
+const conversationId = email.replyThreading!.newConversation();
+
+const result = await email.send({
+  from: 'agent@yourapp.com',
+  to: 'user@example.com',
+  subject: 'Re: your support request',
+  html: '<p>Hey — following up on your ticket.</p>',
+  conversationId,
+});
+
+// result.conversationId === conversationId
+// result.sendId is a fresh 11-char id for this specific send
+await saveThread({ conversationId: result.conversationId, sendId: result.sendId });
+```
+
+The SDK generates a signed `Reply-To` address and overrides `ReplyToAddresses`. Passing both `replyTo` and `conversationId` throws `ValidationError` — pick one.
+
+To continue an existing conversation, reuse the id you stored from a prior `send()`:
+
+```typescript
+await email.send({
+  from: 'agent@yourapp.com',
+  to: 'user@example.com',
+  subject: 'Re: your support request',
+  html: '<p>Quick follow-up.</p>',
+  conversationId: existingThread.conversationId,
+});
+```
+
+### ID format
+
+Both `conversationId` and `sendId` must be 11-character base64url strings (8 raw bytes). UUIDs and other formats will throw `ValidationError`. Generate them with the SDK:
+
+```typescript
+import { generateConversationId, generateSendId } from '@wraps.dev/email';
+
+const conversationId = generateConversationId(); // e.g. "a7F_2kQbNxR"
+const sendId = generateSendId();
+```
+
+Or use the client helper: `email.replyThreading!.newConversation()`.
+
+### Handle incoming replies
+
+The inbound Lambda (deployed by `wraps email inbound init`) verifies the token and emits an `email.received` event on EventBridge with a `replyToken` block:
+
+```typescript
+// EventBridge target (Lambda, SQS consumer, etc.)
+export async function handler(event: { detail: EmailReceivedDetail }) {
+  const { replyToken, from, subject, text } = event.detail;
+
+  if (replyToken?.status !== 'valid') {
+    // One of: 'invalid-signature' | 'expired' | 'unsupported-version'
+    //       | 'malformed' | 'unknown-domain' | undefined (no token present)
+    await routeToFallbackInbox(event.detail);
+    return;
+  }
+
+  await appendReplyToThread({
+    conversationId: replyToken.conversationId,
+    inReplyToSendId: replyToken.sendId,
+    from: from.address,
+    body: text,
+  });
+}
+```
+
+See the [event shape reference](https://wraps.dev/docs/infrastructure/events) for the full `email.received` payload.
+
+### Rotating the signing secret
+
+Rotate with the CLI whenever you need to — the previous secret stays valid during the rotation window so in-flight replies keep verifying:
+
+```bash
+wraps email reply rotate --domain yourapp.com
+```
+
+SDK instances pick up the new secret within `cacheTtlMs` (default 5 minutes). No redeploy needed.
+
+### Honest limits
+
+- **Verified ≠ sender identity.** A valid token proves the reply came back to an address you minted — it does not prove who sent it. Verify `From:` (SPF/DKIM/DMARC, or an explicit allow-list) before taking sensitive actions.
+- **Default TTL is 90 days.** Tokens older than that verify as `expired`. Pass `replyTtlSeconds: 0` on `send()` for infinite-lifetime tokens, or override per-domain with `replyThreading.ttlSeconds`.
+- **No replay defense in v1.** The same signed address will verify repeatedly until it expires. If you need single-use semantics, track `sendId` in your own store and reject duplicates.
+- **One secret per domain.** Multiple sending domains mean multiple SSM parameters (all under `parameterPrefix`) and multiple CLI `reply init` runs.
 
 ## Template Management
 

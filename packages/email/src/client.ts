@@ -16,6 +16,7 @@ import { SESError, ValidationError } from './errors';
 import { WrapsEmailEvents } from './events';
 import { WrapsInbox } from './inbox';
 import { renderReactEmail } from './react';
+import { WrapsReplyThreading } from './reply-threading';
 import { WrapsEmailSuppression } from './suppression';
 import type {
   CreateTemplateFromReactParams,
@@ -63,6 +64,18 @@ export class WrapsEmail {
    * Always available when credentials are configured
    */
   public readonly suppression: WrapsEmailSuppression;
+
+  /**
+   * Signed reply-to threading
+   * Only available when `replyThreading` is configured
+   */
+  public readonly replyThreading: WrapsReplyThreading | null;
+
+  /**
+   * Constructor-level `replyDomain` override, preserved so per-send
+   * resolution can honor it without re-reading config.
+   */
+  private readonly replyDomainOverride: string | undefined;
 
   /**
    * Template management methods
@@ -145,6 +158,34 @@ export class WrapsEmail {
     }
     this.suppression = new WrapsEmailSuppression(this.sesv2Client);
 
+    // Initialize reply threading if configured
+    this.replyDomainOverride = config.replyThreading?.replyDomain;
+    if (config.replyThreading) {
+      let ssmClient = config.replyThreading.ssmClient;
+      if (!ssmClient) {
+        const { SSMClient } = require('@aws-sdk/client-ssm');
+        const ssmConfig: Record<string, unknown> = {
+          region: config.region || 'us-east-1',
+        };
+        if (config.credentials) {
+          ssmConfig.credentials = config.credentials;
+        }
+        if (config.endpoint) {
+          ssmConfig.endpoint = config.endpoint;
+        }
+        ssmClient = new SSMClient(ssmConfig);
+      }
+      this.replyThreading = new WrapsReplyThreading({
+        ssmClient: ssmClient as NonNullable<typeof ssmClient>,
+        parameterPrefix: config.replyThreading.parameterPrefix ?? '/wraps/email/reply-secret/',
+        cacheTtlMs: config.replyThreading.cacheTtlMs,
+        defaultTtlSeconds: config.replyThreading.ttlSeconds,
+        defaultReplyDomainOverride: config.replyThreading.replyDomain,
+      });
+    } else {
+      this.replyThreading = null;
+    }
+
     // Initialize templates namespace
     this.templates = {
       create: this.createTemplate.bind(this),
@@ -159,6 +200,15 @@ export class WrapsEmail {
   async send(params: SendEmailParams): Promise<SendEmailResult> {
     // Validate parameters
     validateEmailParams(params);
+
+    // Resolve reply-to (signed token when conversationId is set)
+    const replyToResolved = await this.resolveReplyTo({
+      from: params.from,
+      replyTo: params.replyTo,
+      conversationId: params.conversationId,
+      sendId: params.sendId,
+      replyTtlSeconds: params.replyTtlSeconds,
+    });
 
     // Handle React.email rendering
     let html = params.html;
@@ -180,7 +230,7 @@ export class WrapsEmail {
 
     // Handle attachments (requires SES v2 SendRawEmail)
     if (params.attachments && params.attachments.length > 0) {
-      return this.sendWithAttachments(params);
+      return this.sendWithAttachments(params, replyToResolved);
     }
 
     // Build SES SendEmail command
@@ -191,7 +241,7 @@ export class WrapsEmail {
         CcAddresses: params.cc ? normalizeEmailAddresses(params.cc) : undefined,
         BccAddresses: params.bcc ? normalizeEmailAddresses(params.bcc) : undefined,
       },
-      ReplyToAddresses: params.replyTo ? normalizeEmailAddresses(params.replyTo) : undefined,
+      ReplyToAddresses: replyToResolved.replyToAddresses,
       Message: {
         Subject: {
           Data: params.subject,
@@ -229,16 +279,28 @@ export class WrapsEmail {
         throw new Error('Invalid response from SES: missing MessageId or requestId');
       }
 
-      return {
+      const result: SendEmailResult = {
         messageId: response.MessageId,
         requestId: response.$metadata.requestId,
       };
+      if (replyToResolved.conversationId) {
+        result.conversationId = replyToResolved.conversationId;
+        result.sendId = replyToResolved.sendId;
+      }
+      return result;
     } catch (error) {
       throw this.handleSESError(error);
     }
   }
 
-  private async sendWithAttachments(params: SendEmailParams): Promise<SendEmailResult> {
+  private async sendWithAttachments(
+    params: SendEmailParams,
+    preResolvedReplyTo?: {
+      replyToAddresses?: string[];
+      conversationId?: string;
+      sendId?: string;
+    }
+  ): Promise<SendEmailResult> {
     // Validate that we have attachments
     if (!params.attachments || params.attachments.length === 0) {
       throw new ValidationError('sendWithAttachments called without attachments');
@@ -267,13 +329,24 @@ export class WrapsEmail {
       text = htmlToPlainText(html);
     }
 
+    // Resolve reply-to (may mint a signed token)
+    const replyToResolved =
+      preResolvedReplyTo ??
+      (await this.resolveReplyTo({
+        from: params.from,
+        replyTo: params.replyTo,
+        conversationId: params.conversationId,
+        sendId: params.sendId,
+        replyTtlSeconds: params.replyTtlSeconds,
+      }));
+
     // Build raw MIME message
     const rawMessage = buildRawEmailMessage({
       from: params.from,
       to: params.to,
       cc: params.cc,
       bcc: params.bcc,
-      replyTo: params.replyTo,
+      replyTo: replyToResolved.replyToAddresses,
       subject: params.subject,
       html,
       text,
@@ -305,13 +378,65 @@ export class WrapsEmail {
         throw new Error('Invalid response from SES: missing MessageId or requestId');
       }
 
-      return {
+      const result: SendEmailResult = {
         messageId: response.MessageId,
         requestId: response.$metadata.requestId,
       };
+      if (replyToResolved.conversationId) {
+        result.conversationId = replyToResolved.conversationId;
+        result.sendId = replyToResolved.sendId;
+      }
+      return result;
     } catch (error) {
       throw this.handleSESError(error);
     }
+  }
+
+  /**
+   * Resolve the `ReplyToAddresses` for a send, optionally minting a signed
+   * reply-to address when `conversationId` is set and reply threading is
+   * configured.
+   */
+  private async resolveReplyTo(params: {
+    from: string | EmailAddress;
+    replyTo?: string | string[] | EmailAddress | EmailAddress[];
+    conversationId?: string;
+    sendId?: string;
+    replyTtlSeconds?: number;
+  }): Promise<{
+    replyToAddresses?: string[];
+    conversationId?: string;
+    sendId?: string;
+  }> {
+    if (params.replyTo && params.conversationId) {
+      throw new ValidationError('replyTo and conversationId cannot both be set', 'conversationId');
+    }
+
+    if (params.conversationId && this.replyThreading) {
+      const fromStr = normalizeEmailAddress(params.from);
+      const atIndex = fromStr.lastIndexOf('@');
+      if (atIndex === -1) {
+        throw new ValidationError('from address must contain @', 'from');
+      }
+      const fromDomain = fromStr.slice(atIndex + 1).toLowerCase();
+      const result = await this.replyThreading.generateReplyTo({
+        fromDomain,
+        replyDomain: this.replyDomainOverride,
+        conversationId: params.conversationId,
+        sendId: params.sendId,
+        ttlSeconds: params.replyTtlSeconds,
+      });
+      return {
+        replyToAddresses: [result.address],
+        conversationId: result.conversationId,
+        sendId: result.sendId,
+      };
+    }
+
+    if (params.replyTo) {
+      return { replyToAddresses: normalizeEmailAddresses(params.replyTo) };
+    }
+    return {};
   }
 
   private handleSESError(error: unknown): Error {
@@ -337,6 +462,14 @@ export class WrapsEmail {
    * Send email using an SES template
    */
   async sendTemplate(params: SendTemplateParams): Promise<SendEmailResult> {
+    const replyToResolved = await this.resolveReplyTo({
+      from: params.from,
+      replyTo: params.replyTo,
+      conversationId: params.conversationId,
+      sendId: params.sendId,
+      replyTtlSeconds: params.replyTtlSeconds,
+    });
+
     const toAddresses: (string | EmailAddress)[] = Array.isArray(params.to)
       ? params.to
       : [params.to];
@@ -347,7 +480,7 @@ export class WrapsEmail {
         CcAddresses: params.cc ? normalizeEmailAddresses(params.cc) : undefined,
         BccAddresses: params.bcc ? normalizeEmailAddresses(params.bcc) : undefined,
       },
-      ReplyToAddresses: params.replyTo ? normalizeEmailAddresses(params.replyTo) : undefined,
+      ReplyToAddresses: replyToResolved.replyToAddresses,
       Template: params.template,
       TemplateData: JSON.stringify(params.templateData),
       Tags: params.tags
@@ -366,10 +499,15 @@ export class WrapsEmail {
         throw new Error('Invalid response from SES: missing MessageId or requestId');
       }
 
-      return {
+      const result: SendEmailResult = {
         messageId: response.MessageId,
         requestId: response.$metadata.requestId,
       };
+      if (replyToResolved.conversationId) {
+        result.conversationId = replyToResolved.conversationId;
+        result.sendId = replyToResolved.sendId;
+      }
+      return result;
     } catch (error) {
       throw this.handleSESError(error);
     }
@@ -383,9 +521,17 @@ export class WrapsEmail {
       throw new ValidationError('Maximum 50 destinations allowed per bulk send');
     }
 
+    const replyToResolved = await this.resolveReplyTo({
+      from: params.from,
+      replyTo: params.replyTo,
+      conversationId: params.conversationId,
+      sendId: params.sendId,
+      replyTtlSeconds: params.replyTtlSeconds,
+    });
+
     const command = new SendBulkTemplatedEmailCommand({
       Source: normalizeEmailAddress(params.from),
-      ReplyToAddresses: params.replyTo ? normalizeEmailAddresses(params.replyTo) : undefined,
+      ReplyToAddresses: replyToResolved.replyToAddresses,
       Template: params.template,
       DefaultTemplateData: params.defaultTemplateData
         ? JSON.stringify(params.defaultTemplateData)
@@ -423,7 +569,7 @@ export class WrapsEmail {
         throw new Error('Invalid response from SES: missing Status or requestId');
       }
 
-      return {
+      const result: SendBulkTemplateResult = {
         status: response.Status.map((s) => ({
           messageId: s.MessageId,
           status: s.Status as 'success' | 'failure',
@@ -431,6 +577,11 @@ export class WrapsEmail {
         })),
         requestId: response.$metadata.requestId,
       };
+      if (replyToResolved.conversationId) {
+        result.conversationId = replyToResolved.conversationId;
+        result.sendId = replyToResolved.sendId;
+      }
+      return result;
     } catch (error) {
       throw this.handleSESError(error);
     }

@@ -1,9 +1,46 @@
 import type { S3Client } from '@aws-sdk/client-s3';
 import type { SESClient } from '@aws-sdk/client-ses';
 import type { SESv2Client } from '@aws-sdk/client-sesv2';
+import type { SSMClient } from '@aws-sdk/client-ssm';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import type { AwsCredentialIdentityProvider } from '@aws-sdk/types';
 import type React from 'react';
+
+/**
+ * Reply-threading configuration.
+ *
+ * When set, `WrapsEmail` enables signed reply-to generation. Callers pass
+ * `conversationId` to `send()` / `sendTemplate()` / etc. to opt in per-message.
+ */
+export interface ReplyThreadingConfig {
+  /**
+   * SSM parameter name prefix where per-domain signing secrets live.
+   * Default: `"/wraps/email/reply-secret/"`.
+   */
+  parameterPrefix?: string;
+
+  /**
+   * Global override for the reply domain. If unset, the reply domain is
+   * auto-derived as `r.mail.{fromDomain}`. Per-send `replyDomain` still wins.
+   */
+  replyDomain?: string;
+
+  /**
+   * Pre-configured SSM client. If omitted, one is built from the standard
+   * config (region / credentials / endpoint).
+   */
+  ssmClient?: SSMClient;
+
+  /**
+   * Default token TTL in seconds. `0` = infinite. Defaults to 90 days.
+   */
+  ttlSeconds?: number;
+
+  /**
+   * Per-domain secret cache TTL in milliseconds. Defaults to 5 minutes.
+   */
+  cacheTtlMs?: number;
+}
 
 export interface WrapsEmailConfig {
   /**
@@ -87,6 +124,13 @@ export interface WrapsEmailConfig {
    * When provided, takes precedence over region/credentials for suppression
    */
   sesv2Client?: SESv2Client;
+
+  /**
+   * Enable signed reply-to threading. When set, callers can pass
+   * `conversationId` to `send()` / `sendTemplate()` / etc. to mint a
+   * signed reply-to address that the inbound Lambda verifies.
+   */
+  replyThreading?: ReplyThreadingConfig;
 }
 
 export interface EmailAddress {
@@ -161,11 +205,42 @@ export interface SendEmailParams {
    * Configuration set name (for tracking opens, clicks, bounces)
    */
   configurationSetName?: string;
+
+  /**
+   * Opt in to signed reply-to threading. When set (and `replyThreading`
+   * is configured on the client), a signed reply-to address is minted for
+   * this message and `ReplyToAddresses` is overridden. Cannot be combined
+   * with an explicit `replyTo`.
+   */
+  conversationId?: string;
+
+  /**
+   * Optional override for the per-send `sendId`. When omitted, a fresh
+   * id is generated. Only meaningful when `conversationId` is set.
+   */
+  sendId?: string;
+
+  /**
+   * Override the token TTL for this send (seconds). `0` = infinite.
+   * Only meaningful when `conversationId` is set. Defaults to the
+   * `replyThreading.ttlSeconds` value (or 90 days).
+   */
+  replyTtlSeconds?: number;
 }
 
 export interface SendEmailResult {
   messageId: string;
   requestId: string;
+  /**
+   * Present when the send was signed for reply threading — mirrors the
+   * `conversationId` baked into the reply-to token.
+   */
+  conversationId?: string;
+  /**
+   * Present when the send was signed for reply threading — mirrors the
+   * `sendId` baked into the reply-to token.
+   */
+  sendId?: string;
 }
 
 export interface SendTemplateParams {
@@ -213,6 +288,21 @@ export interface SendTemplateParams {
    * Configuration set name (optional)
    */
   configurationSetName?: string;
+
+  /**
+   * Opt in to signed reply-to threading. See `SendEmailParams.conversationId`.
+   */
+  conversationId?: string;
+
+  /**
+   * Optional override for per-send `sendId`. See `SendEmailParams.sendId`.
+   */
+  sendId?: string;
+
+  /**
+   * Override token TTL for this send (seconds). `0` = infinite.
+   */
+  replyTtlSeconds?: number;
 }
 
 export interface BulkTemplateDestination {
@@ -256,6 +346,22 @@ export interface SendBulkTemplateParams {
    * Configuration set name (optional)
    */
   configurationSetName?: string;
+
+  /**
+   * Opt in to signed reply-to threading. See `SendEmailParams.conversationId`.
+   * Applies to all destinations in the bulk send.
+   */
+  conversationId?: string;
+
+  /**
+   * Optional override for per-send `sendId`.
+   */
+  sendId?: string;
+
+  /**
+   * Override token TTL for this send (seconds). `0` = infinite.
+   */
+  replyTtlSeconds?: number;
 }
 
 export interface SendBulkTemplateResult {
@@ -265,6 +371,14 @@ export interface SendBulkTemplateResult {
     error?: string;
   }>;
   requestId: string;
+  /**
+   * Present when the bulk send was signed for reply threading.
+   */
+  conversationId?: string;
+  /**
+   * Present when the bulk send was signed for reply threading.
+   */
+  sendId?: string;
 }
 
 // ============================================================

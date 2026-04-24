@@ -208,6 +208,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/batch/{id}/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Promote draft batch send
+         * @description Promotes an existing draft batch_send to an active send (queued or scheduled).
+         */
+        post: operations["postV1BatchByIdSend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/events/": {
         parameters: {
             query?: never;
@@ -288,6 +308,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workflows/executions/{executionId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry failed execution
+         * @description Retry a failed workflow execution from the step where it failed. Completed steps are preserved.
+         */
+        post: operations["postV1WorkflowsExecutionsByExecutionIdRetry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workflows/executions/{executionId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel workflow execution
+         * @description Cancel an active workflow execution. Cleans up schedulers and adjusts workflow stats.
+         */
+        post: operations["postV1WorkflowsExecutionsByExecutionIdCancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/webhooks/ses/{awsAccountNumber}": {
         parameters: {
             query?: never;
@@ -326,6 +386,26 @@ export interface paths {
          * @description Processes unsubscribe requests. Supports RFC 8058 one-click unsubscribe via POST with body 'List-Unsubscribe=One-Click'. Returns 200 OK directly (no redirects per RFC 8058 spec).
          */
         post: operations["postUnsubscribeByToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/preference-events/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Emit workflow events for preference center changes
+         * @description Called by the preference center after DB writes to emit topic_subscribed/topic_unsubscribed workflow events. Authenticated via unsubscribe JWT token.
+         */
+        post: operations["postV1Preference-events"];
         delete?: never;
         options?: never;
         head?: never;
@@ -764,11 +844,13 @@ export interface operations {
                 /** @description Number of items per page (max 100) */
                 pageSize?: string;
                 /** @description Filter by email status */
-                emailStatus?: string;
+                emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
                 /** @description Filter by SMS status */
-                smsStatus?: string;
+                smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
                 /** @description Search by email or phone */
                 search?: string;
+                /** @description Filter by preferred channel */
+                preferredChannel?: "email" | "sms";
             };
             header?: never;
             path?: never;
@@ -785,6 +867,8 @@ export interface operations {
                         contacts: {
                             /** @description Contact ID */
                             id: string;
+                            /** @description Caller-supplied external ID */
+                            externalId: string | null;
                             /** @description Email address */
                             email: string | null;
                             /** @description Phone number */
@@ -801,6 +885,8 @@ export interface operations {
                             emailStatus: string | null;
                             /** @description SMS subscription status */
                             smsStatus: string | null;
+                            /** @description Preferred communication channel */
+                            preferredChannel: string | null;
                             properties: {
                                 [key: string]: unknown;
                             };
@@ -838,6 +924,8 @@ export interface operations {
                         contacts: {
                             /** @description Contact ID */
                             id: string;
+                            /** @description Caller-supplied external ID */
+                            externalId: string | null;
                             /** @description Email address */
                             email: string | null;
                             /** @description Phone number */
@@ -854,6 +942,8 @@ export interface operations {
                             emailStatus: string | null;
                             /** @description SMS subscription status */
                             smsStatus: string | null;
+                            /** @description Preferred communication channel */
+                            preferredChannel: string | null;
                             properties: {
                                 [key: string]: unknown;
                             };
@@ -891,6 +981,8 @@ export interface operations {
                         contacts: {
                             /** @description Contact ID */
                             id: string;
+                            /** @description Caller-supplied external ID */
+                            externalId: string | null;
                             /** @description Email address */
                             email: string | null;
                             /** @description Phone number */
@@ -907,6 +999,8 @@ export interface operations {
                             emailStatus: string | null;
                             /** @description SMS subscription status */
                             smsStatus: string | null;
+                            /** @description Preferred communication channel */
+                            preferredChannel: string | null;
                             properties: {
                                 [key: string]: unknown;
                             };
@@ -954,7 +1048,12 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @description Email address */
+                    /** @description Caller-supplied external ID (e.g. your own user ID) */
+                    externalId?: string;
+                    /**
+                     * Format: email
+                     * @description Email address
+                     */
                     email?: string;
                     /** @description Phone number */
                     phone?: string;
@@ -970,6 +1069,8 @@ export interface operations {
                     emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
                     /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
+                    /** @description Preferred communication channel */
+                    preferredChannel?: "email" | "sms";
                     /** @description Custom properties */
                     properties?: {
                         [key: string]: unknown;
@@ -980,7 +1081,12 @@ export interface operations {
                     topicSlugs?: string[];
                 };
                 "multipart/form-data": {
-                    /** @description Email address */
+                    /** @description Caller-supplied external ID (e.g. your own user ID) */
+                    externalId?: string;
+                    /**
+                     * Format: email
+                     * @description Email address
+                     */
                     email?: string;
                     /** @description Phone number */
                     phone?: string;
@@ -996,6 +1102,8 @@ export interface operations {
                     emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
                     /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
+                    /** @description Preferred communication channel */
+                    preferredChannel?: "email" | "sms";
                     /** @description Custom properties */
                     properties?: {
                         [key: string]: unknown;
@@ -1006,7 +1114,12 @@ export interface operations {
                     topicSlugs?: string[];
                 };
                 "text/plain": {
-                    /** @description Email address */
+                    /** @description Caller-supplied external ID (e.g. your own user ID) */
+                    externalId?: string;
+                    /**
+                     * Format: email
+                     * @description Email address
+                     */
                     email?: string;
                     /** @description Phone number */
                     phone?: string;
@@ -1022,6 +1135,8 @@ export interface operations {
                     emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
                     /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
+                    /** @description Preferred communication channel */
+                    preferredChannel?: "email" | "sms";
                     /** @description Custom properties */
                     properties?: {
                         [key: string]: unknown;
@@ -1042,6 +1157,8 @@ export interface operations {
                     "application/json": {
                         /** @description Contact ID */
                         id: string;
+                        /** @description Caller-supplied external ID */
+                        externalId: string | null;
                         /** @description Email address */
                         email: string | null;
                         /** @description Phone number */
@@ -1058,6 +1175,8 @@ export interface operations {
                         emailStatus: string | null;
                         /** @description SMS subscription status */
                         smsStatus: string | null;
+                        /** @description Preferred communication channel */
+                        preferredChannel: string | null;
                         properties: {
                             [key: string]: unknown;
                         };
@@ -1087,6 +1206,8 @@ export interface operations {
                     "multipart/form-data": {
                         /** @description Contact ID */
                         id: string;
+                        /** @description Caller-supplied external ID */
+                        externalId: string | null;
                         /** @description Email address */
                         email: string | null;
                         /** @description Phone number */
@@ -1103,6 +1224,8 @@ export interface operations {
                         emailStatus: string | null;
                         /** @description SMS subscription status */
                         smsStatus: string | null;
+                        /** @description Preferred communication channel */
+                        preferredChannel: string | null;
                         properties: {
                             [key: string]: unknown;
                         };
@@ -1132,6 +1255,8 @@ export interface operations {
                     "text/plain": {
                         /** @description Contact ID */
                         id: string;
+                        /** @description Caller-supplied external ID */
+                        externalId: string | null;
                         /** @description Email address */
                         email: string | null;
                         /** @description Phone number */
@@ -1148,6 +1273,8 @@ export interface operations {
                         emailStatus: string | null;
                         /** @description SMS subscription status */
                         smsStatus: string | null;
+                        /** @description Preferred communication channel */
+                        preferredChannel: string | null;
                         properties: {
                             [key: string]: unknown;
                         };
@@ -1288,7 +1415,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Contact ID */
+                /** @description Contact UUID, email, or externalId */
                 id: string;
             };
             cookie?: never;
@@ -1303,6 +1430,8 @@ export interface operations {
                     "application/json": {
                         /** @description Contact ID */
                         id: string;
+                        /** @description Caller-supplied external ID */
+                        externalId: string | null;
                         /** @description Email address */
                         email: string | null;
                         /** @description Phone number */
@@ -1319,6 +1448,8 @@ export interface operations {
                         emailStatus: string | null;
                         /** @description SMS subscription status */
                         smsStatus: string | null;
+                        /** @description Preferred communication channel */
+                        preferredChannel: string | null;
                         properties: {
                             [key: string]: unknown;
                         };
@@ -1352,6 +1483,8 @@ export interface operations {
                     "multipart/form-data": {
                         /** @description Contact ID */
                         id: string;
+                        /** @description Caller-supplied external ID */
+                        externalId: string | null;
                         /** @description Email address */
                         email: string | null;
                         /** @description Phone number */
@@ -1368,6 +1501,8 @@ export interface operations {
                         emailStatus: string | null;
                         /** @description SMS subscription status */
                         smsStatus: string | null;
+                        /** @description Preferred communication channel */
+                        preferredChannel: string | null;
                         properties: {
                             [key: string]: unknown;
                         };
@@ -1401,6 +1536,8 @@ export interface operations {
                     "text/plain": {
                         /** @description Contact ID */
                         id: string;
+                        /** @description Caller-supplied external ID */
+                        externalId: string | null;
                         /** @description Email address */
                         email: string | null;
                         /** @description Phone number */
@@ -1417,6 +1554,8 @@ export interface operations {
                         emailStatus: string | null;
                         /** @description SMS subscription status */
                         smsStatus: string | null;
+                        /** @description Preferred communication channel */
+                        preferredChannel: string | null;
                         properties: {
                             [key: string]: unknown;
                         };
@@ -1475,7 +1614,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Contact ID */
+                /** @description Contact UUID, email, or externalId */
                 id: string;
             };
             cookie?: never;
@@ -1524,7 +1663,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Contact ID */
+                /** @description Contact UUID, email, or externalId */
                 id: string;
             };
             cookie?: never;
@@ -1532,7 +1671,10 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @description Email address */
+                    /**
+                     * Format: email
+                     * @description Email address
+                     */
                     email?: string;
                     /** @description Phone number */
                     phone?: string;
@@ -1548,6 +1690,8 @@ export interface operations {
                     emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
                     /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
+                    /** @description Preferred communication channel (null to clear) */
+                    preferredChannel?: "email" | "sms" | null;
                     /** @description Custom properties */
                     properties?: {
                         [key: string]: unknown;
@@ -1558,7 +1702,10 @@ export interface operations {
                     topicSlugs?: string[];
                 };
                 "multipart/form-data": {
-                    /** @description Email address */
+                    /**
+                     * Format: email
+                     * @description Email address
+                     */
                     email?: string;
                     /** @description Phone number */
                     phone?: string;
@@ -1574,6 +1721,8 @@ export interface operations {
                     emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
                     /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
+                    /** @description Preferred communication channel (null to clear) */
+                    preferredChannel?: "email" | "sms" | null;
                     /** @description Custom properties */
                     properties?: {
                         [key: string]: unknown;
@@ -1584,7 +1733,10 @@ export interface operations {
                     topicSlugs?: string[];
                 };
                 "text/plain": {
-                    /** @description Email address */
+                    /**
+                     * Format: email
+                     * @description Email address
+                     */
                     email?: string;
                     /** @description Phone number */
                     phone?: string;
@@ -1600,6 +1752,8 @@ export interface operations {
                     emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
                     /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
+                    /** @description Preferred communication channel (null to clear) */
+                    preferredChannel?: "email" | "sms" | null;
                     /** @description Custom properties */
                     properties?: {
                         [key: string]: unknown;
@@ -1620,6 +1774,8 @@ export interface operations {
                     "application/json": {
                         /** @description Contact ID */
                         id: string;
+                        /** @description Caller-supplied external ID */
+                        externalId: string | null;
                         /** @description Email address */
                         email: string | null;
                         /** @description Phone number */
@@ -1636,6 +1792,8 @@ export interface operations {
                         emailStatus: string | null;
                         /** @description SMS subscription status */
                         smsStatus: string | null;
+                        /** @description Preferred communication channel */
+                        preferredChannel: string | null;
                         properties: {
                             [key: string]: unknown;
                         };
@@ -1665,6 +1823,8 @@ export interface operations {
                     "multipart/form-data": {
                         /** @description Contact ID */
                         id: string;
+                        /** @description Caller-supplied external ID */
+                        externalId: string | null;
                         /** @description Email address */
                         email: string | null;
                         /** @description Phone number */
@@ -1681,6 +1841,8 @@ export interface operations {
                         emailStatus: string | null;
                         /** @description SMS subscription status */
                         smsStatus: string | null;
+                        /** @description Preferred communication channel */
+                        preferredChannel: string | null;
                         properties: {
                             [key: string]: unknown;
                         };
@@ -1710,6 +1872,8 @@ export interface operations {
                     "text/plain": {
                         /** @description Contact ID */
                         id: string;
+                        /** @description Caller-supplied external ID */
+                        externalId: string | null;
                         /** @description Email address */
                         email: string | null;
                         /** @description Phone number */
@@ -1726,6 +1890,8 @@ export interface operations {
                         emailStatus: string | null;
                         /** @description SMS subscription status */
                         smsStatus: string | null;
+                        /** @description Preferred communication channel */
+                        preferredChannel: string | null;
                         properties: {
                             [key: string]: unknown;
                         };
@@ -1897,6 +2063,22 @@ export interface operations {
                     templateId?: string;
                     /** @description Raw HTML content (if not using template) */
                     htmlContent?: string;
+                    /** @description Variable mappings for custom template variables */
+                    variableMappings?: {
+                        /** @description Template variable name */
+                        variableName: string;
+                        source: {
+                            /** @constant */
+                            type: "static";
+                            /** @description Static value */
+                            value: string;
+                        } | {
+                            /** @constant */
+                            type: "contact";
+                            /** @description Contact field name */
+                            field: string;
+                        };
+                    }[];
                     /** @description SMS body text */
                     body?: string;
                     /** @description SMS sender ID */
@@ -1936,6 +2118,22 @@ export interface operations {
                     templateId?: string;
                     /** @description Raw HTML content (if not using template) */
                     htmlContent?: string;
+                    /** @description Variable mappings for custom template variables */
+                    variableMappings?: {
+                        /** @description Template variable name */
+                        variableName: string;
+                        source: {
+                            /** @constant */
+                            type: "static";
+                            /** @description Static value */
+                            value: string;
+                        } | {
+                            /** @constant */
+                            type: "contact";
+                            /** @description Contact field name */
+                            field: string;
+                        };
+                    }[];
                     /** @description SMS body text */
                     body?: string;
                     /** @description SMS sender ID */
@@ -1975,6 +2173,22 @@ export interface operations {
                     templateId?: string;
                     /** @description Raw HTML content (if not using template) */
                     htmlContent?: string;
+                    /** @description Variable mappings for custom template variables */
+                    variableMappings?: {
+                        /** @description Template variable name */
+                        variableName: string;
+                        source: {
+                            /** @constant */
+                            type: "static";
+                            /** @description Static value */
+                            value: string;
+                        } | {
+                            /** @constant */
+                            type: "contact";
+                            /** @description Contact field name */
+                            field: string;
+                        };
+                    }[];
                     /** @description SMS body text */
                     body?: string;
                     /** @description SMS sender ID */
@@ -2142,6 +2356,138 @@ export interface operations {
             };
         };
     };
+    postV1BatchByIdSend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Draft batch ID to promote */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    channel?: "email" | "sms";
+                    name?: string;
+                    audienceType?: "all" | "topic" | "segment";
+                    topicId?: string;
+                    segmentId?: string;
+                    subject?: string;
+                    previewText?: string;
+                    from?: string;
+                    fromName?: string;
+                    replyTo?: string;
+                    templateId?: string;
+                    htmlContent?: string;
+                    variableMappings?: {
+                        variableName: string;
+                        source: {
+                            /** @constant */
+                            type: "static";
+                            value: string;
+                        } | {
+                            /** @constant */
+                            type: "contact";
+                            field: string;
+                        };
+                    }[];
+                    body?: string;
+                    senderId?: string;
+                    /** Format: date-time */
+                    scheduledFor?: string;
+                    awsAccountId: string;
+                    totalRecipients: number;
+                };
+                "multipart/form-data": {
+                    channel?: "email" | "sms";
+                    name?: string;
+                    audienceType?: "all" | "topic" | "segment";
+                    topicId?: string;
+                    segmentId?: string;
+                    subject?: string;
+                    previewText?: string;
+                    from?: string;
+                    fromName?: string;
+                    replyTo?: string;
+                    templateId?: string;
+                    htmlContent?: string;
+                    variableMappings?: {
+                        variableName: string;
+                        source: {
+                            /** @constant */
+                            type: "static";
+                            value: string;
+                        } | {
+                            /** @constant */
+                            type: "contact";
+                            field: string;
+                        };
+                    }[];
+                    body?: string;
+                    senderId?: string;
+                    /** Format: date-time */
+                    scheduledFor?: string;
+                    awsAccountId: string;
+                    totalRecipients: number;
+                };
+                "text/plain": {
+                    channel?: "email" | "sms";
+                    name?: string;
+                    audienceType?: "all" | "topic" | "segment";
+                    topicId?: string;
+                    segmentId?: string;
+                    subject?: string;
+                    previewText?: string;
+                    from?: string;
+                    fromName?: string;
+                    replyTo?: string;
+                    templateId?: string;
+                    htmlContent?: string;
+                    variableMappings?: {
+                        variableName: string;
+                        source: {
+                            /** @constant */
+                            type: "static";
+                            value: string;
+                        } | {
+                            /** @constant */
+                            type: "contact";
+                            field: string;
+                        };
+                    }[];
+                    body?: string;
+                    senderId?: string;
+                    /** Format: date-time */
+                    scheduledFor?: string;
+                    awsAccountId: string;
+                    totalRecipients: number;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        status: string;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        status: string;
+                    };
+                    "text/plain": {
+                        id: string;
+                        status: string;
+                    };
+                };
+            };
+        };
+    };
     postV1Events: {
         parameters: {
             query?: never;
@@ -2156,6 +2502,8 @@ export interface operations {
                     name: string;
                     /** @description Contact ID */
                     contactId?: string;
+                    /** @description Contact externalId (alternative to contactId) */
+                    contactExternalId?: string;
                     /** @description Contact email (alternative to contactId) */
                     contactEmail?: string;
                     /** @description Contact name (used when createIfMissing is true to set firstName) */
@@ -2175,6 +2523,8 @@ export interface operations {
                     name: string;
                     /** @description Contact ID */
                     contactId?: string;
+                    /** @description Contact externalId (alternative to contactId) */
+                    contactExternalId?: string;
                     /** @description Contact email (alternative to contactId) */
                     contactEmail?: string;
                     /** @description Contact name (used when createIfMissing is true to set firstName) */
@@ -2194,6 +2544,8 @@ export interface operations {
                     name: string;
                     /** @description Contact ID */
                     contactId?: string;
+                    /** @description Contact externalId (alternative to contactId) */
+                    contactExternalId?: string;
                     /** @description Contact email (alternative to contactId) */
                     contactEmail?: string;
                     /** @description Contact name (used when createIfMissing is true to set firstName) */
@@ -2283,6 +2635,7 @@ export interface operations {
                     events: {
                         name: string;
                         contactId?: string;
+                        contactExternalId?: string;
                         contactEmail?: string;
                         properties?: {
                             [key: string]: unknown;
@@ -2294,6 +2647,7 @@ export interface operations {
                     events: {
                         name: string;
                         contactId?: string;
+                        contactExternalId?: string;
                         contactEmail?: string;
                         properties?: {
                             [key: string]: unknown;
@@ -2305,6 +2659,7 @@ export interface operations {
                     events: {
                         name: string;
                         contactId?: string;
+                        contactExternalId?: string;
                         contactEmail?: string;
                         properties?: {
                             [key: string]: unknown;
@@ -2530,6 +2885,75 @@ export interface operations {
             };
         };
     };
+    postV1WorkflowsExecutionsByExecutionIdRetry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Execution ID to retry */
+                executionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        message?: string;
+                        error?: string;
+                    };
+                    "multipart/form-data": {
+                        success: boolean;
+                        message?: string;
+                        error?: string;
+                    };
+                    "text/plain": {
+                        success: boolean;
+                        message?: string;
+                        error?: string;
+                    };
+                };
+            };
+        };
+    };
+    postV1WorkflowsExecutionsByExecutionIdCancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Execution ID to cancel */
+                executionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        error?: string;
+                    };
+                    "multipart/form-data": {
+                        success: boolean;
+                        error?: string;
+                    };
+                    "text/plain": {
+                        success: boolean;
+                        error?: string;
+                    };
+                };
+            };
+        };
+    };
     postWebhooksSesByAwsAccountNumber: {
         parameters: {
             query?: never;
@@ -2586,22 +3010,6 @@ export interface operations {
                     };
                 };
             };
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        error: string;
-                    };
-                    "multipart/form-data": {
-                        error: string;
-                    };
-                    "text/plain": {
-                        error: string;
-                    };
-                };
-            };
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -2641,31 +3049,25 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": string;
-                    "multipart/form-data": string;
-                    "text/plain": string;
+                    "text/html": string;
                 };
             };
-            /** @description HTML error page */
+            /** @description HTML error page (invalid or expired token) */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": string;
-                    "multipart/form-data": string;
-                    "text/plain": string;
+                    "text/html": string;
                 };
             };
-            /** @description HTML not found page */
+            /** @description HTML error page (contact not found) */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": string;
-                    "multipart/form-data": string;
-                    "text/plain": string;
+                    "text/html": string;
                 };
             };
         };
@@ -2747,6 +3149,88 @@ export interface operations {
             };
         };
     };
+    "postV1Preference-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                    contactId: string;
+                    organizationId: string;
+                    changes: {
+                        topicId: string;
+                        topicName?: string;
+                        action: "subscribed" | "unsubscribed";
+                    }[];
+                };
+                "multipart/form-data": {
+                    token: string;
+                    contactId: string;
+                    organizationId: string;
+                    changes: {
+                        topicId: string;
+                        topicName?: string;
+                        action: "subscribed" | "unsubscribed";
+                    }[];
+                };
+                "text/plain": {
+                    token: string;
+                    contactId: string;
+                    organizationId: string;
+                    changes: {
+                        topicId: string;
+                        topicName?: string;
+                        action: "subscribed" | "unsubscribed";
+                    }[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        subscribed: number;
+                        unsubscribed: number;
+                    };
+                    "multipart/form-data": {
+                        success: boolean;
+                        subscribed: number;
+                        unsubscribed: number;
+                    };
+                    "text/plain": {
+                        success: boolean;
+                        subscribed: number;
+                        unsubscribed: number;
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
     postV1TemplatesPush: {
         parameters: {
             query?: never;
@@ -2771,8 +3255,13 @@ export interface operations {
                     previewText?: string;
                     /** @description Email type for compliance */
                     emailType: "marketing" | "transactional";
+                    /** @description Template channel (default: email) */
+                    channel?: "email" | "sms";
                     /** @description Template variables */
-                    variables: unknown[];
+                    variables: {
+                        name: string;
+                        fallback?: string;
+                    }[];
                     /** @description SHA256 hash of source file */
                     sourceHash: string;
                     /** @description SES template name */
@@ -2797,8 +3286,13 @@ export interface operations {
                     previewText?: string;
                     /** @description Email type for compliance */
                     emailType: "marketing" | "transactional";
+                    /** @description Template channel (default: email) */
+                    channel?: "email" | "sms";
                     /** @description Template variables */
-                    variables: unknown[];
+                    variables: {
+                        name: string;
+                        fallback?: string;
+                    }[];
                     /** @description SHA256 hash of source file */
                     sourceHash: string;
                     /** @description SES template name */
@@ -2823,8 +3317,13 @@ export interface operations {
                     previewText?: string;
                     /** @description Email type for compliance */
                     emailType: "marketing" | "transactional";
+                    /** @description Template channel (default: email) */
+                    channel?: "email" | "sms";
                     /** @description Template variables */
-                    variables: unknown[];
+                    variables: {
+                        name: string;
+                        fallback?: string;
+                    }[];
                     /** @description SHA256 hash of source file */
                     sourceHash: string;
                     /** @description SES template name */
@@ -2863,7 +3362,11 @@ export interface operations {
                         subject: string;
                         previewText?: string;
                         emailType: "marketing" | "transactional";
-                        variables: unknown[];
+                        channel?: "email" | "sms";
+                        variables: {
+                            name: string;
+                            fallback?: string;
+                        }[];
                         sourceHash: string;
                         sesTemplateName: string;
                         cliProjectPath?: string;
@@ -2879,7 +3382,11 @@ export interface operations {
                         subject: string;
                         previewText?: string;
                         emailType: "marketing" | "transactional";
-                        variables: unknown[];
+                        channel?: "email" | "sms";
+                        variables: {
+                            name: string;
+                            fallback?: string;
+                        }[];
                         sourceHash: string;
                         sesTemplateName: string;
                         cliProjectPath?: string;
@@ -2895,7 +3402,11 @@ export interface operations {
                         subject: string;
                         previewText?: string;
                         emailType: "marketing" | "transactional";
-                        variables: unknown[];
+                        channel?: "email" | "sms";
+                        variables: {
+                            name: string;
+                            fallback?: string;
+                        }[];
                         sourceHash: string;
                         sesTemplateName: string;
                         cliProjectPath?: string;
@@ -2951,9 +3462,25 @@ export interface operations {
                     /** @description SHA256 hash of source file */
                     sourceHash: string;
                     /** @description Flat array of workflow steps */
-                    steps: unknown[];
+                    steps: {
+                        id: string;
+                        type: string;
+                        name: string;
+                        position: {
+                            x: number;
+                            y: number;
+                        };
+                        config: unknown;
+                    }[];
                     /** @description Flat array of step transitions */
-                    transitions: unknown[];
+                    transitions: {
+                        id: string;
+                        fromStepId: string;
+                        toStepId: string;
+                        condition?: {
+                            branch: string;
+                        };
+                    }[];
                     /** @description Trigger type */
                     triggerType: string;
                     /** @description Trigger configuration */
@@ -2974,6 +3501,8 @@ export interface operations {
                     cliProjectPath?: string;
                     /** @description Force overwrite even if edited on dashboard */
                     force?: boolean;
+                    /** @description Push as draft without enabling the workflow */
+                    draft?: boolean;
                 };
                 "multipart/form-data": {
                     /** @description Workflow slug (filename without extension) */
@@ -2987,9 +3516,25 @@ export interface operations {
                     /** @description SHA256 hash of source file */
                     sourceHash: string;
                     /** @description Flat array of workflow steps */
-                    steps: unknown[];
+                    steps: {
+                        id: string;
+                        type: string;
+                        name: string;
+                        position: {
+                            x: number;
+                            y: number;
+                        };
+                        config: unknown;
+                    }[];
                     /** @description Flat array of step transitions */
-                    transitions: unknown[];
+                    transitions: {
+                        id: string;
+                        fromStepId: string;
+                        toStepId: string;
+                        condition?: {
+                            branch: string;
+                        };
+                    }[];
                     /** @description Trigger type */
                     triggerType: string;
                     /** @description Trigger configuration */
@@ -3010,6 +3555,8 @@ export interface operations {
                     cliProjectPath?: string;
                     /** @description Force overwrite even if edited on dashboard */
                     force?: boolean;
+                    /** @description Push as draft without enabling the workflow */
+                    draft?: boolean;
                 };
                 "text/plain": {
                     /** @description Workflow slug (filename without extension) */
@@ -3023,9 +3570,25 @@ export interface operations {
                     /** @description SHA256 hash of source file */
                     sourceHash: string;
                     /** @description Flat array of workflow steps */
-                    steps: unknown[];
+                    steps: {
+                        id: string;
+                        type: string;
+                        name: string;
+                        position: {
+                            x: number;
+                            y: number;
+                        };
+                        config: unknown;
+                    }[];
                     /** @description Flat array of step transitions */
-                    transitions: unknown[];
+                    transitions: {
+                        id: string;
+                        fromStepId: string;
+                        toStepId: string;
+                        condition?: {
+                            branch: string;
+                        };
+                    }[];
                     /** @description Trigger type */
                     triggerType: string;
                     /** @description Trigger configuration */
@@ -3046,6 +3609,8 @@ export interface operations {
                     cliProjectPath?: string;
                     /** @description Force overwrite even if edited on dashboard */
                     force?: boolean;
+                    /** @description Push as draft without enabling the workflow */
+                    draft?: boolean;
                 };
             };
         };
@@ -3074,8 +3639,24 @@ export interface operations {
                         description?: string;
                         sourceTs: string;
                         sourceHash: string;
-                        steps: unknown[];
-                        transitions: unknown[];
+                        steps: {
+                            id: string;
+                            type: string;
+                            name: string;
+                            position: {
+                                x: number;
+                                y: number;
+                            };
+                            config: unknown;
+                        }[];
+                        transitions: {
+                            id: string;
+                            fromStepId: string;
+                            toStepId: string;
+                            condition?: {
+                                branch: string;
+                            };
+                        }[];
                         triggerType: string;
                         triggerConfig?: unknown;
                         settings?: {
@@ -3092,6 +3673,7 @@ export interface operations {
                         };
                         cliProjectPath?: string;
                         force?: boolean;
+                        draft?: boolean;
                     }[];
                 };
                 "multipart/form-data": {
@@ -3101,8 +3683,24 @@ export interface operations {
                         description?: string;
                         sourceTs: string;
                         sourceHash: string;
-                        steps: unknown[];
-                        transitions: unknown[];
+                        steps: {
+                            id: string;
+                            type: string;
+                            name: string;
+                            position: {
+                                x: number;
+                                y: number;
+                            };
+                            config: unknown;
+                        }[];
+                        transitions: {
+                            id: string;
+                            fromStepId: string;
+                            toStepId: string;
+                            condition?: {
+                                branch: string;
+                            };
+                        }[];
                         triggerType: string;
                         triggerConfig?: unknown;
                         settings?: {
@@ -3119,6 +3717,7 @@ export interface operations {
                         };
                         cliProjectPath?: string;
                         force?: boolean;
+                        draft?: boolean;
                     }[];
                 };
                 "text/plain": {
@@ -3128,8 +3727,24 @@ export interface operations {
                         description?: string;
                         sourceTs: string;
                         sourceHash: string;
-                        steps: unknown[];
-                        transitions: unknown[];
+                        steps: {
+                            id: string;
+                            type: string;
+                            name: string;
+                            position: {
+                                x: number;
+                                y: number;
+                            };
+                            config: unknown;
+                        }[];
+                        transitions: {
+                            id: string;
+                            fromStepId: string;
+                            toStepId: string;
+                            condition?: {
+                                branch: string;
+                            };
+                        }[];
                         triggerType: string;
                         triggerConfig?: unknown;
                         settings?: {
@@ -3146,6 +3761,7 @@ export interface operations {
                         };
                         cliProjectPath?: string;
                         force?: boolean;
+                        draft?: boolean;
                     }[];
                 };
             };
