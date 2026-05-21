@@ -7,6 +7,7 @@ export interface MCPConfig {
   accountId: string;
   writeEnabled: boolean;
   fromEmail: string | undefined;
+  configurationSetName: string | undefined;
 }
 
 let cachedAccountId: string | undefined;
@@ -20,6 +21,7 @@ export async function loadConfig(): Promise<MCPConfig> {
   const historyTableName = process.env.WRAPS_HISTORY_TABLE_NAME || 'wraps-email-history';
   const writeEnabled = process.env.WRAPS_WRITE_ENABLED === 'true';
   const fromEmail = process.env.WRAPS_FROM_EMAIL;
+  const configurationSetName = process.env.WRAPS_CONFIGURATION_SET;
 
   let accountId = process.env.WRAPS_ACCOUNT_ID || cachedAccountId;
   if (!accountId) {
@@ -32,7 +34,7 @@ export async function loadConfig(): Promise<MCPConfig> {
     cachedAccountId = accountId;
   }
 
-  return { region, historyTableName, accountId, writeEnabled, fromEmail };
+  return { region, historyTableName, accountId, writeEnabled, fromEmail, configurationSetName };
 }
 
 export function resetAccountIdCache(): void {

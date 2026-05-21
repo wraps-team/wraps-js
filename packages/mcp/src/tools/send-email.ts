@@ -55,6 +55,7 @@ export function registerSendEmail(server: McpServer, config: MCPConfig): void {
       const email = new WrapsEmail({
         region: config.region,
         historyTableName: config.historyTableName,
+        configurationSetName: config.configurationSetName,
       });
       try {
         const result = await email.send({
