@@ -10,7 +10,11 @@ import {
   SendTemplatedEmailCommand,
   UpdateTemplateCommand,
 } from '@aws-sdk/client-ses';
-import type { SESv2Client } from '@aws-sdk/client-sesv2';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { S3Client } from '@aws-sdk/client-s3';
+import { SESv2Client } from '@aws-sdk/client-sesv2';
+import { SSMClient } from '@aws-sdk/client-ssm';
+import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { sendBatch as sendBatchImpl } from './batch';
 import { SESError, ValidationError } from './errors';
 import { WrapsEmailEvents } from './events';
@@ -97,9 +101,6 @@ export class WrapsEmail {
       if (config.s3Client) {
         this.inbox = new WrapsInbox(config.s3Client, config.inboxBucketName, this.sesClient);
       } else {
-        // Dynamically import S3Client to avoid adding it as a required dependency
-        // for users who don't use inbox
-        const { S3Client } = require('@aws-sdk/client-s3');
         const s3Config: Record<string, unknown> = {
           region: config.region || 'us-east-1',
         };
@@ -120,8 +121,6 @@ export class WrapsEmail {
       if (config.dynamodbClient) {
         this.events = new WrapsEmailEvents(config.dynamodbClient, config.historyTableName);
       } else {
-        const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
-        const { DynamoDBDocumentClient } = require('@aws-sdk/lib-dynamodb');
         const dynamoConfig: Record<string, unknown> = {
           region: config.region || 'us-east-1',
         };
@@ -144,7 +143,6 @@ export class WrapsEmail {
     if (config.sesv2Client) {
       this.sesv2Client = config.sesv2Client;
     } else {
-      const { SESv2Client: SESv2ClientClass } = require('@aws-sdk/client-sesv2');
       const sesv2Config: Record<string, unknown> = {
         region: config.region || 'us-east-1',
       };
@@ -154,7 +152,7 @@ export class WrapsEmail {
       if (config.endpoint) {
         sesv2Config.endpoint = config.endpoint;
       }
-      this.sesv2Client = new SESv2ClientClass(sesv2Config);
+      this.sesv2Client = new SESv2Client(sesv2Config);
     }
     this.suppression = new WrapsEmailSuppression(this.sesv2Client);
 
@@ -163,7 +161,6 @@ export class WrapsEmail {
     if (config.replyThreading) {
       let ssmClient = config.replyThreading.ssmClient;
       if (!ssmClient) {
-        const { SSMClient } = require('@aws-sdk/client-ssm');
         const ssmConfig: Record<string, unknown> = {
           region: config.region || 'us-east-1',
         };

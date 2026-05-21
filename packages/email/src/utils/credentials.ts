@@ -20,18 +20,18 @@ export function createSESClient(config: WrapsEmailConfig): SESClient {
     const roleSessionName = config.roleSessionName || 'wraps-email-session';
 
     if (process.env.VERCEL) {
-      // Vercel uses @vercel/oidc-aws-credentials-provider for OIDC token exchange
-      try {
-        const { awsCredentialsProvider } = require('@vercel/oidc-aws-credentials-provider');
-        clientConfig.credentials = awsCredentialsProvider({
-          roleArn,
-          roleSessionName,
-        });
-      } catch {
-        throw new Error(
-          'On Vercel with roleArn requires @vercel/oidc-aws-credentials-provider. Install it: pnpm add @vercel/oidc-aws-credentials-provider',
-        );
-      }
+      // Vercel uses @vercel/oidc-aws-credentials-provider for OIDC token exchange.
+      // Dynamic import keeps it out of the bundle and defers loading to credential resolution time.
+      clientConfig.credentials = async () => {
+        try {
+          const { awsCredentialsProvider } = await import('@vercel/oidc-aws-credentials-provider');
+          return awsCredentialsProvider({ roleArn, roleSessionName })();
+        } catch {
+          throw new Error(
+            'On Vercel with roleArn requires @vercel/oidc-aws-credentials-provider. Install it: pnpm add @vercel/oidc-aws-credentials-provider',
+          );
+        }
+      };
     } else {
       // EKS, GitHub Actions, and other OIDC environments use AWS_WEB_IDENTITY_TOKEN_FILE
       clientConfig.credentials = fromTokenFile({

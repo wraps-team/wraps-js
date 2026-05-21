@@ -10,5 +10,5 @@ export default defineConfig({
   treeshake: true,
   minify: false, // Keep readable for debugging
   outDir: 'dist',
-  external: ['@aws-sdk/client-pinpoint-sms-voice-v2'],
+  external: ['@aws-sdk/client-pinpoint-sms-voice-v2', '@vercel/oidc-aws-credentials-provider'],
 });

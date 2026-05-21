@@ -26,18 +26,17 @@ export function createSMSClient(config: WrapsSMSConfig): PinpointSMSVoiceV2Clien
     const roleSessionName = config.roleSessionName || 'wraps-sms-session';
 
     if (process.env.VERCEL) {
-      // Vercel uses @vercel/oidc-aws-credentials-provider for OIDC token exchange
-      try {
-        const { awsCredentialsProvider } = require('@vercel/oidc-aws-credentials-provider');
-        clientConfig.credentials = awsCredentialsProvider({
-          roleArn,
-          roleSessionName,
-        });
-      } catch {
-        throw new Error(
-          'On Vercel with roleArn requires @vercel/oidc-aws-credentials-provider. Install it: pnpm add @vercel/oidc-aws-credentials-provider',
-        );
-      }
+      // Dynamic import keeps @vercel/oidc-aws-credentials-provider out of the bundle.
+      clientConfig.credentials = async () => {
+        try {
+          const { awsCredentialsProvider } = await import('@vercel/oidc-aws-credentials-provider');
+          return awsCredentialsProvider({ roleArn, roleSessionName })();
+        } catch {
+          throw new Error(
+            'On Vercel with roleArn requires @vercel/oidc-aws-credentials-provider. Install it: pnpm add @vercel/oidc-aws-credentials-provider',
+          );
+        }
+      };
     } else {
       // EKS, GitHub Actions, and other OIDC environments use AWS_WEB_IDENTITY_TOKEN_FILE
       clientConfig.credentials = fromTokenFile({
