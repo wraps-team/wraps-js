@@ -274,10 +274,11 @@ describe('list_recent_sends tool', () => {
     expect(getText(result)).toBe('No recent sends found.');
   });
 
-  it('formats email rows as "[status] subject → to at ISO timestamp"', async () => {
+  it('formats email rows as "[status] subject → to at ISO timestamp (id: messageId)"', async () => {
     mockEventsList.mockResolvedValueOnce({
       emails: [
         {
+          messageId: 'abc-123',
           status: 'delivered',
           subject: 'Welcome',
           to: ['user@example.com'],
@@ -291,7 +292,7 @@ describe('list_recent_sends tool', () => {
     await cleanup();
     expect(result.isError).toBeUndefined();
     expect(getText(result)).toBe(
-      '[delivered] Welcome → user@example.com at 2023-11-14T22:13:20.000Z'
+      '[delivered] Welcome → user@example.com at 2023-11-14T22:13:20.000Z (id: abc-123)'
     );
   });
 
