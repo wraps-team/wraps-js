@@ -121,8 +121,8 @@ importers:
         specifier: ^1.12.0
         version: 1.29.0(zod@4.1.12)
       '@wraps.dev/email':
-        specifier: ^0.10.4
-        version: 0.10.4(@react-email/components@1.0.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)
+        specifier: ^0.11.1
+        version: 0.11.1(@react-email/components@1.0.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)
       zod:
         specifier: ^4.1.12
         version: 4.1.12
@@ -2331,8 +2331,8 @@ packages:
   '@vitest/utils@4.0.8':
     resolution: {integrity: sha512-pdk2phO5NDvEFfUTxcTP8RFYjVj/kfLSPIN5ebP2Mu9kcIMeAQTbknqcFEyBcC4z2pJlJI9aS5UQjcYfhmKAow==}
 
-  '@wraps.dev/email@0.10.4':
-    resolution: {integrity: sha512-PK9TC/aSUqbWCOM9thCeZMnTyMq1bnVMvme8g9nt5jJ44E02UtLyMh7Ey6ZijH245bSwAIW+KOZZj1iq3xiCyA==}
+  '@wraps.dev/email@0.11.1':
+    resolution: {integrity: sha512-4VV4eUQnNt9Jo1J0Dv0+ClzF7wrVcKri70Bkgv+8zuW53l+fnIk5+rXP8Y+uDW9MslnA83cS1KpZAQsAYPm1Xg==}
     engines: {node: '>=20.0.0'}
     peerDependencies:
       '@react-email/components': '>=0.0.25'
@@ -7288,12 +7288,13 @@ snapshots:
       '@vitest/pretty-format': 4.0.8
       tinyrainbow: 3.0.3
 
-  '@wraps.dev/email@0.10.4(@react-email/components@1.0.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)':
+  '@wraps.dev/email@0.11.1(@react-email/components@1.0.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)':
     dependencies:
       '@aws-sdk/client-dynamodb': 3.986.0
       '@aws-sdk/client-s3': 3.981.0
       '@aws-sdk/client-ses': 3.928.0
       '@aws-sdk/client-sesv2': 3.986.0
+      '@aws-sdk/client-ssm': 3.1031.0
       '@aws-sdk/credential-providers': 3.931.0
       '@aws-sdk/lib-dynamodb': 3.986.0(@aws-sdk/client-dynamodb@3.986.0)
       '@aws-sdk/s3-request-presigner': 3.981.0
