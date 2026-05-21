@@ -243,6 +243,23 @@ describe('send_email tool', () => {
     expect(mockEmailSend).not.toHaveBeenCalled();
   });
 
+  it('forwards configurationSetName from config to email.send()', async () => {
+    mockEmailSend.mockResolvedValueOnce({ messageId: 'msg-789', requestId: 'req-3' });
+    const { client, cleanup } = await createTestClient(registerSendEmail, {
+      ...baseConfig,
+      configurationSetName: 'my-config-set',
+    });
+    const result = await client.callTool({
+      name: 'send_email',
+      arguments: { to: 'user@example.com', subject: 'Hello', text: 'Hi' },
+    });
+    await cleanup();
+    expect(mockEmailSend).toHaveBeenCalledWith(
+      expect.objectContaining({ configurationSetName: 'my-config-set' })
+    );
+    expect(result.isError).toBeUndefined();
+  });
+
   it('returns isError: true with error message when send() throws', async () => {
     mockEmailSend.mockRejectedValueOnce(new Error('SES rate limit exceeded'));
     const { client, cleanup } = await createTestClient(registerSendEmail);
