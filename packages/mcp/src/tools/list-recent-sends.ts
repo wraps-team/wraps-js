@@ -13,7 +13,7 @@ export function registerListRecentSends(server: McpServer, config: MCPConfig): v
     'list_recent_sends',
     {
       description:
-        'List recently sent emails from your Wraps email history. Returns send status, subject, recipient, and timestamps for the most recent sends. The `since` parameter accepts a full ISO 8601 datetime string (e.g., 2024-01-01T00:00:00Z).',
+        'List recently sent emails from your Wraps email history. Returns send status, subject, recipient, timestamps, and messageId for each send. Use the messageId with get_email_event_log for full delivery details. The `since` parameter accepts a full ISO 8601 datetime string (e.g., 2024-01-01T00:00:00Z).',
       inputSchema: ListRecentSendsInputSchema,
       annotations: { readOnlyHint: true },
     },
@@ -41,7 +41,7 @@ export function registerListRecentSends(server: McpServer, config: MCPConfig): v
             : result.emails
                 .map(
                   (item) =>
-                    `[${item.status}] ${item.subject} → ${item.to.join(', ')} at ${new Date(item.sentAt).toISOString()}`
+                    `[${item.status}] ${item.subject} → ${item.to.join(', ')} at ${new Date(item.sentAt).toISOString()} (id: ${item.messageId})`
                 )
                 .join('\n');
 
