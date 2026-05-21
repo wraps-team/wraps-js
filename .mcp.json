@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "wraps": {
+      "command": "npx",
+      "args": ["-y", "@wraps.dev/mcp"]
+    }
+  }
+}

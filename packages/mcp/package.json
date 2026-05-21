@@ -1,0 +1,72 @@
+{
+  "name": "@wraps.dev/mcp",
+  "version": "0.1.0",
+  "description": "MCP server for Wraps email infrastructure. Query send history, check domain status, manage suppressions, and send emails via your AWS SES account.",
+  "type": "module",
+  "bin": {
+    "wraps-mcp": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist coverage",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm clean && pnpm build"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sesv2": "^3.928.0",
+    "@aws-sdk/client-sts": "^3.928.0",
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@wraps.dev/email": "workspace:*",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.5",
+    "@types/node": "^24.10.0",
+    "@vitest/coverage-v8": "^4.0.8",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.8"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "email",
+    "ses",
+    "aws",
+    "wraps"
+  ],
+  "author": "Wraps",
+  "license": "MIT",
+  "homepage": "https://github.com/wraps-team/wraps-js/tree/main/packages/mcp#readme",
+  "bugs": {
+    "url": "https://github.com/wraps-team/wraps-js/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wraps-team/wraps-js.git",
+    "directory": "packages/mcp"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
