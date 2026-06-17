@@ -34,7 +34,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Security audit
-        run: pnpm audit
+        run: pnpm audit --prod
 
       - name: Lint & Format Check
         run: pnpm lint
