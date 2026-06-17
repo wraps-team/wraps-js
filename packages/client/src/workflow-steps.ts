@@ -376,10 +376,7 @@ export function webhook(
  *
  * Expands to: sendEmail → waitForEmailEngagement → condition (engaged?) → yes: exit → no: sendSms
  */
-export function cascade(
-  id: string,
-  config: CascadeConfig
-): StepDefinition[] {
+export function cascade(id: string, config: CascadeConfig): StepDefinition[] {
   const { channels } = config;
   const steps: StepDefinition[] = [];
 

@@ -1,13 +1,8 @@
-import { SendBulkEmailCommand, type SESv2Client } from '@aws-sdk/client-sesv2';
+import { type SESv2Client, SendBulkEmailCommand } from '@aws-sdk/client-sesv2';
 import { SESError, ValidationError } from './errors';
 import { renderReactEmail } from './react';
+import type { BatchEmailEntry, BatchEntryResult, SendBatchParams, SendBatchResult } from './types';
 import { htmlToPlainText } from './utils/html-to-text';
-import type {
-  BatchEmailEntry,
-  BatchEntryResult,
-  SendBatchParams,
-  SendBatchResult,
-} from './types';
 import { normalizeEmailAddress, normalizeEmailAddresses } from './utils/validation';
 
 const MAX_ENTRIES = 100;
@@ -31,7 +26,10 @@ async function resolveEntries(entries: BatchEmailEntry[]): Promise<ResolvedEntry
     const entry = entries[i];
 
     if (!entry.subject) {
-      throw new ValidationError(`Entry ${i}: missing required field "subject"`, `entries[${i}].subject`);
+      throw new ValidationError(
+        `Entry ${i}: missing required field "subject"`,
+        `entries[${i}].subject`
+      );
     }
 
     if (!entry.to) {

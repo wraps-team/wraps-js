@@ -369,7 +369,9 @@ export class WrapsSMS {
       );
     }
 
-    return error instanceof Error ? error : new SMSError(String(error), 'Unknown', 'unknown', false);
+    return error instanceof Error
+      ? error
+      : new SMSError(String(error), 'Unknown', 'unknown', false);
   }
 
   /**

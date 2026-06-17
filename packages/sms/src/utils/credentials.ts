@@ -33,7 +33,7 @@ export function createSMSClient(config: WrapsSMSConfig): PinpointSMSVoiceV2Clien
           return awsCredentialsProvider({ roleArn, roleSessionName })();
         } catch {
           throw new Error(
-            'On Vercel with roleArn requires @vercel/oidc-aws-credentials-provider. Install it: pnpm add @vercel/oidc-aws-credentials-provider',
+            'On Vercel with roleArn requires @vercel/oidc-aws-credentials-provider. Install it: pnpm add @vercel/oidc-aws-credentials-provider'
           );
         }
       };

@@ -88,6 +88,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/email/logs/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List email delivery logs
+         * @description Returns paginated email delivery logs for the organization.
+         */
+        get: operations["getV1EmailLogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/email/logs/{messageId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get email log by message ID
+         * @description Returns full log detail for a specific SES message ID.
+         */
+        get: operations["getV1EmailLogsByMessageId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/contacts/": {
         parameters: {
             query?: never;
@@ -222,6 +262,26 @@ export interface paths {
          * @description Promotes an existing draft batch_send to an active send (queued or scheduled).
          */
         post: operations["postV1BatchByIdSend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/batch/{id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resume batch send
+         * @description Resumes a 'processing' or 'failed' email batch from the last successfully completed chunk. Writes a resume entry to errorDetails and enqueues the next chunk.
+         */
+        post: operations["postV1BatchByIdResume"];
         delete?: never;
         options?: never;
         head?: never;
@@ -823,6 +883,47 @@ export interface operations {
             path: {
                 /** @description Connection ID */
                 id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getV1EmailLogs: {
+        parameters: {
+            query?: {
+                status?: "sent" | "delivered" | "opened" | "clicked" | "bounced" | "complained" | "suppressed" | "failed" | "queued" | "pending" | "opted_out";
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getV1EmailLogsByMessageId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description SES Message ID */
+                messageId: string;
             };
             cookie?: never;
         };
@@ -2485,6 +2586,41 @@ export interface operations {
                         status: string;
                     };
                 };
+            };
+        };
+    };
+    postV1BatchByIdResume: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Batch ID to resume */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Operator override — restart from this chunkIndex with a fresh cursor. Omit to use the durable heartbeat. */
+                    fromChunkIndex?: number;
+                };
+                "multipart/form-data": {
+                    /** @description Operator override — restart from this chunkIndex with a fresh cursor. Omit to use the durable heartbeat. */
+                    fromChunkIndex?: number;
+                };
+                "text/plain": {
+                    /** @description Operator override — restart from this chunkIndex with a fresh cursor. Omit to use the durable heartbeat. */
+                    fromChunkIndex?: number;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { cascade } from '../workflow-steps';
 import { defineWorkflow } from '../workflow';
+import { cascade } from '../workflow-steps';
 
 describe('cascade', () => {
   it('expands a 2-channel cascade (email → sms) correctly', () => {
@@ -45,9 +45,7 @@ describe('cascade', () => {
 
   it('handles single-channel cascade (just send, no wait/check)', () => {
     const steps = cascade('simple', {
-      channels: [
-        { type: 'email', template: 'notification' },
-      ],
+      channels: [{ type: 'email', template: 'notification' }],
     });
 
     expect(steps).toHaveLength(1);
@@ -69,7 +67,7 @@ describe('cascade', () => {
       ],
     });
 
-    expect(steps1.map(s => s.id)).toEqual(steps2.map(s => s.id));
+    expect(steps1.map((s) => s.id)).toEqual(steps2.map((s) => s.id));
   });
 
   it('passes config through to underlying steps', () => {
@@ -102,7 +100,7 @@ describe('cascade', () => {
     });
 
     // SMS config
-    const smsStep = steps.find(s => s.type === 'send_sms');
+    const smsStep = steps.find((s) => s.type === 'send_sms');
     expect(smsStep?.config).toMatchObject({
       type: 'send_sms',
       template: 'branded-sms',
@@ -146,7 +144,7 @@ describe('cascade', () => {
     });
 
     expect(workflow.steps.length).toBe(4);
-    expect(workflow.steps.every(s => !Array.isArray(s))).toBe(true);
+    expect(workflow.steps.every((s) => !Array.isArray(s))).toBe(true);
   });
 
   it('defaults engagement to opened for email channels', () => {
@@ -158,7 +156,7 @@ describe('cascade', () => {
     });
 
     // The condition should check for 'opened' (default)
-    const waitStep = steps.find(s => s.type === 'wait_for_email_engagement');
+    const waitStep = steps.find((s) => s.type === 'wait_for_email_engagement');
     expect(waitStep).toBeDefined();
   });
 });

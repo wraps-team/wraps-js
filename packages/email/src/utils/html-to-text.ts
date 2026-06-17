@@ -21,8 +21,14 @@ export function htmlToPlainText(html: string): string {
   });
 
   // Add newlines before block-level elements
-  text = text.replace(/<\/(p|div|h[1-6]|tr|blockquote|section|article|header|footer|main|aside|nav)>/gi, '\n\n');
-  text = text.replace(/<(p|div|h[1-6]|tr|blockquote|section|article|header|footer|main|aside|nav)[\s>]/gi, '\n');
+  text = text.replace(
+    /<\/(p|div|h[1-6]|tr|blockquote|section|article|header|footer|main|aside|nav)>/gi,
+    '\n\n'
+  );
+  text = text.replace(
+    /<(p|div|h[1-6]|tr|blockquote|section|article|header|footer|main|aside|nav)[\s>]/gi,
+    '\n'
+  );
 
   // Handle list items
   text = text.replace(/<li[\s>][^>]*>/gi, '\n- ');

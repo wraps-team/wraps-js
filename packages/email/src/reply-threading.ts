@@ -200,10 +200,7 @@ function b64urlToBuffer8(s: string, fieldName: string): Buffer {
   const pad = s.length % 4 === 0 ? '' : '='.repeat(4 - (s.length % 4));
   const raw = Buffer.from(s.replace(/-/g, '+').replace(/_/g, '/') + pad, 'base64');
   if (raw.length !== 8) {
-    throw new ValidationError(
-      `${fieldName} must decode to exactly 8 bytes`,
-      fieldName
-    );
+    throw new ValidationError(`${fieldName} must decode to exactly 8 bytes`, fieldName);
   }
   return raw;
 }
