@@ -77,6 +77,9 @@ importers:
       '@react-email/components':
         specifier: '>=0.0.25'
         version: 1.0.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      aws4fetch:
+        specifier: ^1.0.20
+        version: 1.0.20
       react:
         specifier: ^18.0.0 || ^19.0.0
         version: 19.2.0
@@ -2383,6 +2386,9 @@ packages:
 
   ast-v8-to-istanbul@0.3.8:
     resolution: {integrity: sha512-szgSZqUxI5T8mLKvS7WTjF9is+MVbOeLADU73IseOcrqhxr/VAvy6wfoVE39KnKzA7JRhjF5eUagNlHwvZPlKQ==}
+
+  aws4fetch@1.0.20:
+    resolution: {integrity: sha512-/djoAN709iY65ETD6LKCtyyEI04XIBP5xVvfmNxsEP0uJB5tyaGBztSryRr4HqMStr9R06PisQE7m9zDTXKu6g==}
 
   balanced-match@1.0.2:
     resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
@@ -7338,6 +7344,8 @@ snapshots:
       '@jridgewell/trace-mapping': 0.3.31
       estree-walker: 3.0.3
       js-tokens: 9.0.1
+
+  aws4fetch@1.0.20: {}
 
   balanced-match@1.0.2: {}
 

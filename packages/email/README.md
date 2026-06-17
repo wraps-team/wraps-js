@@ -49,6 +49,66 @@ import { WrapsEmail } from '@wraps.dev/email';
 const { WrapsEmail } = require('@wraps.dev/email');
 ```
 
+## Cloudflare Workers / Edge
+
+The `@wraps.dev/email/workers` subpath is a zero-Node-APIs build (~5 KiB) that runs
+on Cloudflare Workers, Deno Deploy, and any other `workerd`-based runtime. It uses
+`aws4fetch` (Web Crypto) to sign requests and the SESv2 REST API (JSON payloads, no
+`DOMParser`).
+
+```typescript
+import { SESError, ValidationError, WrapsEmail } from '@wraps.dev/email/workers';
+
+const email = new WrapsEmail({
+  region: env.AWS_REGION,          // required — no credential chain at the edge
+  credentials: {
+    accessKeyId: env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
+  },
+});
+
+const result = await email.send({
+  from: 'hello@example.com',
+  to: 'user@example.com',
+  subject: 'Hello from the edge!',
+  html: '<h1>Hi there</h1>',
+});
+```
+
+### Required at the edge
+
+Both `region` and `credentials` are required — there is no AWS credential chain in a
+Worker. Store them as [Wrangler secrets](https://developers.cloudflare.com/workers/configuration/secrets/):
+
+```sh
+wrangler secret put AWS_ACCESS_KEY_ID
+wrangler secret put AWS_SECRET_ACCESS_KEY
+```
+
+### Supported fields
+
+`from`, `to`, `cc`, `bcc`, `replyTo`, `subject`, `html`, `text`, `tags`,
+`configurationSetName`.
+
+When `html` is provided without `text`, plain text is auto-generated (same as the
+Node entry).
+
+### Not supported at the edge
+
+| Feature | Why | Alternative |
+|---|---|---|
+| `react` | Requires `react-dom/server` (Node built-ins) | Render to HTML before calling `send()` |
+| `attachments` | MIME serialisation requires `Buffer` | Use the Node entry or pre-encode |
+| Templates / inbox / events | Depend on `@aws-sdk/*` clients | Use the Node entry |
+| Reply threading | Requires AWS SSM | Use the Node entry |
+
+### Security note
+
+Scope the IAM key to `ses:SendEmail` only. Store credentials as Wrangler secrets
+(never in `wrangler.toml` source). Rotate them periodically. For high-volume use,
+consider enqueueing emails via a Cloudflare Queue rather than blocking the request
+so transient SES errors don't surface to end users.
+
 ## Authentication
 
 Wraps Email uses the AWS credential chain in the following order:
