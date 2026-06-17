@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { safeParse, email as zEmail } from 'zod/mini';
 import { ValidationError } from '../errors';
 import type { EmailAddress, SendEmailParams } from '../types';
 
@@ -110,9 +110,9 @@ function validateEmailAddress(address: string | EmailAddress, field: string): vo
     throw new ValidationError(`Invalid email address in field: ${field}`, field);
   }
 
-  // Use Zod's built-in email validation (safer than custom regex)
-  const emailSchema = z.string().email();
-  const result = emailSchema.safeParse(email);
+  // Zod Mini email validator — tree-shakeable; avoids bundling all of zod at the
+  // edge. Behavior is identical to z.string().email() (verified). See plan 002.
+  const result = safeParse(zEmail(), email);
 
   if (!result.success) {
     throw new ValidationError(`Invalid email format in field: ${field} (${email})`, field);
