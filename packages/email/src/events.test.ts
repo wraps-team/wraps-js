@@ -59,18 +59,18 @@ describe('WrapsEmailEvents', () => {
       const result = await events.get('msg-123');
 
       expect(result).not.toBeNull();
-      expect(result!.messageId).toBe('msg-123');
-      expect(result!.from).toBe('sender@example.com');
-      expect(result!.to).toEqual(['user@example.com']);
-      expect(result!.subject).toBe('Hello');
-      expect(result!.status).toBe('opened');
-      expect(result!.sentAt).toBe(1700000000000);
-      expect(result!.lastEventAt).toBe(1700000005000);
-      expect(result!.events).toHaveLength(3);
-      expect(result!.events[0].type).toBe('send');
-      expect(result!.events[1].type).toBe('delivery');
-      expect(result!.events[2].type).toBe('open');
-      expect(result!.events[2].metadata).toEqual({ ipAddress: '1.2.3.4' });
+      expect(result?.messageId).toBe('msg-123');
+      expect(result?.from).toBe('sender@example.com');
+      expect(result?.to).toEqual(['user@example.com']);
+      expect(result?.subject).toBe('Hello');
+      expect(result?.status).toBe('opened');
+      expect(result?.sentAt).toBe(1700000000000);
+      expect(result?.lastEventAt).toBe(1700000005000);
+      expect(result?.events).toHaveLength(3);
+      expect(result?.events[0].type).toBe('send');
+      expect(result?.events[1].type).toBe('delivery');
+      expect(result?.events[2].type).toBe('open');
+      expect(result?.events[2].metadata).toEqual({ ipAddress: '1.2.3.4' });
     });
 
     it('should return null when no items found', async () => {
@@ -123,7 +123,7 @@ describe('WrapsEmailEvents', () => {
       });
 
       const result = await events.get('msg-bounce');
-      expect(result!.status).toBe('bounced');
+      expect(result?.status).toBe('bounced');
     });
 
     it('should handle complaint overriding delivered status', async () => {
@@ -161,7 +161,7 @@ describe('WrapsEmailEvents', () => {
       });
 
       const result = await events.get('msg-complaint');
-      expect(result!.status).toBe('complained');
+      expect(result?.status).toBe('complained');
     });
 
     it('should handle suppressed event type', async () => {
@@ -181,7 +181,7 @@ describe('WrapsEmailEvents', () => {
       });
 
       const result = await events.get('msg-suppressed');
-      expect(result!.status).toBe('suppressed');
+      expect(result?.status).toBe('suppressed');
     });
 
     it('should handle items with invalid additionalData gracefully', async () => {
@@ -202,7 +202,7 @@ describe('WrapsEmailEvents', () => {
 
       const result = await events.get('msg-bad-json');
       expect(result).not.toBeNull();
-      expect(result!.events[0].metadata).toBeUndefined();
+      expect(result?.events[0].metadata).toBeUndefined();
     });
   });
 
@@ -241,13 +241,13 @@ describe('WrapsEmailEvents', () => {
       expect(result.nextToken).toBeDefined();
 
       // Verify base64 encoded token
-      const decoded = JSON.parse(Buffer.from(result.nextToken!, 'base64').toString('utf-8'));
+      const decoded = JSON.parse(Buffer.from(result.nextToken ?? '', 'base64').toString('utf-8'));
       expect(decoded).toEqual({ messageId: 'msg-2', sentAt: 1700000003000 });
     });
 
     it('should handle continuationToken (base64 decode)', async () => {
       const token = Buffer.from(
-        JSON.stringify({ messageId: 'msg-prev', sentAt: 1700000000000 }),
+        JSON.stringify({ messageId: 'msg-prev', sentAt: 1700000000000 })
       ).toString('base64');
 
       mockSend.mockResolvedValue({
@@ -314,7 +314,7 @@ describe('WrapsEmailEvents', () => {
 
     it('should throw ValidationError for invalid continuation token', async () => {
       await expect(
-        events.list({ accountId: '123456789012', continuationToken: 'not-valid-base64!@#' }),
+        events.list({ accountId: '123456789012', continuationToken: 'not-valid-base64!@#' })
       ).rejects.toThrow(ValidationError);
     });
 
@@ -361,13 +361,13 @@ describe('WrapsEmailEvents', () => {
 
       const emailA = result.emails.find((e) => e.messageId === 'msg-a');
       expect(emailA).toBeDefined();
-      expect(emailA!.events).toHaveLength(2);
-      expect(emailA!.status).toBe('delivered');
+      expect(emailA?.events).toHaveLength(2);
+      expect(emailA?.status).toBe('delivered');
 
       const emailB = result.emails.find((e) => e.messageId === 'msg-b');
       expect(emailB).toBeDefined();
-      expect(emailB!.events).toHaveLength(1);
-      expect(emailB!.status).toBe('sent');
+      expect(emailB?.events).toHaveLength(1);
+      expect(emailB?.status).toBe('sent');
     });
   });
 });

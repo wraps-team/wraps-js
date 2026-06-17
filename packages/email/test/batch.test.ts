@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { sendBatch } from '../src/batch';
 import { ValidationError } from '../src/errors';
 import type { SendBatchParams } from '../src/types';
@@ -11,7 +11,11 @@ vi.mock('../src/react', () => ({
   }),
 }));
 
-function createMockSESv2Client(responses: Array<{ BulkEmailEntryResults: Array<{ Status: string; MessageId?: string; Error?: string }> }>) {
+function createMockSESv2Client(
+  responses: Array<{
+    BulkEmailEntryResults: Array<{ Status: string; MessageId?: string; Error?: string }>;
+  }>
+) {
   let callIndex = 0;
   return {
     send: vi.fn().mockImplementation(() => {
@@ -21,13 +25,6 @@ function createMockSESv2Client(responses: Array<{ BulkEmailEntryResults: Array<{
       }
       return Promise.resolve(response);
     }),
-    destroy: vi.fn(),
-  } as any;
-}
-
-function createErrorClient(error: Error) {
-  return {
-    send: vi.fn().mockRejectedValue(error),
     destroy: vi.fn(),
   } as any;
 }
@@ -43,12 +40,14 @@ describe('sendBatch', () => {
 
   describe('happy path', () => {
     it('should send 2 entries successfully', async () => {
-      const client = createMockSESv2Client([{
-        BulkEmailEntryResults: [
-          { Status: 'SUCCESS', MessageId: 'msg-1' },
-          { Status: 'SUCCESS', MessageId: 'msg-2' },
-        ],
-      }]);
+      const client = createMockSESv2Client([
+        {
+          BulkEmailEntryResults: [
+            { Status: 'SUCCESS', MessageId: 'msg-1' },
+            { Status: 'SUCCESS', MessageId: 'msg-2' },
+          ],
+        },
+      ]);
 
       const result = await sendBatch(client, baseParams);
 
@@ -71,9 +70,11 @@ describe('sendBatch', () => {
     });
 
     it('should pass from, replyTo, tags, and configurationSetName', async () => {
-      const client = createMockSESv2Client([{
-        BulkEmailEntryResults: [{ Status: 'SUCCESS', MessageId: 'msg-1' }],
-      }]);
+      const client = createMockSESv2Client([
+        {
+          BulkEmailEntryResults: [{ Status: 'SUCCESS', MessageId: 'msg-1' }],
+        },
+      ]);
 
       await sendBatch(client, {
         from: { email: 'sender@example.com', name: 'Sender' },
@@ -91,12 +92,14 @@ describe('sendBatch', () => {
     });
 
     it('should pass per-entry replacement tags', async () => {
-      const client = createMockSESv2Client([{
-        BulkEmailEntryResults: [
-          { Status: 'SUCCESS', MessageId: 'msg-1' },
-          { Status: 'SUCCESS', MessageId: 'msg-2' },
-        ],
-      }]);
+      const client = createMockSESv2Client([
+        {
+          BulkEmailEntryResults: [
+            { Status: 'SUCCESS', MessageId: 'msg-1' },
+            { Status: 'SUCCESS', MessageId: 'msg-2' },
+          ],
+        },
+      ]);
 
       await sendBatch(client, {
         from: 'sender@example.com',
@@ -117,33 +120,36 @@ describe('sendBatch', () => {
   describe('react entries', () => {
     it('should render react components', async () => {
       const { renderReactEmail } = await import('../src/react');
-      const client = createMockSESv2Client([{
-        BulkEmailEntryResults: [{ Status: 'SUCCESS', MessageId: 'msg-1' }],
-      }]);
+      const client = createMockSESv2Client([
+        {
+          BulkEmailEntryResults: [{ Status: 'SUCCESS', MessageId: 'msg-1' }],
+        },
+      ]);
 
       const fakeReactElement = { type: 'div', props: {} } as any;
 
       await sendBatch(client, {
         from: 'sender@example.com',
-        entries: [
-          { to: 'alice@example.com', subject: 'Hi', react: fakeReactElement },
-        ],
+        entries: [{ to: 'alice@example.com', subject: 'Hi', react: fakeReactElement }],
       });
 
       expect(renderReactEmail).toHaveBeenCalledWith(fakeReactElement);
 
       const command = client.send.mock.calls[0][0];
       const templateData = JSON.parse(
-        command.input.BulkEmailEntries[0].ReplacementEmailContent.ReplacementTemplate.ReplacementTemplateData
+        command.input.BulkEmailEntries[0].ReplacementEmailContent.ReplacementTemplate
+          .ReplacementTemplateData
       );
       expect(templateData.htmlContent).toBe('<p>rendered react</p>');
       expect(templateData.textContent).toBe('rendered react');
     });
 
     it('should use provided text over rendered text', async () => {
-      const client = createMockSESv2Client([{
-        BulkEmailEntryResults: [{ Status: 'SUCCESS', MessageId: 'msg-1' }],
-      }]);
+      const client = createMockSESv2Client([
+        {
+          BulkEmailEntryResults: [{ Status: 'SUCCESS', MessageId: 'msg-1' }],
+        },
+      ]);
 
       const fakeReactElement = { type: 'div', props: {} } as any;
 
@@ -156,7 +162,8 @@ describe('sendBatch', () => {
 
       const command = client.send.mock.calls[0][0];
       const templateData = JSON.parse(
-        command.input.BulkEmailEntries[0].ReplacementEmailContent.ReplacementTemplate.ReplacementTemplateData
+        command.input.BulkEmailEntries[0].ReplacementEmailContent.ReplacementTemplate
+          .ReplacementTemplateData
       );
       expect(templateData.textContent).toBe('custom text');
     });
@@ -206,12 +213,14 @@ describe('sendBatch', () => {
         html: `<p>Content ${i}</p>`,
       }));
 
-      const client = createMockSESv2Client([{
-        BulkEmailEntryResults: Array.from({ length: 50 }, (_, i) => ({
-          Status: 'SUCCESS',
-          MessageId: `msg-${i}`,
-        })),
-      }]);
+      const client = createMockSESv2Client([
+        {
+          BulkEmailEntryResults: Array.from({ length: 50 }, (_, i) => ({
+            Status: 'SUCCESS',
+            MessageId: `msg-${i}`,
+          })),
+        },
+      ]);
 
       const result = await sendBatch(client, { from: 'sender@example.com', entries });
 
@@ -225,12 +234,12 @@ describe('sendBatch', () => {
     it('should throw on empty entries', async () => {
       const client = createMockSESv2Client([]);
 
-      await expect(
-        sendBatch(client, { from: 'sender@example.com', entries: [] })
-      ).rejects.toThrow(ValidationError);
-      await expect(
-        sendBatch(client, { from: 'sender@example.com', entries: [] })
-      ).rejects.toThrow('entries array must not be empty');
+      await expect(sendBatch(client, { from: 'sender@example.com', entries: [] })).rejects.toThrow(
+        ValidationError
+      );
+      await expect(sendBatch(client, { from: 'sender@example.com', entries: [] })).rejects.toThrow(
+        'entries array must not be empty'
+      );
     });
 
     it('should throw on >100 entries', async () => {
@@ -241,12 +250,12 @@ describe('sendBatch', () => {
         html: `<p>${i}</p>`,
       }));
 
-      await expect(
-        sendBatch(client, { from: 'sender@example.com', entries })
-      ).rejects.toThrow(ValidationError);
-      await expect(
-        sendBatch(client, { from: 'sender@example.com', entries })
-      ).rejects.toThrow('Maximum 100 entries');
+      await expect(sendBatch(client, { from: 'sender@example.com', entries })).rejects.toThrow(
+        ValidationError
+      );
+      await expect(sendBatch(client, { from: 'sender@example.com', entries })).rejects.toThrow(
+        'Maximum 100 entries'
+      );
     });
 
     it('should throw on missing subject', async () => {
@@ -289,12 +298,14 @@ describe('sendBatch', () => {
       await expect(
         sendBatch(client, {
           from: 'sender@example.com',
-          entries: [{
-            to: 'alice@example.com',
-            subject: 'Hi',
-            html: '<p>Hi</p>',
-            react: fakeReactElement,
-          }],
+          entries: [
+            {
+              to: 'alice@example.com',
+              subject: 'Hi',
+              html: '<p>Hi</p>',
+              react: fakeReactElement,
+            },
+          ],
         })
       ).rejects.toThrow('cannot provide both "html" and "react"');
     });
@@ -302,13 +313,15 @@ describe('sendBatch', () => {
 
   describe('partial failure', () => {
     it('should report mixed success/failure per-entry results', async () => {
-      const client = createMockSESv2Client([{
-        BulkEmailEntryResults: [
-          { Status: 'SUCCESS', MessageId: 'msg-1' },
-          { Status: 'FAILED', Error: 'Address blacklisted' },
-          { Status: 'SUCCESS', MessageId: 'msg-3' },
-        ],
-      }]);
+      const client = createMockSESv2Client([
+        {
+          BulkEmailEntryResults: [
+            { Status: 'SUCCESS', MessageId: 'msg-1' },
+            { Status: 'FAILED', Error: 'Address blacklisted' },
+            { Status: 'SUCCESS', MessageId: 'msg-3' },
+          ],
+        },
+      ]);
 
       const result = await sendBatch(client, {
         from: 'sender@example.com',
@@ -344,11 +357,13 @@ describe('sendBatch', () => {
         send: vi.fn().mockImplementation(() => {
           callIndex++;
           if (callIndex === 1) {
-            return Promise.reject(Object.assign(new Error('Throttled'), {
-              $metadata: { requestId: 'req-1' },
-              $retryable: { throttling: true },
-              name: 'TooManyRequestsException',
-            }));
+            return Promise.reject(
+              Object.assign(new Error('Throttled'), {
+                $metadata: { requestId: 'req-1' },
+                $retryable: { throttling: true },
+                name: 'TooManyRequestsException',
+              })
+            );
           }
           return Promise.resolve({
             BulkEmailEntryResults: Array.from({ length: 25 }, (_, i) => ({
@@ -384,22 +399,23 @@ describe('sendBatch', () => {
 
   describe('text-only entries', () => {
     it('should accept entries with only text (no html)', async () => {
-      const client = createMockSESv2Client([{
-        BulkEmailEntryResults: [{ Status: 'SUCCESS', MessageId: 'msg-1' }],
-      }]);
+      const client = createMockSESv2Client([
+        {
+          BulkEmailEntryResults: [{ Status: 'SUCCESS', MessageId: 'msg-1' }],
+        },
+      ]);
 
       const result = await sendBatch(client, {
         from: 'sender@example.com',
-        entries: [
-          { to: 'alice@example.com', subject: 'Hi', text: 'Plain text only' },
-        ],
+        entries: [{ to: 'alice@example.com', subject: 'Hi', text: 'Plain text only' }],
       });
 
       expect(result.successCount).toBe(1);
 
       const command = client.send.mock.calls[0][0];
       const templateData = JSON.parse(
-        command.input.BulkEmailEntries[0].ReplacementEmailContent.ReplacementTemplate.ReplacementTemplateData
+        command.input.BulkEmailEntries[0].ReplacementEmailContent.ReplacementTemplate
+          .ReplacementTemplateData
       );
       expect(templateData.htmlContent).toBe('');
       expect(templateData.textContent).toBe('Plain text only');
@@ -408,9 +424,11 @@ describe('sendBatch', () => {
 
   describe('EmailAddress objects', () => {
     it('should normalize EmailAddress objects for to and from', async () => {
-      const client = createMockSESv2Client([{
-        BulkEmailEntryResults: [{ Status: 'SUCCESS', MessageId: 'msg-1' }],
-      }]);
+      const client = createMockSESv2Client([
+        {
+          BulkEmailEntryResults: [{ Status: 'SUCCESS', MessageId: 'msg-1' }],
+        },
+      ]);
 
       await sendBatch(client, {
         from: { email: 'sender@example.com', name: 'My App' },
@@ -421,7 +439,9 @@ describe('sendBatch', () => {
 
       const command = client.send.mock.calls[0][0];
       expect(command.input.FromEmailAddress).toBe('"My App" <sender@example.com>');
-      expect(command.input.BulkEmailEntries[0].Destination.ToAddresses).toEqual(['"Alice" <alice@example.com>']);
+      expect(command.input.BulkEmailEntries[0].Destination.ToAddresses).toEqual([
+        '"Alice" <alice@example.com>',
+      ]);
     });
   });
 });

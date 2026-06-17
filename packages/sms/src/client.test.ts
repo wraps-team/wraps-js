@@ -43,7 +43,7 @@ vi.mock('@aws-sdk/client-pinpoint-sms-voice-v2', () => ({
 
 // Import after mocking
 import { WrapsSMS } from './client';
-import { RateLimitError, SMSError, ValidationError } from './errors';
+import { RateLimitError, ValidationError } from './errors';
 import { calculateSegments, validatePhoneNumber } from './utils/validation';
 
 describe('WrapsSMS', () => {

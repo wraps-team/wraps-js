@@ -27,14 +27,17 @@ export class WrapsEmailSuppression {
 
     try {
       const response = await this.client.send(
-        new GetSuppressedDestinationCommand({ EmailAddress: email }),
+        new GetSuppressedDestinationCommand({ EmailAddress: email })
       );
 
-      const dest = response.SuppressedDestination!;
+      const dest = response.SuppressedDestination;
+      if (!dest?.EmailAddress || !dest.LastUpdateTime) {
+        return null;
+      }
       return {
-        email: dest.EmailAddress!,
+        email: dest.EmailAddress,
         reason: dest.Reason as SuppressionReason,
-        lastUpdated: dest.LastUpdateTime!,
+        lastUpdated: dest.LastUpdateTime,
         messageId: dest.Attributes?.MessageId,
         feedbackId: dest.Attributes?.FeedbackId,
       };
@@ -63,7 +66,7 @@ export class WrapsEmailSuppression {
         new PutSuppressedDestinationCommand({
           EmailAddress: email,
           Reason: reason,
-        }),
+        })
       );
     } catch (error) {
       throw this.handleError(error);
@@ -80,9 +83,7 @@ export class WrapsEmailSuppression {
     }
 
     try {
-      await this.client.send(
-        new DeleteSuppressedDestinationCommand({ EmailAddress: email }),
-      );
+      await this.client.send(new DeleteSuppressedDestinationCommand({ EmailAddress: email }));
     } catch (error) {
       if ((error as { name?: string }).name === 'NotFoundException') {
         return;
@@ -103,16 +104,20 @@ export class WrapsEmailSuppression {
           EndDate: options.endDate,
           PageSize: options.maxResults || 100,
           NextToken: options.continuationToken,
-        }),
+        })
       );
 
-      const entries: SuppressionEntry[] = (response.SuppressedDestinationSummaries || []).map(
-        (s) => ({
-          email: s.EmailAddress!,
+      const entries: SuppressionEntry[] = [];
+      for (const s of response.SuppressedDestinationSummaries || []) {
+        if (!s.EmailAddress || !s.LastUpdateTime) {
+          continue;
+        }
+        entries.push({
+          email: s.EmailAddress,
           reason: s.Reason as SuppressionReason,
-          lastUpdated: s.LastUpdateTime!,
-        }),
-      );
+          lastUpdated: s.LastUpdateTime,
+        });
+      }
 
       return {
         entries,
@@ -135,7 +140,7 @@ export class WrapsEmailSuppression {
         err.message || 'SES request failed',
         err.name || 'Unknown',
         err.$metadata.requestId || 'unknown',
-        err.$retryable?.throttling || false,
+        err.$retryable?.throttling || false
       );
     }
     return error instanceof Error ? error : new Error(String(error));

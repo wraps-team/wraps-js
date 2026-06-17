@@ -48,11 +48,11 @@ describe('WrapsEmailSuppression', () => {
       const result = await suppression.get('bounced@example.com');
 
       expect(result).not.toBeNull();
-      expect(result!.email).toBe('bounced@example.com');
-      expect(result!.reason).toBe('BOUNCE');
-      expect(result!.lastUpdated).toBe(lastUpdateTime);
-      expect(result!.messageId).toBe('msg-abc');
-      expect(result!.feedbackId).toBe('fb-123');
+      expect(result?.email).toBe('bounced@example.com');
+      expect(result?.reason).toBe('BOUNCE');
+      expect(result?.lastUpdated).toBe(lastUpdateTime);
+      expect(result?.messageId).toBe('msg-abc');
+      expect(result?.feedbackId).toBe('fb-123');
     });
 
     it('should return null when NotFoundException (not suppressed)', async () => {
@@ -95,7 +95,7 @@ describe('WrapsEmailSuppression', () => {
 
     it('should validate reason is BOUNCE or COMPLAINT', async () => {
       await expect(suppression.add('test@example.com', 'INVALID' as any)).rejects.toThrow(
-        ValidationError,
+        ValidationError
       );
     });
 

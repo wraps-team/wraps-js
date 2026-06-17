@@ -43,7 +43,7 @@ function deriveStatus(events: EmailEvent[]): EmailStatus['status'] {
 export class WrapsEmailEvents {
   constructor(
     private client: DynamoDBDocumentClient,
-    private tableName: string,
+    private tableName: string
   ) {}
 
   /**
@@ -64,7 +64,7 @@ export class WrapsEmailEvents {
             ':mid': messageId,
           },
           ScanIndexForward: true,
-        }),
+        })
       );
 
       if (!response.Items || response.Items.length === 0) {
@@ -109,7 +109,7 @@ export class WrapsEmailEvents {
     if (options.continuationToken) {
       try {
         exclusiveStartKey = JSON.parse(
-          Buffer.from(options.continuationToken, 'base64').toString('utf-8'),
+          Buffer.from(options.continuationToken, 'base64').toString('utf-8')
         );
       } catch {
         throw new ValidationError('Invalid continuation token', 'continuationToken');
@@ -126,7 +126,7 @@ export class WrapsEmailEvents {
           ScanIndexForward: false,
           Limit: limit,
           ExclusiveStartKey: exclusiveStartKey,
-        }),
+        })
       );
 
       const items = response.Items || [];
@@ -135,10 +135,9 @@ export class WrapsEmailEvents {
       const grouped = new Map<string, Record<string, unknown>[]>();
       for (const item of items) {
         const mid = item.messageId as string;
-        if (!grouped.has(mid)) {
-          grouped.set(mid, []);
-        }
-        grouped.get(mid)!.push(item);
+        const group = grouped.get(mid) ?? [];
+        group.push(item);
+        grouped.set(mid, group);
       }
 
       // Aggregate each group into an EmailStatus
@@ -207,7 +206,7 @@ export class WrapsEmailEvents {
         err.message || 'DynamoDB request failed',
         err.name || 'Unknown',
         err.$metadata.requestId || 'unknown',
-        err.$retryable?.throttling || false,
+        err.$retryable?.throttling || false
       );
     }
     return error instanceof Error ? error : new Error(String(error));
