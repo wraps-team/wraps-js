@@ -49,7 +49,7 @@ export function registerSendEmail(server: McpServer, config: MCPConfig): void {
       if (config.allowedRecipients.length > 0 || config.allowedRecipientDomains.length > 0) {
         const denied = recipients.some((addr) => {
           const lower = addr.toLowerCase();
-          const domain = lower.split('@')[1];
+          const domain = lower.split('@')[1] ?? '';
           return (
             !config.allowedRecipients.includes(lower) &&
             !config.allowedRecipientDomains.includes(domain)

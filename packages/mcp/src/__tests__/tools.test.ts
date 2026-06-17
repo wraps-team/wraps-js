@@ -145,6 +145,14 @@ describe('loadConfig()', () => {
     await expect(loadConfig()).rejects.toThrow(ConfigError);
     await expect(loadConfig()).rejects.toThrow(/Account ID/i);
   });
+
+  it('throws ConfigError when WRAPS_MAX_RECIPIENTS contains trailing garbage like "50x"', async () => {
+    process.env.AWS_REGION = 'us-east-1';
+    process.env.WRAPS_ACCOUNT_ID = '123456789012';
+    process.env.WRAPS_MAX_RECIPIENTS = '50x';
+    await expect(loadConfig()).rejects.toThrow(ConfigError);
+    await expect(loadConfig()).rejects.toThrow(/WRAPS_MAX_RECIPIENTS/);
+  });
 });
 
 const baseConfig: MCPConfig = {

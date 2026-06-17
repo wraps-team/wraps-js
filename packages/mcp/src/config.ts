@@ -40,8 +40,8 @@ export async function loadConfig(): Promise<MCPConfig> {
   const maxRecipientsRaw = process.env.WRAPS_MAX_RECIPIENTS;
   let maxRecipients = 50;
   if (maxRecipientsRaw !== undefined) {
-    const parsed = Number.parseInt(maxRecipientsRaw, 10);
-    if (Number.isNaN(parsed) || parsed <= 0) {
+    const parsed = Number(maxRecipientsRaw);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
       throw new ConfigError(
         `Invalid WRAPS_MAX_RECIPIENTS: "${maxRecipientsRaw}". Must be a positive integer.`
       );

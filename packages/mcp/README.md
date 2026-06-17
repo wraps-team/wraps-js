@@ -96,7 +96,7 @@ When write mode is enabled, the `send_email` tool can reach any SES-verified add
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `WRAPS_ALLOWED_RECIPIENTS` | — (no restriction) | Comma-separated exact addresses the agent may send to. If set, any address not in this list (or `WRAPS_ALLOWED_RECIPIENT_DOMAINS`) is rejected. |
-| `WRAPS_ALLOWED_RECIPIENT_DOMAINS` | — (no restriction) | Comma-separated domains (e.g. `company.com,partner.org`) the agent may send to. Combined with `WRAPS_ALLOWED_RECIPIENTS`; a recipient is allowed if it matches either list. |
+| `WRAPS_ALLOWED_RECIPIENT_DOMAINS` | — (no restriction) | Comma-separated domains (e.g. `company.com,partner.org`) the agent may send to. Combined with `WRAPS_ALLOWED_RECIPIENTS`; a recipient is allowed if it matches either list. Matching is exact: `example.com` allows `user@example.com` but NOT subdomains like `user@mail.example.com` — list each subdomain explicitly. |
 | `WRAPS_MAX_RECIPIENTS` | `50` | Maximum number of recipients per `send_email` call. |
 | `WRAPS_ALLOW_FROM_OVERRIDE` | `false` | Set to `true` to let the agent supply a `from` address that differs from `WRAPS_FROM_EMAIL`. When `false` (default), the caller-supplied `from` is rejected if it does not match the configured address. |
 
