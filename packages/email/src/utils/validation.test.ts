@@ -277,4 +277,39 @@ describe('validateEmailParams', () => {
 
     expect(() => validateEmailParams(params)).not.toThrow();
   });
+
+  it('should throw ValidationError when from string contains CRLF in display name', () => {
+    const params: SendEmailParams = {
+      from: 'Evil\r\nBcc: victim@example.com <real@example.com>',
+      to: 'recipient@example.com',
+      subject: 'Test',
+      html: '<p>Test</p>',
+    };
+
+    expect(() => validateEmailParams(params)).toThrow(ValidationError);
+    expect(() => validateEmailParams(params)).toThrow('Illegal newline in header field: from');
+  });
+
+  it('should throw ValidationError when from EmailAddress name contains CRLF', () => {
+    const params: SendEmailParams = {
+      from: { email: 'real@example.com', name: 'Evil\r\nBcc: victim@example.com' },
+      to: 'recipient@example.com',
+      subject: 'Test',
+      html: '<p>Test</p>',
+    };
+
+    expect(() => validateEmailParams(params)).toThrow(ValidationError);
+    expect(() => validateEmailParams(params)).toThrow('Illegal newline in header field: from');
+  });
+
+  it('should accept a normal display name with angle brackets', () => {
+    const params: SendEmailParams = {
+      from: { email: 'sender@example.com', name: 'Legitimate Name' },
+      to: 'recipient@example.com',
+      subject: 'Test',
+      html: '<p>Test</p>',
+    };
+
+    expect(() => validateEmailParams(params)).not.toThrow();
+  });
 });

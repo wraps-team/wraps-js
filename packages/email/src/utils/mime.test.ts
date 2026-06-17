@@ -356,4 +356,59 @@ describe('MIME Message Builder', () => {
       expect(message).not.toContain('multipart/mixed');
     });
   });
+
+  describe('header injection', () => {
+    it('should throw when subject contains CRLF', () => {
+      expect(() =>
+        buildRawEmailMessage({
+          from: 'sender@example.com',
+          to: 'recipient@example.com',
+          subject: 'Hi\r\nBcc: victim@example.com',
+          text: 'body',
+        })
+      ).toThrow('Illegal newline in header field: subject');
+    });
+
+    it('should throw when from display name contains CRLF', () => {
+      expect(() =>
+        buildRawEmailMessage({
+          from: '"Evil\r\nBcc: victim@example.com" <real@example.com>',
+          to: 'recipient@example.com',
+          subject: 'Test',
+          text: 'body',
+        })
+      ).toThrow('Illegal newline in header field: address');
+    });
+
+    it('should throw when customHeaders value contains CRLF', () => {
+      expect(() =>
+        buildRawEmailMessage({
+          from: 'sender@example.com',
+          to: 'recipient@example.com',
+          subject: 'Test',
+          text: 'body',
+          customHeaders: {
+            'X-Custom': 'safe\r\nBcc: victim@example.com',
+          },
+        })
+      ).toThrow('Illegal newline in header field: customHeaders.value');
+    });
+
+    it('should throw when attachment filename contains CRLF', () => {
+      expect(() =>
+        buildRawEmailMessage({
+          from: 'sender@example.com',
+          to: 'recipient@example.com',
+          subject: 'Test',
+          text: 'body',
+          attachments: [
+            {
+              filename: 'evil\r\nBcc: victim@example.com',
+              content: Buffer.from('data'),
+            },
+          ],
+        })
+      ).toThrow('Illegal newline in header field: attachment.filename');
+    });
+  });
 });

@@ -1,6 +1,7 @@
 import { safeParse, email as zEmail } from 'zod/mini';
 import { ValidationError } from '../errors';
 import type { EmailAddress, SendEmailParams } from '../types';
+import { assertNoHeaderInjection } from './headers';
 
 /**
  * Normalize email address to string format
@@ -103,6 +104,16 @@ function extractEmail(address: string): string {
  * Supports RFC 5322 format: "Display Name <email@example.com>" or plain "email@example.com"
  */
 function validateEmailAddress(address: string | EmailAddress, field: string): void {
+  // Reject CRLF in the full address string or in EmailAddress fields
+  if (typeof address === 'string') {
+    assertNoHeaderInjection(address, field);
+  } else {
+    assertNoHeaderInjection(address.email, field);
+    if (address.name) {
+      assertNoHeaderInjection(address.name, field);
+    }
+  }
+
   // Extract email portion from string or EmailAddress object
   const email = typeof address === 'string' ? extractEmail(address) : address.email;
 

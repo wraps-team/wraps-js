@@ -1,4 +1,5 @@
 import type { Attachment, EmailAddress } from '../types';
+import { assertNoHeaderInjection, sanitizeHeaderValue } from './headers';
 
 /**
  * Generate a random boundary string for MIME multipart messages
@@ -11,15 +12,18 @@ function generateBoundary(prefix = 'boundary'): string {
  * Encode email address with optional name
  */
 function formatEmailAddress(address: string | EmailAddress): string {
+  let out: string;
   if (typeof address === 'string') {
-    return address;
-  }
-  if (address.name) {
+    out = address;
+  } else if (address.name) {
     // Properly quote and escape name if it contains special characters
     const name = address.name.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-    return `"${name}" <${address.email}>`;
+    out = `"${name}" <${address.email}>`;
+  } else {
+    out = address.email;
   }
-  return address.email;
+  assertNoHeaderInjection(out, 'address');
+  return out;
 }
 
 /**
@@ -111,11 +115,13 @@ export function buildRawEmailMessage(params: BuildRawEmailParams): string {
     lines.push(`Reply-To: ${formatEmailAddresses(params.replyTo)}`);
   }
 
-  lines.push(`Subject: ${params.subject}`);
+  lines.push(`Subject: ${sanitizeHeaderValue(params.subject, 'subject')}`);
 
   // Add custom headers (e.g., In-Reply-To, References for threading)
   if (params.customHeaders) {
     for (const [name, value] of Object.entries(params.customHeaders)) {
+      assertNoHeaderInjection(name, 'customHeaders.name');
+      assertNoHeaderInjection(value, 'customHeaders.value');
       lines.push(`${name}: ${value}`);
     }
   }
@@ -210,6 +216,8 @@ export function buildRawEmailMessage(params: BuildRawEmailParams): string {
     const encoding = attachment.encoding || 'base64';
 
     lines.push(`--${mainBoundary}`);
+    assertNoHeaderInjection(mimeType, 'attachment.contentType');
+    assertNoHeaderInjection(attachment.filename, 'attachment.filename');
     lines.push(`Content-Type: ${mimeType}; name="${attachment.filename}"`);
     lines.push(`Content-Disposition: attachment; filename="${attachment.filename}"`);
     lines.push(`Content-Transfer-Encoding: ${encoding}`);

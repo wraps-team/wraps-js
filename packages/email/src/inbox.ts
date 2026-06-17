@@ -17,6 +17,7 @@ import type {
   InboxReplyOptions,
   SendEmailResult,
 } from './types';
+import { assertNoHeaderInjection } from './utils/headers';
 import { buildRawEmailMessage } from './utils/mime';
 import { normalizeEmailAddress, normalizeEmailAddresses } from './utils/validation';
 
@@ -242,14 +243,17 @@ export class WrapsInbox {
 
       // Rewrite From header
       const fromStr = normalizeEmailAddress(options.from);
+      assertNoHeaderInjection(fromStr, 'from');
       rawMime = rawMime.replace(/^From:\s*.+$/im, `From: ${fromStr}`);
 
       // Rewrite To header
       const toStr = normalizeEmailAddresses(options.to).join(', ');
+      assertNoHeaderInjection(toStr, 'to');
       rawMime = rawMime.replace(/^To:\s*.+$/im, `To: ${toStr}`);
 
       // Optionally prefix subject
       if (options.addPrefix) {
+        assertNoHeaderInjection(options.addPrefix, 'addPrefix');
         rawMime = rawMime.replace(/^Subject:\s*(.+)$/im, `Subject: ${options.addPrefix} $1`);
       }
 
@@ -334,15 +338,17 @@ export class WrapsInbox {
     // Build threading headers
     const customHeaders: Record<string, string> = {};
     if (email.messageId) {
+      assertNoHeaderInjection(email.messageId, 'In-Reply-To');
       customHeaders['In-Reply-To'] = email.messageId;
       const existingRefs = email.headers?.references || email.headers?.References || '';
-      customHeaders.References = existingRefs
-        ? `${existingRefs} ${email.messageId}`
-        : email.messageId;
+      const references = existingRefs ? `${existingRefs} ${email.messageId}` : email.messageId;
+      assertNoHeaderInjection(references, 'References');
+      customHeaders.References = references;
     }
 
     // Subject: prepend Re: if not already present
     const subject = /^Re:/i.test(email.subject) ? email.subject : `Re: ${email.subject}`;
+    assertNoHeaderInjection(subject, 'subject');
 
     // Reply to the original sender
     const replyTo = email.from.name
