@@ -96,6 +96,10 @@ describe('loadConfig()', () => {
       accountId: '123456789012',
       writeEnabled: false,
       fromEmail: undefined,
+      allowedRecipients: [],
+      allowedRecipientDomains: [],
+      maxRecipients: 50,
+      allowFromOverride: false,
     });
   });
 
@@ -109,6 +113,10 @@ describe('loadConfig()', () => {
       accountId: '999888777666',
       writeEnabled: false,
       fromEmail: undefined,
+      allowedRecipients: [],
+      allowedRecipientDomains: [],
+      maxRecipients: 50,
+      allowFromOverride: false,
     });
     expect(mockStsSend).toHaveBeenCalledOnce();
   });
@@ -123,6 +131,10 @@ describe('loadConfig()', () => {
       accountId: '111222333444',
       writeEnabled: false,
       fromEmail: undefined,
+      allowedRecipients: [],
+      allowedRecipientDomains: [],
+      maxRecipients: 50,
+      allowFromOverride: false,
     });
     expect(mockStsSend).not.toHaveBeenCalled();
   });
@@ -141,6 +153,11 @@ const baseConfig: MCPConfig = {
   accountId: '123456789012',
   writeEnabled: true,
   fromEmail: 'noreply@example.com',
+  configurationSetName: undefined,
+  allowedRecipients: [],
+  allowedRecipientDomains: [],
+  maxRecipients: 50,
+  allowFromOverride: false,
 };
 
 async function createTestClient(
@@ -481,6 +498,144 @@ describe('verify_domain_status tool', () => {
     await cleanup();
     expect(result.isError).toBe(true);
     expect(getText(result)).toBe('Domain not found in SES: missing.com');
+  });
+});
+
+describe('send_email guardrails', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns isError when recipients exceed maxRecipients and does not call send', async () => {
+    const { client, cleanup } = await createTestClient(registerSendEmail, {
+      ...baseConfig,
+      maxRecipients: 2,
+    });
+    const result = await client.callTool({
+      name: 'send_email',
+      arguments: {
+        to: ['a@example.com', 'b@example.com', 'c@example.com'],
+        subject: 'Hi',
+        text: 'body',
+      },
+    });
+    await cleanup();
+    expect(result.isError).toBe(true);
+    expect(getText(result)).toMatch(/Too many recipients \(3\); max is 2/);
+    expect(mockEmailSend).not.toHaveBeenCalled();
+  });
+
+  it('returns isError when recipient domain is not in allowlist and does not call send', async () => {
+    const { client, cleanup } = await createTestClient(registerSendEmail, {
+      ...baseConfig,
+      allowedRecipientDomains: ['allowed.com'],
+    });
+    const result = await client.callTool({
+      name: 'send_email',
+      arguments: { to: 'user@notallowed.com', subject: 'Hi', text: 'body' },
+    });
+    await cleanup();
+    expect(result.isError).toBe(true);
+    expect(getText(result)).toContain('not in the configured allowlist');
+    expect(mockEmailSend).not.toHaveBeenCalled();
+  });
+
+  it('allows send when recipient matches exact address allowlist', async () => {
+    mockEmailSend.mockResolvedValueOnce({ messageId: 'msg-al1', requestId: 'req-al1' });
+    const { client, cleanup } = await createTestClient(registerSendEmail, {
+      ...baseConfig,
+      allowedRecipients: ['exact@example.com'],
+      allowedRecipientDomains: [],
+    });
+    const result = await client.callTool({
+      name: 'send_email',
+      arguments: { to: 'exact@example.com', subject: 'Hi', text: 'body' },
+    });
+    await cleanup();
+    expect(result.isError).toBeUndefined();
+    expect(mockEmailSend).toHaveBeenCalledOnce();
+  });
+
+  it('allows send when recipient matches domain allowlist', async () => {
+    mockEmailSend.mockResolvedValueOnce({ messageId: 'msg-al2', requestId: 'req-al2' });
+    const { client, cleanup } = await createTestClient(registerSendEmail, {
+      ...baseConfig,
+      allowedRecipientDomains: ['example.com'],
+    });
+    const result = await client.callTool({
+      name: 'send_email',
+      arguments: { to: 'anyone@example.com', subject: 'Hi', text: 'body' },
+    });
+    await cleanup();
+    expect(result.isError).toBeUndefined();
+    expect(mockEmailSend).toHaveBeenCalledOnce();
+  });
+
+  it('returns isError when from differs from configured fromEmail with allowFromOverride: false', async () => {
+    const { client, cleanup } = await createTestClient(registerSendEmail, {
+      ...baseConfig,
+      allowFromOverride: false,
+    });
+    const result = await client.callTool({
+      name: 'send_email',
+      arguments: { to: 'user@example.com', from: 'other@example.com', subject: 'Hi', text: 'body' },
+    });
+    await cleanup();
+    expect(result.isError).toBe(true);
+    expect(getText(result)).toContain('WRAPS_ALLOW_FROM_OVERRIDE');
+    expect(mockEmailSend).not.toHaveBeenCalled();
+  });
+
+  it('allows from override when allowFromOverride: true', async () => {
+    mockEmailSend.mockResolvedValueOnce({ messageId: 'msg-fro', requestId: 'req-fro' });
+    const { client, cleanup } = await createTestClient(registerSendEmail, {
+      ...baseConfig,
+      allowFromOverride: true,
+    });
+    const result = await client.callTool({
+      name: 'send_email',
+      arguments: { to: 'user@example.com', from: 'other@example.com', subject: 'Hi', text: 'body' },
+    });
+    await cleanup();
+    expect(result.isError).toBeUndefined();
+    expect(mockEmailSend).toHaveBeenCalledWith(
+      expect.objectContaining({ from: 'other@example.com' })
+    );
+  });
+
+  it('proceeds with no allowlists configured (back-compat baseline)', async () => {
+    mockEmailSend.mockResolvedValueOnce({ messageId: 'msg-bc', requestId: 'req-bc' });
+    const { client, cleanup } = await createTestClient(registerSendEmail);
+    const result = await client.callTool({
+      name: 'send_email',
+      arguments: { to: 'anyone@anywhere.com', subject: 'Hi', text: 'body' },
+    });
+    await cleanup();
+    expect(result.isError).toBeUndefined();
+    expect(mockEmailSend).toHaveBeenCalledOnce();
+  });
+
+  it('allows from override when fromEmail is not configured (no override happening)', async () => {
+    mockEmailSend.mockResolvedValueOnce({ messageId: 'msg-nf', requestId: 'req-nf' });
+    const { client, cleanup } = await createTestClient(registerSendEmail, {
+      ...baseConfig,
+      fromEmail: undefined,
+      allowFromOverride: false,
+    });
+    const result = await client.callTool({
+      name: 'send_email',
+      arguments: {
+        to: 'user@example.com',
+        from: 'caller@example.com',
+        subject: 'Hi',
+        text: 'body',
+      },
+    });
+    await cleanup();
+    expect(result.isError).toBeUndefined();
+    expect(mockEmailSend).toHaveBeenCalledWith(
+      expect.objectContaining({ from: 'caller@example.com' })
+    );
   });
 });
 

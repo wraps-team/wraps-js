@@ -4,7 +4,7 @@ import { z } from 'zod';
 import type { MCPConfig } from '../config.ts';
 
 const SendEmailInputSchema = {
-  to: z.union([z.string().email(), z.array(z.string().email()).min(1)]),
+  to: z.union([z.string().email(), z.array(z.string().email()).min(1).max(1000)]),
   from: z.string().email().optional(),
   subject: z.string(),
   html: z.string().optional(),
@@ -32,7 +32,62 @@ export function registerSendEmail(server: McpServer, config: MCPConfig): void {
         };
       }
 
-      const from = input.from ?? config.fromEmail;
+      const recipients = Array.isArray(input.to) ? input.to : [input.to];
+
+      if (recipients.length > config.maxRecipients) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: 'text' as const,
+              text: `Too many recipients (${recipients.length}); max is ${config.maxRecipients}.`,
+            },
+          ],
+        };
+      }
+
+      if (config.allowedRecipients.length > 0 || config.allowedRecipientDomains.length > 0) {
+        const denied = recipients.some((addr) => {
+          const lower = addr.toLowerCase();
+          const domain = lower.split('@')[1];
+          return (
+            !config.allowedRecipients.includes(lower) &&
+            !config.allowedRecipientDomains.includes(domain)
+          );
+        });
+        if (denied) {
+          return {
+            isError: true,
+            content: [
+              {
+                type: 'text' as const,
+                text: 'One or more recipients are not in the configured allowlist.',
+              },
+            ],
+          };
+        }
+      }
+
+      let from: string | undefined;
+      if (!input.from) {
+        from = config.fromEmail;
+      } else if (!config.fromEmail) {
+        from = input.from;
+      } else if (input.from.toLowerCase() === config.fromEmail.toLowerCase()) {
+        from = input.from;
+      } else if (config.allowFromOverride) {
+        from = input.from;
+      } else {
+        return {
+          isError: true,
+          content: [
+            {
+              type: 'text' as const,
+              text: 'Overriding the configured from address is disabled. Set WRAPS_ALLOW_FROM_OVERRIDE=true to allow.',
+            },
+          ],
+        };
+      }
       if (!from) {
         return {
           isError: true,
