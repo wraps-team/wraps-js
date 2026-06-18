@@ -484,6 +484,41 @@ describe('WrapsEmail', () => {
 
       expect(mockDestroy).toHaveBeenCalled();
     });
+
+    it('should destroy all internally-created S3/DynamoDB/SSM clients', () => {
+      const email = new WrapsEmail({
+        region: 'us-east-1',
+        inboxBucketName: 'b',
+        historyTableName: 't',
+        replyThreading: { parameterPrefix: '/wraps/email/reply-secret/' },
+      });
+      const owned = (email as any).ownedClients as Array<{ destroy(): void }>;
+      expect(owned).toHaveLength(3); // S3, DynamoDB, SSM
+      const spies = owned.map((c) => vi.spyOn(c, 'destroy'));
+      email.destroy();
+      for (const spy of spies) expect(spy).toHaveBeenCalledTimes(1);
+      // SES clients still destroyed (existing behavior)
+      expect((email as any).sesClient.destroy).toHaveBeenCalled();
+    });
+
+    it('should not own or destroy caller-supplied clients', () => {
+      const callerS3 = { send: vi.fn(), destroy: vi.fn() } as any;
+      const email = new WrapsEmail({
+        region: 'us-east-1',
+        inboxBucketName: 'b',
+        s3Client: callerS3,
+      });
+      expect((email as any).ownedClients).not.toContain(callerS3);
+      email.destroy();
+      expect(callerS3.destroy).not.toHaveBeenCalled();
+    });
+
+    it('should have no owned clients and not throw for a bare instance', () => {
+      const email = new WrapsEmail({ region: 'us-east-1' });
+      expect((email as any).ownedClients).toHaveLength(0);
+      expect(() => email.destroy()).not.toThrow();
+      expect((email as any).sesClient.destroy).toHaveBeenCalled();
+    });
   });
 });
 

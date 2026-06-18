@@ -81,6 +81,9 @@ export class WrapsEmail {
    */
   private readonly replyDomainOverride: string | undefined;
 
+  /** Clients this instance created itself and is responsible for closing. */
+  private readonly ownedClients: Array<{ destroy(): void }> = [];
+
   /**
    * Template management methods
    */
@@ -110,7 +113,9 @@ export class WrapsEmail {
         if (config.endpoint) {
           s3Config.endpoint = config.endpoint;
         }
-        this.inbox = new WrapsInbox(new S3Client(s3Config), config.inboxBucketName, this.sesClient);
+        const s3Client = new S3Client(s3Config);
+        this.ownedClients.push(s3Client);
+        this.inbox = new WrapsInbox(s3Client, config.inboxBucketName, this.sesClient);
       }
     } else {
       this.inbox = null;
@@ -130,7 +135,9 @@ export class WrapsEmail {
         if (config.endpoint) {
           dynamoConfig.endpoint = config.endpoint;
         }
-        const docClient = DynamoDBDocumentClient.from(new DynamoDBClient(dynamoConfig), {
+        const ddbClient = new DynamoDBClient(dynamoConfig);
+        this.ownedClients.push(ddbClient);
+        const docClient = DynamoDBDocumentClient.from(ddbClient, {
           marshallOptions: { removeUndefinedValues: true },
         });
         this.events = new WrapsEmailEvents(docClient, config.historyTableName);
@@ -171,6 +178,7 @@ export class WrapsEmail {
           ssmConfig.endpoint = config.endpoint;
         }
         ssmClient = new SSMClient(ssmConfig);
+        this.ownedClients.push(ssmClient);
       }
       this.replyThreading = new WrapsReplyThreading({
         ssmClient: ssmClient as NonNullable<typeof ssmClient>,
@@ -736,5 +744,8 @@ export class WrapsEmail {
   destroy(): void {
     this.sesClient.destroy();
     this.sesv2Client.destroy();
+    for (const client of this.ownedClients) {
+      client.destroy();
+    }
   }
 }
