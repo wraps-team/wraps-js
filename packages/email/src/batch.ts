@@ -1,5 +1,5 @@
 import { type SESv2Client, SendBulkEmailCommand } from '@aws-sdk/client-sesv2';
-import { mapAwsSdkError, ValidationError } from './errors';
+import { mapAwsSdkError, SESError, ValidationError } from './errors';
 import { renderReactEmail } from './react';
 import type { BatchEmailEntry, BatchEntryResult, SendBatchParams, SendBatchResult } from './types';
 import { htmlToPlainText } from './utils/html-to-text';
@@ -146,6 +146,17 @@ function handleSESv2Error(error: unknown): Error {
   return mapAwsSdkError(error);
 }
 
+function describeChunkError(error: unknown): string {
+  const mapped = mapAwsSdkError(error);
+  if (mapped instanceof SESError) {
+    return `${mapped.code}: ${mapped.message}${mapped.retryable ? ' (retryable)' : ''}`;
+  }
+  if (mapped instanceof Error) {
+    return mapped.message;
+  }
+  return 'Chunk-level SES error';
+}
+
 /**
  * Send batch emails with unique content per recipient.
  *
@@ -173,26 +184,28 @@ export async function sendBatch(
 
   const resolved = await resolveEntries(params.entries);
 
-  const allResults: BatchEntryResult[] = [];
-
-  // Process in chunks of 50
+  const chunkOffsets: number[] = [];
   for (let offset = 0; offset < resolved.length; offset += CHUNK_SIZE) {
-    const chunk = resolved.slice(offset, offset + CHUNK_SIZE);
-
-    try {
-      const chunkResults = await sendChunk(sesv2Client, params, chunk, offset);
-      allResults.push(...chunkResults);
-    } catch {
-      // Chunk-level failure: mark all entries in this chunk as failed
-      for (let i = 0; i < chunk.length; i++) {
-        allResults.push({
-          index: offset + i,
-          status: 'failure',
-          error: 'Chunk-level SES error',
-        });
-      }
-    }
+    chunkOffsets.push(offset);
   }
+
+  const chunkResultSets = await Promise.all(
+    chunkOffsets.map(async (offset) => {
+      const chunk = resolved.slice(offset, offset + CHUNK_SIZE);
+      try {
+        return await sendChunk(sesv2Client, params, chunk, offset);
+      } catch (error) {
+        const detail = describeChunkError(error);
+        return chunk.map((_, i) => ({
+          index: offset + i,
+          status: 'failure' as const,
+          error: detail,
+        }));
+      }
+    })
+  );
+
+  const allResults: BatchEntryResult[] = chunkResultSets.flat().sort((a, b) => a.index - b.index);
 
   const successCount = allResults.filter((r) => r.status === 'success').length;
   const failureCount = allResults.filter((r) => r.status === 'failure').length;

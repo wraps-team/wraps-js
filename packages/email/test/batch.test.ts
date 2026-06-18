@@ -386,13 +386,82 @@ describe('sendBatch', () => {
       for (let i = 0; i < 50; i++) {
         expect(result.results[i].status).toBe('failure');
         expect(result.results[i].index).toBe(i);
-        expect(result.results[i].error).toBe('Chunk-level SES error');
+        expect(result.results[i].error).toBe('TooManyRequestsException: Throttled (retryable)');
       }
 
       // Next 25 should be successes
       for (let i = 50; i < 75; i++) {
         expect(result.results[i].status).toBe('success');
         expect(result.results[i].index).toBe(i);
+      }
+    });
+
+    it('should fall back to the raw error message for non-AWS errors', async () => {
+      const entries = Array.from({ length: 10 }, (_, i) => ({
+        to: `user${i}@example.com`,
+        subject: `Subject ${i}`,
+        html: `<p>Content ${i}</p>`,
+      }));
+
+      const client = {
+        send: vi.fn().mockImplementation(() => Promise.reject(new Error('boom'))),
+        destroy: vi.fn(),
+      } as any;
+
+      const result = await sendBatch(client, { from: 'sender@example.com', entries });
+
+      expect(result.results).toHaveLength(10);
+      expect(result.failureCount).toBe(10);
+      for (let i = 0; i < 10; i++) {
+        expect(result.results[i].status).toBe('failure');
+        expect(result.results[i].error).toBe('boom');
+      }
+    });
+
+    it('should preserve index ordering when the second chunk fails', async () => {
+      const entries = Array.from({ length: 100 }, (_, i) => ({
+        to: `user${i}@example.com`,
+        subject: `Subject ${i}`,
+        html: `<p>Content ${i}</p>`,
+      }));
+
+      let callIndex = 0;
+      const client = {
+        send: vi.fn().mockImplementation(() => {
+          callIndex++;
+          if (callIndex === 1) {
+            return Promise.resolve({
+              BulkEmailEntryResults: Array.from({ length: 50 }, (_, i) => ({
+                Status: 'SUCCESS',
+                MessageId: `msg-${i}`,
+              })),
+            });
+          }
+          return Promise.reject(
+            Object.assign(new Error('Throttled'), {
+              $metadata: { requestId: 'req-2' },
+              $retryable: { throttling: true },
+              name: 'TooManyRequestsException',
+            })
+          );
+        }),
+        destroy: vi.fn(),
+      } as any;
+
+      const result = await sendBatch(client, { from: 'sender@example.com', entries });
+
+      expect(result.results).toHaveLength(100);
+      expect(result.successCount).toBe(50);
+      expect(result.failureCount).toBe(50);
+
+      for (let i = 0; i < 100; i++) {
+        expect(result.results[i].index).toBe(i);
+      }
+      for (let i = 0; i < 50; i++) {
+        expect(result.results[i].status).toBe('success');
+      }
+      for (let i = 50; i < 100; i++) {
+        expect(result.results[i].status).toBe('failure');
       }
     });
   });
