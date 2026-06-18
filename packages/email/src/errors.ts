@@ -61,3 +61,31 @@ export class BatchError extends WrapsEmailError {
     this.failureCount = failureCount;
   }
 }
+
+/**
+ * Map an AWS SDK v3 client error into a {@link SESError}. AWS SDK errors carry
+ * `$metadata` (with `requestId`) and an optional `$retryable.throttling` flag.
+ * Non-AWS errors are returned unchanged.
+ *
+ * @param error - The caught error from an AWS SDK `.send()` call.
+ * @param fallbackMessage - Message used when the error has no `.message`.
+ * @returns A `SESError` when the error looks like an AWS SDK error, else the
+ *   original error.
+ */
+export function mapAwsSdkError(error: unknown, fallbackMessage = 'SES request failed'): Error {
+  const err = error as {
+    $metadata?: { requestId?: string };
+    $retryable?: { throttling?: boolean };
+    message?: string;
+    name?: string;
+  };
+  if (err.$metadata) {
+    return new SESError(
+      err.message || fallbackMessage,
+      err.name || 'Unknown',
+      err.$metadata.requestId || 'unknown',
+      err.$retryable?.throttling || false
+    );
+  }
+  return error as Error;
+}

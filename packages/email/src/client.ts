@@ -16,7 +16,7 @@ import { SESv2Client } from '@aws-sdk/client-sesv2';
 import { SSMClient } from '@aws-sdk/client-ssm';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { sendBatch as sendBatchImpl } from './batch';
-import { SESError, ValidationError } from './errors';
+import { mapAwsSdkError, ValidationError } from './errors';
 import { WrapsEmailEvents } from './events';
 import { WrapsInbox } from './inbox';
 import { renderReactEmail } from './react';
@@ -445,22 +445,7 @@ export class WrapsEmail {
   }
 
   private handleSESError(error: unknown): Error {
-    const err = error as {
-      $metadata?: { requestId?: string };
-      $retryable?: { throttling?: boolean };
-      message?: string;
-      name?: string;
-    };
-    if (err.$metadata) {
-      // AWS SDK error
-      return new SESError(
-        err.message || 'SES request failed',
-        err.name || 'Unknown',
-        err.$metadata.requestId || 'unknown',
-        err.$retryable?.throttling || false
-      );
-    }
-    return error as Error;
+    return mapAwsSdkError(error);
   }
 
   /**

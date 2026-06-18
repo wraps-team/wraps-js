@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SESError, ValidationError, WrapsEmailError } from './errors';
+import { mapAwsSdkError, SESError, ValidationError, WrapsEmailError } from './errors';
 
 describe('WrapsEmailError', () => {
   it('should create an error with the correct name and message', () => {
@@ -48,5 +48,48 @@ describe('SESError', () => {
     const error = new SESError('Message rejected', 'MessageRejected', 'xyz-456', false);
 
     expect(error.retryable).toBe(false);
+  });
+});
+
+describe('mapAwsSdkError', () => {
+  it('should map an AWS SDK error with all fields to a SESError', () => {
+    const sdkError = {
+      $metadata: { requestId: 'req-abc-123' },
+      $retryable: { throttling: true },
+      message: 'Rate limit exceeded',
+      name: 'ThrottlingException',
+    };
+
+    const result = mapAwsSdkError(sdkError);
+
+    expect(result).toBeInstanceOf(SESError);
+    const sesError = result as SESError;
+    expect(sesError.message).toBe('Rate limit exceeded');
+    expect(sesError.code).toBe('ThrottlingException');
+    expect(sesError.requestId).toBe('req-abc-123');
+    expect(sesError.retryable).toBe(true);
+  });
+
+  it('should return retryable: false when $retryable is absent', () => {
+    const sdkError = {
+      $metadata: { requestId: 'req-xyz-456' },
+      message: 'Message rejected',
+      name: 'MessageRejected',
+    };
+
+    const result = mapAwsSdkError(sdkError) as SESError;
+
+    expect(result).toBeInstanceOf(SESError);
+    expect(result.retryable).toBe(false);
+  });
+
+  it('should return a plain Error unchanged when $metadata is absent', () => {
+    const original = new Error('boom');
+
+    const result = mapAwsSdkError(original);
+
+    expect(result).toBe(original);
+    expect(result).toBeInstanceOf(Error);
+    expect(result).not.toBeInstanceOf(SESError);
   });
 });

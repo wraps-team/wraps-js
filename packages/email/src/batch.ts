@@ -1,5 +1,5 @@
 import { type SESv2Client, SendBulkEmailCommand } from '@aws-sdk/client-sesv2';
-import { SESError, ValidationError } from './errors';
+import { mapAwsSdkError, ValidationError } from './errors';
 import { renderReactEmail } from './react';
 import type { BatchEmailEntry, BatchEntryResult, SendBatchParams, SendBatchResult } from './types';
 import { htmlToPlainText } from './utils/html-to-text';
@@ -143,21 +143,7 @@ async function sendChunk(
 }
 
 function handleSESv2Error(error: unknown): Error {
-  const err = error as {
-    $metadata?: { requestId?: string };
-    $retryable?: { throttling?: boolean };
-    message?: string;
-    name?: string;
-  };
-  if (err.$metadata) {
-    return new SESError(
-      err.message || 'SES request failed',
-      err.name || 'Unknown',
-      err.$metadata.requestId || 'unknown',
-      err.$retryable?.throttling || false
-    );
-  }
-  return error as Error;
+  return mapAwsSdkError(error);
 }
 
 /**
