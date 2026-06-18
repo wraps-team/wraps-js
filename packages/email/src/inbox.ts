@@ -18,6 +18,7 @@ import type {
   SendEmailResult,
 } from './types';
 import { assertNoHeaderInjection } from './utils/headers';
+import { escapeHtml } from './utils/html-escape';
 import { buildRawEmailMessage } from './utils/mime';
 import { normalizeEmailAddress, normalizeEmailAddresses } from './utils/validation';
 
@@ -296,11 +297,23 @@ export class WrapsInbox {
 
     let html: string | undefined;
     if (options.html || email.html) {
-      const headerHtml = `<br><br><div style="border-top:1px solid #ccc;padding-top:10px"><b>${forwardBanner}</b><br>${fromInfo}<br>${dateInfo}<br>${subjectInfo}<br>${toInfo}<br><br>`;
+      const fromHtml = `From: ${
+        email.from.name
+          ? `${escapeHtml(email.from.name)} &lt;${escapeHtml(email.from.address)}&gt;`
+          : escapeHtml(email.from.address)
+      }`;
+      const dateHtml = `Date: ${escapeHtml(email.date)}`;
+      const subjectHtml = `Subject: ${escapeHtml(email.subject)}`;
+      const toHtml = `To: ${email.to
+        .map((t) =>
+          t.name ? `${escapeHtml(t.name)} &lt;${escapeHtml(t.address)}&gt;` : escapeHtml(t.address)
+        )
+        .join(', ')}`;
+      const headerHtml = `<br><br><div style="border-top:1px solid #ccc;padding-top:10px"><b>${forwardBanner}</b><br>${fromHtml}<br>${dateHtml}<br>${subjectHtml}<br>${toHtml}<br><br>`;
       html =
         (options.html || '') +
         headerHtml +
-        (email.html || `<pre>${email.text || ''}</pre>`) +
+        (email.html || `<pre>${escapeHtml(email.text || '')}</pre>`) +
         '</div>';
     }
 

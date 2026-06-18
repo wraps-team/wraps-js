@@ -230,6 +230,44 @@ describe('WrapsInbox', () => {
       const sentRaw = new TextDecoder().decode(mockSesSend.mock.calls[0][0].input.RawMessage.Data);
       expect(sentRaw).toContain('Subject: FW: Test');
     });
+
+    it('should escape attacker-controlled fields in HTML chrome', async () => {
+      const inbox = new WrapsInbox(mockS3Client, 'test-bucket', mockSesClient);
+      const email = makeParsedEmail({
+        from: { address: 'attacker@evil.com', name: '</b></div><script>alert(1)</script>' },
+        subject: '<img src=x onerror=alert(2)>',
+        html: '<p>original body</p>',
+        text: '', // skip the plain-text branch so the negative assertion is valid
+      });
+
+      mockS3Send.mockResolvedValueOnce(mockS3GetObject(email));
+      mockSesSend.mockResolvedValueOnce({ MessageId: 'fwd', $metadata: { requestId: 'r' } });
+
+      await inbox.forward('email-123', {
+        from: 'me@myapp.com',
+        to: 'dest@myapp.com',
+        passthrough: false,
+        html: '<p>fyi</p>',
+      });
+
+      const sentRaw = new TextDecoder().decode(mockSesSend.mock.calls[0][0].input.RawMessage.Data);
+
+      // Extract the HTML body (after the MIME header block)
+      const bodyStart = sentRaw.indexOf('\r\n\r\n');
+      const htmlBody = sentRaw.slice(bodyStart);
+
+      // Attacker's script tag must appear only in escaped form in the HTML body
+      expect(htmlBody).toContain('&lt;script&gt;');
+      expect(htmlBody).not.toContain('<script>');
+
+      // Subject injection must be escaped in the HTML chrome
+      expect(htmlBody).toContain('&lt;img');
+      expect(htmlBody).not.toContain('<img src=x');
+
+      // Caller-supplied HTML and original forwarded body pass through unescaped
+      expect(htmlBody).toContain('<p>fyi</p>');
+      expect(htmlBody).toContain('<p>original body</p>');
+    });
   });
 
   describe('reply()', () => {
