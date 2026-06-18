@@ -37,10 +37,7 @@ describe('htmlToPlainText', () => {
   });
 
   it('converts list items to bullet markers', () => {
-    // BUG: <li[\s>][^>]*> greedily matches through </li> content, consuming item
-    // text up to the closing >, so list item content is silently dropped.
-    // Current behavior pins that only bullet markers are emitted, not item text.
-    expect(htmlToPlainText('<ul><li>one</li><li>two</li></ul>')).toBe('-\n-');
+    expect(htmlToPlainText('<ul><li>one</li><li>two</li></ul>')).toBe('- one\n- two');
   });
 
   it('converts table cells to tab-separated values', () => {
@@ -77,21 +74,20 @@ describe('htmlToPlainText', () => {
   </ul>
 </body></html>`;
 
-    // Note: list item content is dropped (see list items test above).
     // Note: extra newlines arise from interleaved block-tag newlines and
     // whitespace-only lines that survive the \n{3,} collapse but become empty
     // after per-line trim, effectively creating 3-4 newline gaps.
     expect(htmlToPlainText(html)).toBe(
-      'Welcome!\n\n\nThank you for signing up. Visit our documentation (https://example.com/docs) to get started.\n\n\n\n-\n\n-\n\n-'
+      'Welcome!\n\n\nThank you for signing up. Visit our documentation (https://example.com/docs) to get started.\n\n\n\n- Feature one\n\n- Feature two\n\n- Feature three'
     );
   });
 
-  it('decodes astral-plane numeric entities with a replacement character', () => {
-    // KNOWN LIMITATION: String.fromCharCode() cannot represent code points above
-    // U+FFFF (astral plane). &#128512; (😀, U+1F600) overflows to U+F600 (a
-    // Private Use Area character) instead of producing the correct emoji.
-    // String.fromCharCode(128512) === '', not '😀'.
-    const result = htmlToPlainText('&#128512;');
-    expect(result).toBe('');
+  it('decodes astral-plane numeric entities to the correct character', () => {
+    expect(htmlToPlainText('&#128512;')).toBe('\u{1F600}');
+    expect(htmlToPlainText('&#x1F600;')).toBe('\u{1F600}'); // hex form decodes too
+  });
+
+  it('leaves an out-of-range numeric entity untouched (no throw)', () => {
+    expect(htmlToPlainText('&#999999999999;')).toBe('&#999999999999;');
   });
 });

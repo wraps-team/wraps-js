@@ -31,7 +31,7 @@ export function htmlToPlainText(html: string): string {
   );
 
   // Handle list items
-  text = text.replace(/<li[\s>][^>]*>/gi, '\n- ');
+  text = text.replace(/<li(?:\s[^>]*)?>/gi, '\n- ');
   text = text.replace(/<\/li>/gi, '');
 
   // Handle table cells with spacing
@@ -50,8 +50,14 @@ export function htmlToPlainText(html: string): string {
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, "'")
     .replace(/&apos;/gi, "'")
-    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number.parseInt(code, 10)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)));
+    .replace(/&#(\d+);/g, (match, code) => {
+      const cp = Number.parseInt(code, 10);
+      return cp <= 0x10ffff ? String.fromCodePoint(cp) : match;
+    })
+    .replace(/&#x([0-9a-f]+);/gi, (match, hex) => {
+      const cp = Number.parseInt(hex, 16);
+      return cp <= 0x10ffff ? String.fromCodePoint(cp) : match;
+    });
 
   // Collapse runs of whitespace (but preserve newlines)
   text = text.replace(/[^\S\n]+/g, ' ');
