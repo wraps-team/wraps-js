@@ -18,6 +18,8 @@
 
 ---
 
+**AI agents:** fetch [wraps.dev/llms-full.txt](https://wraps.dev/llms-full.txt) for the complete documentation in one file, or [wraps.dev/llms.txt](https://wraps.dev/llms.txt) for an agent-oriented index.
+
 ## Packages
 
 ### [@wraps.dev/email](./packages/email) — AWS SES
