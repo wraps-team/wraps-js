@@ -1,6 +1,6 @@
 {
   "name": "@wraps.dev/mcp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "MCP server for Wraps email infrastructure. Query send history, check domain status, manage suppressions, and send emails via your AWS SES account.",
   "type": "module",
   "bin": {
