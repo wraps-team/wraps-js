@@ -18,6 +18,7 @@ Runs locally via stdio. Your AWS credentials never leave your machine.
 | `get_email_event_log` | Get the full delivery event log for a message (Send, Delivery, Bounce, Complaint, Open, Click) | No |
 | `verify_domain_status` | Check verification and DKIM status of a sending domain | No |
 | `list_suppressions` | List addresses on your SES suppression list, optionally filtered by BOUNCE or COMPLAINT | No |
+| `check_send_status` | Poll the outcome of a `pending_approval` send by `approvalId` (enforced mode only) | No |
 
 ## Setup
 
@@ -101,6 +102,25 @@ When write mode is enabled, the `send_email` tool can reach any SES-verified add
 | `WRAPS_ALLOW_FROM_OVERRIDE` | `false` | Set to `true` to let the agent supply a `from` address that differs from `WRAPS_FROM_EMAIL`. When `false` (default), the caller-supplied `from` is rejected if it does not match the configured address. |
 
 > **Note:** Running with `WRAPS_WRITE_ENABLED=true` and no allowlist gives the agent unrestricted send capability to any address in your SES account.
+
+## Enforced mode (agent enforcer)
+
+For agents provisioned via `wraps email agent create`, the MCP server runs in **enforced mode**. The agent's AWS credential can only invoke a customer-side enforcer Lambda — never SES directly. All policy (kill-switch, recipient allowlist, hourly/daily caps) is decided by that Lambda, so the local guardrails above are skipped.
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `WRAPS_AGENT_ID` | Yes (for enforced mode) | The agent's ID. Enables enforced mode when set together with the enforcer function. |
+| `WRAPS_AGENT_ENFORCER_ARN` | Yes (for enforced mode) | Qualified per-agent alias ARN of the customer's `wraps-agent-enforcer` Lambda (`arn:aws:lambda:<region>:<acct>:function:wraps-agent-enforcer:agent-<agentId>`). A bare function name or unqualified ARN invokes `$LATEST`, which the enforcer treats as a platform caller and blocks agent sends. |
+
+When both are set, `send_email` invokes the enforcer instead of SES and returns a structured disposition rather than an error for policy outcomes:
+
+- `sent` — delivered, with `messageId`.
+- `pending_approval` — an operator must approve; poll `check_send_status` with the returned `approvalId`.
+- `blocked` — refused by policy (kill-switch, allowlist, or caps), with a `reason`.
+
+Only transport or configuration failures are returned as errors. The `check_send_status` tool is registered only in enforced mode.
+
+Enforced mode supports **a single recipient per send**. Pass one address as a string, or a one-element array; a `to` array with more than one recipient is rejected as an error (send one email per recipient). Note that `WRAPS_ALLOWED_RECIPIENTS`, `WRAPS_ALLOWED_RECIPIENT_DOMAINS`, `WRAPS_MAX_RECIPIENTS`, and `WRAPS_ALLOW_FROM_OVERRIDE` do not apply in enforced mode — recipient and sender policy is enforced entirely by the Lambda.
 
 ## License
 

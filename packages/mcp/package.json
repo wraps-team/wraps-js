@@ -33,6 +33,7 @@
     "prepublishOnly": "pnpm clean && pnpm build"
   },
   "dependencies": {
+    "@aws-sdk/client-lambda": "^3.928.0",
     "@aws-sdk/client-sesv2": "^3.928.0",
     "@aws-sdk/client-sts": "^3.928.0",
     "@modelcontextprotocol/sdk": "^1.12.0",

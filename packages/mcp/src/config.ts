@@ -12,6 +12,9 @@ export interface MCPConfig {
   allowedRecipientDomains: string[];
   maxRecipients: number;
   allowFromOverride: boolean;
+  agentId: string | undefined;
+  enforcerFunction: string | undefined;
+  enforcedMode: boolean;
 }
 
 let cachedAccountId: string | undefined;
@@ -51,6 +54,10 @@ export async function loadConfig(): Promise<MCPConfig> {
 
   const allowFromOverride = process.env.WRAPS_ALLOW_FROM_OVERRIDE === 'true';
 
+  const agentId = process.env.WRAPS_AGENT_ID || undefined;
+  const enforcerFunction = process.env.WRAPS_AGENT_ENFORCER_ARN || undefined;
+  const enforcedMode = Boolean(agentId && enforcerFunction);
+
   let accountId = process.env.WRAPS_ACCOUNT_ID || cachedAccountId;
   if (!accountId) {
     const sts = new STSClient({ region });
@@ -73,6 +80,9 @@ export async function loadConfig(): Promise<MCPConfig> {
     allowedRecipientDomains,
     maxRecipients,
     allowFromOverride,
+    agentId,
+    enforcerFunction,
+    enforcedMode,
   };
 }
 

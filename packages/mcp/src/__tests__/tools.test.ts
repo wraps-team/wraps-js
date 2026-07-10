@@ -72,6 +72,8 @@ describe('loadConfig()', () => {
     delete process.env.WRAPS_ACCOUNT_ID;
     delete process.env.WRAPS_WRITE_ENABLED;
     delete process.env.WRAPS_FROM_EMAIL;
+    delete process.env.WRAPS_AGENT_ID;
+    delete process.env.WRAPS_AGENT_ENFORCER_ARN;
     vi.clearAllMocks();
     mockStsSend.mockReset();
     resetAccountIdCache();
@@ -100,6 +102,7 @@ describe('loadConfig()', () => {
       allowedRecipientDomains: [],
       maxRecipients: 50,
       allowFromOverride: false,
+      enforcedMode: false,
     });
   });
 
@@ -117,6 +120,7 @@ describe('loadConfig()', () => {
       allowedRecipientDomains: [],
       maxRecipients: 50,
       allowFromOverride: false,
+      enforcedMode: false,
     });
     expect(mockStsSend).toHaveBeenCalledOnce();
   });
@@ -135,6 +139,7 @@ describe('loadConfig()', () => {
       allowedRecipientDomains: [],
       maxRecipients: 50,
       allowFromOverride: false,
+      enforcedMode: false,
     });
     expect(mockStsSend).not.toHaveBeenCalled();
   });
@@ -153,6 +158,39 @@ describe('loadConfig()', () => {
     await expect(loadConfig()).rejects.toThrow(ConfigError);
     await expect(loadConfig()).rejects.toThrow(/WRAPS_MAX_RECIPIENTS/);
   });
+
+  it('derives enforcedMode: true only when BOTH WRAPS_AGENT_ID and WRAPS_AGENT_ENFORCER_ARN are set (with alias ARN)', async () => {
+    process.env.AWS_REGION = 'us-east-1';
+    process.env.WRAPS_ACCOUNT_ID = '123456789012';
+    process.env.WRAPS_AGENT_ID = 'agent-abc';
+    process.env.WRAPS_AGENT_ENFORCER_ARN =
+      'arn:aws:lambda:us-east-1:123456789012:function:wraps-agent-enforcer:agent-abc';
+    const config = await loadConfig();
+    expect(config.enforcedMode).toBe(true);
+    expect(config.agentId).toBe('agent-abc');
+    expect(config.enforcerFunction).toBe(
+      'arn:aws:lambda:us-east-1:123456789012:function:wraps-agent-enforcer:agent-abc'
+    );
+  });
+
+  it('derives enforcedMode: false when only WRAPS_AGENT_ID is set (AND, not OR)', async () => {
+    process.env.AWS_REGION = 'us-east-1';
+    process.env.WRAPS_ACCOUNT_ID = '123456789012';
+    process.env.WRAPS_AGENT_ID = 'agent-abc';
+    const config = await loadConfig();
+    expect(config.enforcedMode).toBe(false);
+    expect(config.enforcerFunction).toBeUndefined();
+  });
+
+  it('derives enforcedMode: false when only WRAPS_AGENT_ENFORCER_ARN is set (AND, not OR)', async () => {
+    process.env.AWS_REGION = 'us-east-1';
+    process.env.WRAPS_ACCOUNT_ID = '123456789012';
+    process.env.WRAPS_AGENT_ENFORCER_ARN =
+      'arn:aws:lambda:us-east-1:123456789012:function:wraps-agent-enforcer:agent-abc';
+    const config = await loadConfig();
+    expect(config.enforcedMode).toBe(false);
+    expect(config.agentId).toBeUndefined();
+  });
 });
 
 const baseConfig: MCPConfig = {
@@ -166,6 +204,9 @@ const baseConfig: MCPConfig = {
   allowedRecipientDomains: [],
   maxRecipients: 50,
   allowFromOverride: false,
+  agentId: undefined,
+  enforcerFunction: undefined,
+  enforcedMode: false,
 };
 
 async function createTestClient(
