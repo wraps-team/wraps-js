@@ -18,6 +18,7 @@ Runs locally via stdio. Your AWS credentials never leave your machine.
 | `get_email_event_log` | Get the full delivery event log for a message (Send, Delivery, Bounce, Complaint, Open, Click) | No |
 | `verify_domain_status` | Check verification and DKIM status of a sending domain | No |
 | `list_suppressions` | List addresses on your SES suppression list, optionally filtered by BOUNCE or COMPLAINT | No |
+| `estimate_cost` | Estimate monthly Wraps + AWS cost for a send volume, including which SES pricing plan the account is on. No AWS credentials needed | No |
 | `check_send_status` | Poll the outcome of a `pending_approval` send by `approvalId` (enforced mode only) | No |
 
 ## Setup
