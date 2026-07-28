@@ -34,6 +34,13 @@ jobs:
       - name: Regenerate client schema
         run: pnpm --filter @wraps.dev/client generate
 
+      # PRs opened with GITHUB_TOKEN do not trigger on: pull_request runs, so
+      # the drift PR would otherwise arrive unverified. Check it here instead.
+      - name: Typecheck and build against the regenerated schema
+        run: |
+          pnpm --filter @wraps.dev/client typecheck
+          pnpm --filter @wraps.dev/client build
+
       - name: Open PR if the schema drifted
         uses: peter-evans/create-pull-request@v8
         with:
@@ -54,3 +61,9 @@ jobs:
 
             `build` compiles the committed schema and does not regenerate it,
             so nothing reaches npm until this merges and a release is cut.
+
+            ---
+
+            PRs opened by `GITHUB_TOKEN` do not trigger CI, so this one will
+            show no checks. `typecheck` and `build` were run against this
+            schema in the job that opened it — see the linked run.
