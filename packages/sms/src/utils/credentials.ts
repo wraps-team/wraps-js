@@ -28,14 +28,24 @@ export function createSMSClient(config: WrapsSMSConfig): PinpointSMSVoiceV2Clien
     if (process.env.VERCEL) {
       // Dynamic import keeps @vercel/oidc-aws-credentials-provider out of the bundle.
       clientConfig.credentials = async () => {
+        let awsCredentialsProvider: typeof import('@vercel/oidc-aws-credentials-provider').awsCredentialsProvider;
+
+        // Only the import is guarded — a missing package is the one failure we
+        // can give actionable advice for. Everything after this rethrows as-is
+        // so real STS/OIDC failures aren't misreported as a missing dependency.
         try {
-          const { awsCredentialsProvider } = await import('@vercel/oidc-aws-credentials-provider');
-          return awsCredentialsProvider({ roleArn, roleSessionName })();
-        } catch {
-          throw new Error(
+          ({ awsCredentialsProvider } = await import('@vercel/oidc-aws-credentials-provider'));
+        } catch (err) {
+          const error = new Error(
             'On Vercel with roleArn requires @vercel/oidc-aws-credentials-provider. Install it: pnpm add @vercel/oidc-aws-credentials-provider'
           );
+          // Assigned rather than passed to the constructor: this package targets
+          // ES2020, which predates the Error `cause` option.
+          (error as Error & { cause?: unknown }).cause = err;
+          throw error;
         }
+
+        return awsCredentialsProvider({ roleArn, roleSessionName })();
       };
     } else {
       // EKS, GitHub Actions, and other OIDC environments use AWS_WEB_IDENTITY_TOKEN_FILE
