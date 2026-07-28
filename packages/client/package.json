@@ -23,7 +23,7 @@
   "sideEffects": false,
   "scripts": {
     "generate": "openapi-typescript https://api.wraps.dev/swagger/json -o src/schema.d.ts",
-    "build": "pnpm generate && tsup",
+    "build": "tsup",
     "dev": "tsup --watch",
     "clean": "rm -rf dist",
     "test": "vitest run",

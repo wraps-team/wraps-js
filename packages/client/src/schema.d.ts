@@ -680,6 +680,143 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/agents/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List agents */
+        get: operations["getV1Agents"];
+        put?: never;
+        /** Create an agent */
+        post: operations["postV1Agents"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/agents/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get an agent */
+        get: operations["getV1AgentsById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/agents/{id}/kill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Kill an agent */
+        post: operations["postV1AgentsByIdKill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/agents/{id}/policy-sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync agent deploy outputs */
+        post: operations["postV1AgentsByIdPolicy-sync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/agents/approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the approval queue */
+        get: operations["getV1AgentsApprovals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/agents/approvals/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve a pending send */
+        post: operations["postV1AgentsApprovalsByIdApprove"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/agents/approvals/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject a pending send */
+        post: operations["postV1AgentsApprovalsByIdReject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/agents/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Agent enforcer callback */
+        post: operations["postV1AgentsWebhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2640,7 +2777,10 @@ export interface operations {
                     contactId?: string;
                     /** @description Contact externalId (alternative to contactId) */
                     contactExternalId?: string;
-                    /** @description Contact email (alternative to contactId) */
+                    /**
+                     * Format: email
+                     * @description Contact email (alternative to contactId)
+                     */
                     contactEmail?: string;
                     /** @description Contact name (used when createIfMissing is true to set firstName) */
                     contactName?: string;
@@ -2661,7 +2801,10 @@ export interface operations {
                     contactId?: string;
                     /** @description Contact externalId (alternative to contactId) */
                     contactExternalId?: string;
-                    /** @description Contact email (alternative to contactId) */
+                    /**
+                     * Format: email
+                     * @description Contact email (alternative to contactId)
+                     */
                     contactEmail?: string;
                     /** @description Contact name (used when createIfMissing is true to set firstName) */
                     contactName?: string;
@@ -2682,7 +2825,10 @@ export interface operations {
                     contactId?: string;
                     /** @description Contact externalId (alternative to contactId) */
                     contactExternalId?: string;
-                    /** @description Contact email (alternative to contactId) */
+                    /**
+                     * Format: email
+                     * @description Contact email (alternative to contactId)
+                     */
                     contactEmail?: string;
                     /** @description Contact name (used when createIfMissing is true to set firstName) */
                     contactName?: string;
@@ -4016,6 +4162,8 @@ export interface operations {
                             record: string | null;
                             policy: string | null;
                             subdomainPolicy: string | null;
+                            nonExistentSubdomainPolicy: string | null;
+                            testing: boolean;
                             reportingEnabled: boolean;
                             pct: number | null;
                             alignmentSpf: string | null;
@@ -4122,6 +4270,8 @@ export interface operations {
                             record: string | null;
                             policy: string | null;
                             subdomainPolicy: string | null;
+                            nonExistentSubdomainPolicy: string | null;
+                            testing: boolean;
                             reportingEnabled: boolean;
                             pct: number | null;
                             alignmentSpf: string | null;
@@ -4228,6 +4378,8 @@ export interface operations {
                             record: string | null;
                             policy: string | null;
                             subdomainPolicy: string | null;
+                            nonExistentSubdomainPolicy: string | null;
+                            testing: boolean;
                             reportingEnabled: boolean;
                             pct: number | null;
                             alignmentSpf: string | null;
@@ -4355,6 +4507,8 @@ export interface operations {
                             record: string | null;
                             policy: string | null;
                             subdomainPolicy: string | null;
+                            nonExistentSubdomainPolicy: string | null;
+                            testing: boolean;
                             reportingEnabled: boolean;
                             pct: number | null;
                             alignmentSpf: string | null;
@@ -4461,6 +4615,8 @@ export interface operations {
                             record: string | null;
                             policy: string | null;
                             subdomainPolicy: string | null;
+                            nonExistentSubdomainPolicy: string | null;
+                            testing: boolean;
                             reportingEnabled: boolean;
                             pct: number | null;
                             alignmentSpf: string | null;
@@ -4567,6 +4723,8 @@ export interface operations {
                             record: string | null;
                             policy: string | null;
                             subdomainPolicy: string | null;
+                            nonExistentSubdomainPolicy: string | null;
+                            testing: boolean;
                             reportingEnabled: boolean;
                             pct: number | null;
                             alignmentSpf: string | null;
@@ -4711,6 +4869,1180 @@ export interface operations {
                 "text/plain": {
                     cronExpression: string;
                     timezone?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getV1Agents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        agents: {
+                            id: string;
+                            organizationId: string;
+                            name: string;
+                            emailAddress: string;
+                            domain: string;
+                            /** @description ACTIVE or KILLED */
+                            status: string;
+                            policy: {
+                                /** @description Max sends per rolling hour (0 flags every send) */
+                                maxPerHour: number;
+                                /** @description Max sends per rolling day (0 flags every send) */
+                                maxPerDay: number;
+                                /** @description Exact recipient addresses always allowed */
+                                allowedRecipients: string[];
+                                /** @description Recipient domains always allowed */
+                                allowedRecipientDomains: string[];
+                            };
+                            credentialUserArn: string | null;
+                            enforcerFunctionArn: string | null;
+                            awsAccountId: string | null;
+                            createdBy: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        }[];
+                    };
+                    "multipart/form-data": {
+                        agents: {
+                            id: string;
+                            organizationId: string;
+                            name: string;
+                            emailAddress: string;
+                            domain: string;
+                            /** @description ACTIVE or KILLED */
+                            status: string;
+                            policy: {
+                                /** @description Max sends per rolling hour (0 flags every send) */
+                                maxPerHour: number;
+                                /** @description Max sends per rolling day (0 flags every send) */
+                                maxPerDay: number;
+                                /** @description Exact recipient addresses always allowed */
+                                allowedRecipients: string[];
+                                /** @description Recipient domains always allowed */
+                                allowedRecipientDomains: string[];
+                            };
+                            credentialUserArn: string | null;
+                            enforcerFunctionArn: string | null;
+                            awsAccountId: string | null;
+                            createdBy: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        }[];
+                    };
+                    "text/plain": {
+                        agents: {
+                            id: string;
+                            organizationId: string;
+                            name: string;
+                            emailAddress: string;
+                            domain: string;
+                            /** @description ACTIVE or KILLED */
+                            status: string;
+                            policy: {
+                                /** @description Max sends per rolling hour (0 flags every send) */
+                                maxPerHour: number;
+                                /** @description Max sends per rolling day (0 flags every send) */
+                                maxPerDay: number;
+                                /** @description Exact recipient addresses always allowed */
+                                allowedRecipients: string[];
+                                /** @description Recipient domains always allowed */
+                                allowedRecipientDomains: string[];
+                            };
+                            credentialUserArn: string | null;
+                            enforcerFunctionArn: string | null;
+                            awsAccountId: string | null;
+                            createdBy: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        }[];
+                    };
+                };
+            };
+        };
+    };
+    postV1Agents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    /** Format: email */
+                    emailAddress: string;
+                    domain: string;
+                    policy?: {
+                        /** @description Max sends per rolling hour (0 flags every send) */
+                        maxPerHour: number;
+                        /** @description Max sends per rolling day (0 flags every send) */
+                        maxPerDay: number;
+                        /** @description Exact recipient addresses always allowed */
+                        allowedRecipients: string[];
+                        /** @description Recipient domains always allowed */
+                        allowedRecipientDomains: string[];
+                    };
+                };
+                "multipart/form-data": {
+                    name: string;
+                    /** Format: email */
+                    emailAddress: string;
+                    domain: string;
+                    policy?: {
+                        /** @description Max sends per rolling hour (0 flags every send) */
+                        maxPerHour: number;
+                        /** @description Max sends per rolling day (0 flags every send) */
+                        maxPerDay: number;
+                        /** @description Exact recipient addresses always allowed */
+                        allowedRecipients: string[];
+                        /** @description Recipient domains always allowed */
+                        allowedRecipientDomains: string[];
+                    };
+                };
+                "text/plain": {
+                    name: string;
+                    /** Format: email */
+                    emailAddress: string;
+                    domain: string;
+                    policy?: {
+                        /** @description Max sends per rolling hour (0 flags every send) */
+                        maxPerHour: number;
+                        /** @description Max sends per rolling day (0 flags every send) */
+                        maxPerDay: number;
+                        /** @description Exact recipient addresses always allowed */
+                        allowedRecipients: string[];
+                        /** @description Recipient domains always allowed */
+                        allowedRecipientDomains: string[];
+                    };
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        emailAddress: string;
+                        domain: string;
+                        /** @description ACTIVE or KILLED */
+                        status: string;
+                        policy: {
+                            /** @description Max sends per rolling hour (0 flags every send) */
+                            maxPerHour: number;
+                            /** @description Max sends per rolling day (0 flags every send) */
+                            maxPerDay: number;
+                            /** @description Exact recipient addresses always allowed */
+                            allowedRecipients: string[];
+                            /** @description Recipient domains always allowed */
+                            allowedRecipientDomains: string[];
+                        };
+                        credentialUserArn: string | null;
+                        enforcerFunctionArn: string | null;
+                        awsAccountId: string | null;
+                        createdBy: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                        /** Format: date-time */
+                        updatedAt: string;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        emailAddress: string;
+                        domain: string;
+                        /** @description ACTIVE or KILLED */
+                        status: string;
+                        policy: {
+                            /** @description Max sends per rolling hour (0 flags every send) */
+                            maxPerHour: number;
+                            /** @description Max sends per rolling day (0 flags every send) */
+                            maxPerDay: number;
+                            /** @description Exact recipient addresses always allowed */
+                            allowedRecipients: string[];
+                            /** @description Recipient domains always allowed */
+                            allowedRecipientDomains: string[];
+                        };
+                        credentialUserArn: string | null;
+                        enforcerFunctionArn: string | null;
+                        awsAccountId: string | null;
+                        createdBy: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                        /** Format: date-time */
+                        updatedAt: string;
+                    };
+                    "text/plain": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        emailAddress: string;
+                        domain: string;
+                        /** @description ACTIVE or KILLED */
+                        status: string;
+                        policy: {
+                            /** @description Max sends per rolling hour (0 flags every send) */
+                            maxPerHour: number;
+                            /** @description Max sends per rolling day (0 flags every send) */
+                            maxPerDay: number;
+                            /** @description Exact recipient addresses always allowed */
+                            allowedRecipients: string[];
+                            /** @description Recipient domains always allowed */
+                            allowedRecipientDomains: string[];
+                        };
+                        credentialUserArn: string | null;
+                        enforcerFunctionArn: string | null;
+                        awsAccountId: string | null;
+                        createdBy: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                        /** Format: date-time */
+                        updatedAt: string;
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
+    getV1AgentsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        emailAddress: string;
+                        domain: string;
+                        /** @description ACTIVE or KILLED */
+                        status: string;
+                        policy: {
+                            /** @description Max sends per rolling hour (0 flags every send) */
+                            maxPerHour: number;
+                            /** @description Max sends per rolling day (0 flags every send) */
+                            maxPerDay: number;
+                            /** @description Exact recipient addresses always allowed */
+                            allowedRecipients: string[];
+                            /** @description Recipient domains always allowed */
+                            allowedRecipientDomains: string[];
+                        };
+                        credentialUserArn: string | null;
+                        enforcerFunctionArn: string | null;
+                        awsAccountId: string | null;
+                        createdBy: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                        /** Format: date-time */
+                        updatedAt: string;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        emailAddress: string;
+                        domain: string;
+                        /** @description ACTIVE or KILLED */
+                        status: string;
+                        policy: {
+                            /** @description Max sends per rolling hour (0 flags every send) */
+                            maxPerHour: number;
+                            /** @description Max sends per rolling day (0 flags every send) */
+                            maxPerDay: number;
+                            /** @description Exact recipient addresses always allowed */
+                            allowedRecipients: string[];
+                            /** @description Recipient domains always allowed */
+                            allowedRecipientDomains: string[];
+                        };
+                        credentialUserArn: string | null;
+                        enforcerFunctionArn: string | null;
+                        awsAccountId: string | null;
+                        createdBy: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                        /** Format: date-time */
+                        updatedAt: string;
+                    };
+                    "text/plain": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        emailAddress: string;
+                        domain: string;
+                        /** @description ACTIVE or KILLED */
+                        status: string;
+                        policy: {
+                            /** @description Max sends per rolling hour (0 flags every send) */
+                            maxPerHour: number;
+                            /** @description Max sends per rolling day (0 flags every send) */
+                            maxPerDay: number;
+                            /** @description Exact recipient addresses always allowed */
+                            allowedRecipients: string[];
+                            /** @description Recipient domains always allowed */
+                            allowedRecipientDomains: string[];
+                        };
+                        credentialUserArn: string | null;
+                        enforcerFunctionArn: string | null;
+                        awsAccountId: string | null;
+                        createdBy: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                        /** Format: date-time */
+                        updatedAt: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
+    postV1AgentsByIdKill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        agent: {
+                            id: string;
+                            organizationId: string;
+                            name: string;
+                            emailAddress: string;
+                            domain: string;
+                            /** @description ACTIVE or KILLED */
+                            status: string;
+                            policy: {
+                                /** @description Max sends per rolling hour (0 flags every send) */
+                                maxPerHour: number;
+                                /** @description Max sends per rolling day (0 flags every send) */
+                                maxPerDay: number;
+                                /** @description Exact recipient addresses always allowed */
+                                allowedRecipients: string[];
+                                /** @description Recipient domains always allowed */
+                                allowedRecipientDomains: string[];
+                            };
+                            credentialUserArn: string | null;
+                            enforcerFunctionArn: string | null;
+                            awsAccountId: string | null;
+                            createdBy: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                        syncStatus: "synced" | "skipped" | "failed";
+                        warning?: string;
+                    };
+                    "multipart/form-data": {
+                        agent: {
+                            id: string;
+                            organizationId: string;
+                            name: string;
+                            emailAddress: string;
+                            domain: string;
+                            /** @description ACTIVE or KILLED */
+                            status: string;
+                            policy: {
+                                /** @description Max sends per rolling hour (0 flags every send) */
+                                maxPerHour: number;
+                                /** @description Max sends per rolling day (0 flags every send) */
+                                maxPerDay: number;
+                                /** @description Exact recipient addresses always allowed */
+                                allowedRecipients: string[];
+                                /** @description Recipient domains always allowed */
+                                allowedRecipientDomains: string[];
+                            };
+                            credentialUserArn: string | null;
+                            enforcerFunctionArn: string | null;
+                            awsAccountId: string | null;
+                            createdBy: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                        syncStatus: "synced" | "skipped" | "failed";
+                        warning?: string;
+                    };
+                    "text/plain": {
+                        agent: {
+                            id: string;
+                            organizationId: string;
+                            name: string;
+                            emailAddress: string;
+                            domain: string;
+                            /** @description ACTIVE or KILLED */
+                            status: string;
+                            policy: {
+                                /** @description Max sends per rolling hour (0 flags every send) */
+                                maxPerHour: number;
+                                /** @description Max sends per rolling day (0 flags every send) */
+                                maxPerDay: number;
+                                /** @description Exact recipient addresses always allowed */
+                                allowedRecipients: string[];
+                                /** @description Recipient domains always allowed */
+                                allowedRecipientDomains: string[];
+                            };
+                            credentialUserArn: string | null;
+                            enforcerFunctionArn: string | null;
+                            awsAccountId: string | null;
+                            createdBy: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                        syncStatus: "synced" | "skipped" | "failed";
+                        warning?: string;
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
+    "postV1AgentsByIdPolicy-sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    credentialUserArn?: string;
+                    enforcerFunctionArn?: string;
+                    awsAccountId?: string;
+                };
+                "multipart/form-data": {
+                    credentialUserArn?: string;
+                    enforcerFunctionArn?: string;
+                    awsAccountId?: string;
+                };
+                "text/plain": {
+                    credentialUserArn?: string;
+                    enforcerFunctionArn?: string;
+                    awsAccountId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        emailAddress: string;
+                        domain: string;
+                        /** @description ACTIVE or KILLED */
+                        status: string;
+                        policy: {
+                            /** @description Max sends per rolling hour (0 flags every send) */
+                            maxPerHour: number;
+                            /** @description Max sends per rolling day (0 flags every send) */
+                            maxPerDay: number;
+                            /** @description Exact recipient addresses always allowed */
+                            allowedRecipients: string[];
+                            /** @description Recipient domains always allowed */
+                            allowedRecipientDomains: string[];
+                        };
+                        credentialUserArn: string | null;
+                        enforcerFunctionArn: string | null;
+                        awsAccountId: string | null;
+                        createdBy: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                        /** Format: date-time */
+                        updatedAt: string;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        emailAddress: string;
+                        domain: string;
+                        /** @description ACTIVE or KILLED */
+                        status: string;
+                        policy: {
+                            /** @description Max sends per rolling hour (0 flags every send) */
+                            maxPerHour: number;
+                            /** @description Max sends per rolling day (0 flags every send) */
+                            maxPerDay: number;
+                            /** @description Exact recipient addresses always allowed */
+                            allowedRecipients: string[];
+                            /** @description Recipient domains always allowed */
+                            allowedRecipientDomains: string[];
+                        };
+                        credentialUserArn: string | null;
+                        enforcerFunctionArn: string | null;
+                        awsAccountId: string | null;
+                        createdBy: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                        /** Format: date-time */
+                        updatedAt: string;
+                    };
+                    "text/plain": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        emailAddress: string;
+                        domain: string;
+                        /** @description ACTIVE or KILLED */
+                        status: string;
+                        policy: {
+                            /** @description Max sends per rolling hour (0 flags every send) */
+                            maxPerHour: number;
+                            /** @description Max sends per rolling day (0 flags every send) */
+                            maxPerDay: number;
+                            /** @description Exact recipient addresses always allowed */
+                            allowedRecipients: string[];
+                            /** @description Recipient domains always allowed */
+                            allowedRecipientDomains: string[];
+                        };
+                        credentialUserArn: string | null;
+                        enforcerFunctionArn: string | null;
+                        awsAccountId: string | null;
+                        createdBy: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                        /** Format: date-time */
+                        updatedAt: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
+    getV1AgentsApprovals: {
+        parameters: {
+            query?: {
+                status?: "PENDING" | "APPROVED" | "REJECTED" | "SENT" | "FAILED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        approvals: {
+                            id: string;
+                            organizationId: string;
+                            agentId: string;
+                            payload: {
+                                from: string;
+                                to: string;
+                                subject: string;
+                                html?: string;
+                                text?: string;
+                            };
+                            reason: string | null;
+                            status: string;
+                            decidedBy: string | null;
+                            decidedAt: string | null;
+                            messageId: string | null;
+                            errorMessage: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        }[];
+                    };
+                    "multipart/form-data": {
+                        approvals: {
+                            id: string;
+                            organizationId: string;
+                            agentId: string;
+                            payload: {
+                                from: string;
+                                to: string;
+                                subject: string;
+                                html?: string;
+                                text?: string;
+                            };
+                            reason: string | null;
+                            status: string;
+                            decidedBy: string | null;
+                            decidedAt: string | null;
+                            messageId: string | null;
+                            errorMessage: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        }[];
+                    };
+                    "text/plain": {
+                        approvals: {
+                            id: string;
+                            organizationId: string;
+                            agentId: string;
+                            payload: {
+                                from: string;
+                                to: string;
+                                subject: string;
+                                html?: string;
+                                text?: string;
+                            };
+                            reason: string | null;
+                            status: string;
+                            decidedBy: string | null;
+                            decidedAt: string | null;
+                            messageId: string | null;
+                            errorMessage: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        }[];
+                    };
+                };
+            };
+        };
+    };
+    postV1AgentsApprovalsByIdApprove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        organizationId: string;
+                        agentId: string;
+                        payload: {
+                            from: string;
+                            to: string;
+                            subject: string;
+                            html?: string;
+                            text?: string;
+                        };
+                        reason: string | null;
+                        status: string;
+                        decidedBy: string | null;
+                        decidedAt: string | null;
+                        messageId: string | null;
+                        errorMessage: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                        /** Format: date-time */
+                        updatedAt: string;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        organizationId: string;
+                        agentId: string;
+                        payload: {
+                            from: string;
+                            to: string;
+                            subject: string;
+                            html?: string;
+                            text?: string;
+                        };
+                        reason: string | null;
+                        status: string;
+                        decidedBy: string | null;
+                        decidedAt: string | null;
+                        messageId: string | null;
+                        errorMessage: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                        /** Format: date-time */
+                        updatedAt: string;
+                    };
+                    "text/plain": {
+                        id: string;
+                        organizationId: string;
+                        agentId: string;
+                        payload: {
+                            from: string;
+                            to: string;
+                            subject: string;
+                            html?: string;
+                            text?: string;
+                        };
+                        reason: string | null;
+                        status: string;
+                        decidedBy: string | null;
+                        decidedAt: string | null;
+                        messageId: string | null;
+                        errorMessage: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                        /** Format: date-time */
+                        updatedAt: string;
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
+    postV1AgentsApprovalsByIdReject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        organizationId: string;
+                        agentId: string;
+                        payload: {
+                            from: string;
+                            to: string;
+                            subject: string;
+                            html?: string;
+                            text?: string;
+                        };
+                        reason: string | null;
+                        status: string;
+                        decidedBy: string | null;
+                        decidedAt: string | null;
+                        messageId: string | null;
+                        errorMessage: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                        /** Format: date-time */
+                        updatedAt: string;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        organizationId: string;
+                        agentId: string;
+                        payload: {
+                            from: string;
+                            to: string;
+                            subject: string;
+                            html?: string;
+                            text?: string;
+                        };
+                        reason: string | null;
+                        status: string;
+                        decidedBy: string | null;
+                        decidedAt: string | null;
+                        messageId: string | null;
+                        errorMessage: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                        /** Format: date-time */
+                        updatedAt: string;
+                    };
+                    "text/plain": {
+                        id: string;
+                        organizationId: string;
+                        agentId: string;
+                        payload: {
+                            from: string;
+                            to: string;
+                            subject: string;
+                            html?: string;
+                            text?: string;
+                        };
+                        reason: string | null;
+                        status: string;
+                        decidedBy: string | null;
+                        decidedAt: string | null;
+                        messageId: string | null;
+                        errorMessage: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                        /** Format: date-time */
+                        updatedAt: string;
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
+    postV1AgentsWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    agentId: string;
+                    event: "pending_approval" | "blocked";
+                    payload: {
+                        from: string;
+                        to: string;
+                        subject: string;
+                        html?: string;
+                        text?: string;
+                    };
+                    reason?: string;
+                };
+                "multipart/form-data": {
+                    agentId: string;
+                    event: "pending_approval" | "blocked";
+                    payload: {
+                        from: string;
+                        to: string;
+                        subject: string;
+                        html?: string;
+                        text?: string;
+                    };
+                    reason?: string;
+                };
+                "text/plain": {
+                    agentId: string;
+                    event: "pending_approval" | "blocked";
+                    payload: {
+                        from: string;
+                        to: string;
+                        subject: string;
+                        html?: string;
+                        text?: string;
+                    };
+                    reason?: string;
                 };
             };
         };
