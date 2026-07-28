@@ -1,0 +1,56 @@
+name: Schema Drift
+
+permissions:
+  contents: write
+  pull-requests: write
+
+on:
+  schedule:
+    # Mondays, 13:00 UTC
+    - cron: '0 13 * * 1'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Regenerate client schema
+        run: pnpm --filter @wraps.dev/client generate
+
+      - name: Open PR if the schema drifted
+        uses: peter-evans/create-pull-request@v8
+        with:
+          add-paths: packages/client/src/schema.d.ts
+          branch: chore/client-schema-sync
+          delete-branch: true
+          commit-message: 'chore(client): sync schema with production API'
+          title: 'chore(client): sync schema with production API'
+          body: |
+            `packages/client/src/schema.d.ts` has drifted from the live
+            OpenAPI document at https://api.wraps.dev/swagger/json.
+
+            **Read the diff before merging — it decides the next release bump:**
+
+            - New paths, operations, or optional fields only → minor
+            - Comment/annotation churn only → patch
+            - Any removed or renamed path, operation, or required field → major
+
+            `build` compiles the committed schema and does not regenerate it,
+            so nothing reaches npm until this merges and a release is cut.
