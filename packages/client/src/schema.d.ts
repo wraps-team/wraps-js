@@ -1909,6 +1909,8 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @description Caller-supplied external ID, unique per organization (null to clear) */
+                    externalId?: string | null;
                     /**
                      * Format: email
                      * @description Email address
@@ -1940,6 +1942,8 @@ export interface operations {
                     topicSlugs?: string[];
                 };
                 "multipart/form-data": {
+                    /** @description Caller-supplied external ID, unique per organization (null to clear) */
+                    externalId?: string | null;
                     /**
                      * Format: email
                      * @description Email address
@@ -1971,6 +1975,8 @@ export interface operations {
                     topicSlugs?: string[];
                 };
                 "text/plain": {
+                    /** @description Caller-supplied external ID, unique per organization (null to clear) */
+                    externalId?: string | null;
                     /**
                      * Format: email
                      * @description Email address
@@ -2159,6 +2165,25 @@ export interface operations {
                 };
             };
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
+            };
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
