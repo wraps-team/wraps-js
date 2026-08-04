@@ -51,9 +51,18 @@
   "keywords": [
     "mcp",
     "model-context-protocol",
+    "mcp-server",
+    "ai-agent",
+    "claude",
     "email",
+    "transactional-email",
     "ses",
+    "aws-ses",
     "aws",
+    "bounce-handling",
+    "suppression-list",
+    "email-events",
+    "deliverability",
     "wraps"
   ],
   "author": "Wraps",
