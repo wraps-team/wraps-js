@@ -476,6 +476,70 @@ templates.forEach(t => console.log(t.name, t.createdTimestamp));
 await email.templates.delete('welcome-email');
 ```
 
+## Batch Sending
+
+`sendBatch()` sends up to 100 recipients with unique subject/html/text per entry, inline — no pre-created SES template required (unlike `sendBulkTemplate()`). Partial failures are reported in the result, not thrown.
+
+```typescript
+const result = await email.sendBatch({
+  from: 'hello@example.com',
+  entries: [
+    { to: 'alice@example.com', subject: 'Hi Alice', html: '<p>Hello Alice!</p>' },
+    { to: 'bob@example.com', subject: 'Hi Bob', html: '<p>Hello Bob!</p>' },
+  ],
+});
+
+console.log(result.successCount, result.failureCount);
+for (const entry of result.results) {
+  if (entry.status === 'failure') console.error(entry.index, entry.error);
+}
+```
+
+Full reference: https://wraps.dev/docs/sdk-reference#send-batch
+
+## Suppression List
+
+Check, add, remove, and list entries on the SES account-level suppression list. Always available (no config flag required).
+
+```typescript
+const suppressed = await email.suppression.get('user@example.com');
+if (!suppressed) {
+  await email.suppression.add('user@example.com', 'BOUNCE'); // or 'COMPLAINT'
+}
+await email.suppression.remove('user@example.com');
+const { entries, nextToken } = await email.suppression.list();
+```
+
+Full reference: https://wraps.dev/docs/sdk-reference#suppression
+
+## Inbox
+
+Read inbound emails stored in S3 by the Wraps-deployed inbound Lambda. `email.inbox` is `WrapsInbox | null` — non-null only when `inboxBucketName` is configured.
+
+```typescript
+const { emails } = await email.inbox!.list();
+const full = await email.inbox!.get(emails[0].emailId);
+const attachmentUrl = await email.inbox!.getAttachment(full.emailId, 'att_1');
+await email.inbox!.reply(full.emailId, {
+  from: 'support@example.com',
+  html: '<p>Thanks for reaching out!</p>',
+});
+await email.inbox!.delete(full.emailId);
+```
+
+Full reference: https://wraps.dev/docs/sdk-reference#inbox
+
+## Event History
+
+Query per-message delivery status from DynamoDB. `email.events` is `WrapsEmailEvents | null` — non-null only when `historyTableName` is configured.
+
+```typescript
+const status = await email.events!.get(result.messageId); // sent/delivered/opened/clicked/bounced/complained/suppressed
+const { emails } = await email.events!.list({ accountId: 'acct_123' });
+```
+
+Full reference: https://wraps.dev/docs/sdk-reference#events
+
 ## Error Handling
 
 ```typescript
@@ -501,19 +565,79 @@ try {
 }
 ```
 
+`WrapsEmailError` is the catch-all base class every other email error extends —
+useful for a single `instanceof` check that covers all of them.
+
+`BatchError` is exported for type compatibility but **is not currently thrown**.
+`sendBatch()` never throws on partial failure — it reports per-entry outcomes in
+its resolved `SendBatchResult` instead. Always inspect the result:
+
+```typescript
+const result = await email.sendBatch({ from, entries });
+if (result.failureCount > 0) {
+  for (const entry of result.results) {
+    if (entry.status === 'failure') console.error(entry.index, entry.error);
+  }
+}
+```
+
 ## Configuration Options
 
 ```typescript
 interface WrapsEmailConfig {
-  region?: string; // AWS region (defaults to us-east-1)
-  credentials?: {
-    accessKeyId: string;
-    secretAccessKey: string;
-    sessionToken?: string;
-  };
-  endpoint?: string; // Custom SES endpoint (for testing with LocalStack)
+  // Pre-configured SES client for advanced authentication scenarios.
+  // Takes precedence over region, credentials, roleArn, and endpoint.
+  client?: SESClient;
+
+  // Pre-configured S3 client for inbox operations.
+  // Takes precedence over region/credentials for inbox.
+  s3Client?: S3Client;
+
+  // S3 bucket name for inbound email storage.
+  // When provided, enables the inbox API (email.inbox).
+  inboxBucketName?: string;
+
+  // AWS region for SES (defaults to us-east-1). Ignored if `client` is provided.
+  region?: string;
+
+  // AWS credentials — static or a credential provider (e.g. Vercel OIDC).
+  // Falls back to the AWS credential chain if omitted. Ignored if `client` is provided.
+  credentials?:
+    | { accessKeyId: string; secretAccessKey: string; sessionToken?: string }
+    | AwsCredentialIdentityProvider;
+
+  // IAM role ARN to assume via STS AssumeRole (OIDC federation, cross-account
+  // access). Ignored if `client` is provided.
+  roleArn?: string;
+
+  // Role session name for AssumeRole (defaults to 'wraps-email-session').
+  // Only used when roleArn is provided. Ignored if `client` is provided.
+  roleSessionName?: string;
+
+  // Custom SES endpoint, e.g. for LocalStack. Ignored if `client` is provided.
+  endpoint?: string;
+
+  // DynamoDB table name for email event history.
+  // When provided, enables the events API (email.events).
+  historyTableName?: string;
+
+  // Pre-configured DynamoDB DocumentClient for events.
+  // Takes precedence over region/credentials for events.
+  dynamodbClient?: DynamoDBDocumentClient;
+
+  // Pre-configured SES v2 client for the suppression list.
+  // Takes precedence over region/credentials for suppression.
+  sesv2Client?: SESv2Client;
+
+  // Enable signed reply-to threading (see "Reply threading" above).
+  // When set, send()/sendTemplate()/etc. accept `conversationId` to mint a
+  // signed reply-to address that the inbound Lambda verifies.
+  replyThreading?: ReplyThreadingConfig;
 }
 ```
+
+OIDC / cross-account setups: use `roleArn` (see `packages/email/src/types.ts` for the
+full `ReplyThreadingConfig` shape used by `replyThreading`).
 
 ## Testing with LocalStack
 
@@ -533,6 +657,7 @@ Main client class for sending emails via AWS SES.
 #### Methods
 
 - `send(params: SendEmailParams): Promise<SendEmailResult>` - Send an email
+- `sendBatch(params: SendBatchParams): Promise<SendBatchResult>` - Send up to 100 recipients with unique content each (no pre-created template required)
 - `sendTemplate(params: SendTemplateParams): Promise<SendEmailResult>` - Send using SES template
 - `sendBulkTemplate(params: SendBulkTemplateParams): Promise<SendBulkTemplateResult>` - Bulk send with template
 - `templates.create(params: CreateTemplateParams): Promise<void>` - Create SES template
@@ -541,6 +666,19 @@ Main client class for sending emails via AWS SES.
 - `templates.get(name: string): Promise<Template>` - Get template details
 - `templates.list(): Promise<TemplateMetadata[]>` - List all templates
 - `templates.delete(name: string): Promise<void>` - Delete template
+- `suppression.get(email: string): Promise<SuppressionEntry | null>` - Check if an email is suppressed
+- `suppression.add(email: string, reason: SuppressionReason): Promise<void>` - Add an email to the suppression list
+- `suppression.remove(email: string): Promise<void>` - Remove an email from the suppression list
+- `suppression.list(options?: SuppressionListOptions): Promise<SuppressionListResult>` - List suppressed emails
+- `inbox.list(options?: InboxListOptions): Promise<InboxListResult>` - List inbound emails (when `inboxBucketName` is configured)
+- `inbox.get(emailId: string): Promise<InboxEmail>` - Get a parsed inbound email
+- `inbox.getAttachment(emailId, attachmentId, options?): Promise<string>` - Presigned URL for an inbound attachment
+- `inbox.getRaw(emailId: string): Promise<string>` - Presigned URL for the raw MIME email
+- `inbox.delete(emailId: string): Promise<void>` - Delete an inbound email and its files
+- `inbox.forward(emailId, options): Promise<SendEmailResult>` - Forward an inbound email
+- `inbox.reply(emailId, options): Promise<SendEmailResult>` - Reply to an inbound email
+- `events.get(messageId: string): Promise<EmailStatus | null>` - Get all events for a sent email (when `historyTableName` is configured)
+- `events.list(options: EmailListOptions): Promise<EmailListResult>` - List emails with events for an account
 - `destroy(): void` - Close SES client and clean up resources
 
 ## Requirements

@@ -4,9 +4,9 @@
 
 Monorepo containing three TypeScript SDKs for AWS services, published under the `@wraps.dev` npm namespace:
 
-- **@wraps.dev/email** (v0.9.0) - Email SDK for AWS SES with React.email support
-- **@wraps.dev/sms** (v0.1.2) - SMS SDK for AWS End User Messaging (Pinpoint SMS Voice V2)
-- **@wraps.dev/client** (v0.6.1) - Type-safe API client for the Wraps Platform (OpenAPI-generated)
+- **@wraps.dev/email** (see package.json) - Email SDK for AWS SES with React.email support
+- **@wraps.dev/sms** (see package.json) - SMS SDK for AWS End User Messaging (Pinpoint SMS Voice V2)
+- **@wraps.dev/client** (see package.json) - Type-safe API client for the Wraps Platform (OpenAPI-generated)
 
 ## Key Principles
 
@@ -89,8 +89,10 @@ Both email and SMS follow the same pattern:
 WrapsEmailError / WrapsSMSError (base)
 ├── ValidationError       (invalid input, has .field?)
 ├── SESError / SMSError   (AWS API error, has .code, .requestId, .retryable)
-├── BatchError            (partial failure, has .results, .successCount, .failureCount)
-├── DynamoDBError         (email events, has .code, .requestId, .retryable)
+├── BatchError            (email only, has .results, .successCount, .failureCount —
+│                          exported, never thrown; email sendBatch() returns
+│                          partial failures in its result instead)
+├── DynamoDBError         (email only — email events, has .code, .requestId, .retryable)
 ├── OptedOutError         (SMS only, has .phoneNumber)
 └── RateLimitError        (SMS only, has .retryAfter?)
 ```

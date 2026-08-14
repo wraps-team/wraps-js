@@ -60,7 +60,7 @@ await sms.send({
 });
 ```
 
-Batch sending, opt-out management, and E.164 validation. [SMS docs →](https://wraps.dev/docs/sms)
+Batch sending, opt-out management, and E.164 validation. [SMS docs →](https://wraps.dev/docs/sms-sdk-reference)
 
 ### [@wraps.dev/client](./packages/client) — Wraps Platform API
 
@@ -86,7 +86,7 @@ Auto-generated types from OpenAPI, workflow definitions, and brand kit configura
 |----------|------|
 | Quickstart | [wraps.dev/docs/quickstart](https://wraps.dev/docs/quickstart) |
 | SDK Reference | [wraps.dev/docs/sdk-reference](https://wraps.dev/docs/sdk-reference) |
-| SMS Docs | [wraps.dev/docs/sms](https://wraps.dev/docs/sms) |
+| SMS Docs | [wraps.dev/docs/sms-sdk-reference](https://wraps.dev/docs/sms-sdk-reference) |
 | CLI (deploy infra) | [wraps.dev/docs/cli-reference](https://wraps.dev/docs/cli-reference) |
 
 ## Community
