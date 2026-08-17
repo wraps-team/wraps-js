@@ -6,6 +6,7 @@ import type { MCPConfig } from '../config.ts';
 import { loadConfig, resetAccountIdCache } from '../config.ts';
 import { ConfigError } from '../errors.ts';
 import { registerGetEmailEventLog } from '../tools/get-email-event-log.ts';
+import { registerGetSetupStatus } from '../tools/get-setup-status.ts';
 import { registerListRecentSends } from '../tools/list-recent-sends.ts';
 import { registerListSuppressions } from '../tools/list-suppressions.ts';
 import { registerSendEmail } from '../tools/send-email.ts';
@@ -46,6 +47,11 @@ vi.mock('@aws-sdk/client-sesv2', () => ({
     destroy = vi.fn();
   },
   GetEmailIdentityCommand: class MockGetEmailIdentityCommand {
+    constructor(input: unknown) {
+      capturedSesv2Commands.push(input);
+    }
+  },
+  GetAccountCommand: class MockGetAccountCommand {
     constructor(input: unknown) {
       capturedSesv2Commands.push(input);
     }
@@ -339,6 +345,49 @@ describe('send_email tool', () => {
   });
 });
 
+describe('send_email sandbox guidance', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns simulator guidance, mentions sandbox, and preserves the original SES message on an unverified-recipient rejection', async () => {
+    const rejected = Object.assign(
+      new Error(
+        'Email address is not verified. The following identities failed the check in region US-EAST-1: someone@example.com'
+      ),
+      { name: 'MessageRejected' }
+    );
+    mockEmailSend.mockRejectedValueOnce(rejected);
+    const { client, cleanup } = await createTestClient(registerSendEmail);
+    const result = await client.callTool({
+      name: 'send_email',
+      arguments: { to: 'someone@example.com', subject: 'Hello', text: 'Hi' },
+    });
+    await cleanup();
+    expect(result.isError).toBe(true);
+    const text = getText(result);
+    expect(text).toContain('success@simulator.amazonses.com');
+    expect(text).toContain('sandbox');
+    expect(text).toContain(
+      'Email address is not verified. The following identities failed the check in region US-EAST-1: someone@example.com'
+    );
+  });
+
+  it('does not mention the simulator for an unrelated failure and keeps the original passthrough wording', async () => {
+    mockEmailSend.mockRejectedValueOnce(new Error('Throttled'));
+    const { client, cleanup } = await createTestClient(registerSendEmail);
+    const result = await client.callTool({
+      name: 'send_email',
+      arguments: { to: 'user@example.com', subject: 'Hello', text: 'Hi' },
+    });
+    await cleanup();
+    expect(result.isError).toBe(true);
+    const text = getText(result);
+    expect(text).toBe('Failed to send email: Throttled');
+    expect(text).not.toContain('simulator.amazonses.com');
+  });
+});
+
 describe('list_recent_sends tool', () => {
   afterEach(() => {
     vi.clearAllMocks();
@@ -547,6 +596,88 @@ describe('verify_domain_status tool', () => {
     await cleanup();
     expect(result.isError).toBe(true);
     expect(getText(result)).toBe('Domain not found in SES: missing.com');
+  });
+});
+
+describe('get_setup_status tool', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+    capturedSesv2Commands.length = 0;
+  });
+
+  it('reports sandbox: true and recommends the simulator when in sandbox with a configured fromEmail', async () => {
+    mockSesv2Send.mockResolvedValueOnce({
+      ProductionAccessEnabled: false,
+      EnforcementStatus: 'HEALTHY',
+      SendQuota: { Max24HourSend: 200, SentLast24Hours: 3 },
+    });
+    const { client, cleanup } = await createTestClient(registerGetSetupStatus);
+    const result = await client.callTool({ name: 'get_setup_status', arguments: {} });
+    await cleanup();
+    expect(result.isError).toBeUndefined();
+    const text = getText(result);
+    expect(text).toContain('sandbox: true');
+    expect(text).toContain('success@simulator.amazonses.com');
+  });
+
+  it('reports sandbox: false and does not recommend the simulator when production access is enabled', async () => {
+    mockSesv2Send.mockResolvedValueOnce({
+      ProductionAccessEnabled: true,
+      EnforcementStatus: 'HEALTHY',
+      SendQuota: { Max24HourSend: 50000, SentLast24Hours: 120 },
+    });
+    const { client, cleanup } = await createTestClient(registerGetSetupStatus);
+    const result = await client.callTool({ name: 'get_setup_status', arguments: {} });
+    await cleanup();
+    expect(result.isError).toBeUndefined();
+    const text = getText(result);
+    expect(text).toContain('sandbox: false');
+    expect(text).not.toContain('success@simulator.amazonses.com');
+  });
+
+  it('names WRAPS_FROM_EMAIL and does not recommend the simulator when no fromEmail is configured', async () => {
+    mockSesv2Send.mockResolvedValueOnce({
+      ProductionAccessEnabled: false,
+      EnforcementStatus: 'HEALTHY',
+      SendQuota: { Max24HourSend: 200, SentLast24Hours: 3 },
+    });
+    const { client, cleanup } = await createTestClient(registerGetSetupStatus, {
+      ...baseConfig,
+      fromEmail: undefined,
+    });
+    const result = await client.callTool({ name: 'get_setup_status', arguments: {} });
+    await cleanup();
+    expect(result.isError).toBeUndefined();
+    const text = getText(result);
+    expect(text).toContain('WRAPS_FROM_EMAIL');
+    expect(text).not.toContain('success@simulator.amazonses.com');
+  });
+
+  it('names WRAPS_WRITE_ENABLED as the next action when write is disabled', async () => {
+    mockSesv2Send.mockResolvedValueOnce({
+      ProductionAccessEnabled: false,
+      EnforcementStatus: 'HEALTHY',
+      SendQuota: { Max24HourSend: 200, SentLast24Hours: 3 },
+    });
+    const { client, cleanup } = await createTestClient(registerGetSetupStatus, {
+      ...baseConfig,
+      writeEnabled: false,
+    });
+    const result = await client.callTool({ name: 'get_setup_status', arguments: {} });
+    await cleanup();
+    expect(result.isError).toBeUndefined();
+    expect(getText(result)).toContain('WRAPS_WRITE_ENABLED');
+  });
+
+  it('returns isError: true with no fabricated status when the SESv2 call rejects', async () => {
+    mockSesv2Send.mockRejectedValueOnce(new Error('AccessDenied'));
+    const { client, cleanup } = await createTestClient(registerGetSetupStatus);
+    const result = await client.callTool({ name: 'get_setup_status', arguments: {} });
+    await cleanup();
+    expect(result.isError).toBe(true);
+    const text = getText(result);
+    expect(text).toContain('AccessDenied');
+    expect(text).not.toContain('sandbox:');
   });
 });
 

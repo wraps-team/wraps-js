@@ -3,6 +3,7 @@ import type { MCPConfig } from '../config.ts';
 import { registerCheckSendStatus } from './check-send-status.ts';
 import { registerEstimateCost } from './estimate-cost.ts';
 import { registerGetEmailEventLog } from './get-email-event-log.ts';
+import { registerGetSetupStatus } from './get-setup-status.ts';
 import { registerListRecentSends } from './list-recent-sends.ts';
 import { registerListSuppressions } from './list-suppressions.ts';
 import { registerSendEmail } from './send-email.ts';
@@ -14,6 +15,7 @@ export function registerAllTools(server: McpServer, config: MCPConfig): void {
   registerGetEmailEventLog(server, config);
   registerVerifyDomainStatus(server, config);
   registerListSuppressions(server, config);
+  registerGetSetupStatus(server, config);
   // Pricing needs no AWS access — always available.
   registerEstimateCost(server);
   if (config.enforcedMode) {

@@ -33,6 +33,26 @@ function textError(text: string) {
   return { isError: true as const, content: [{ type: 'text' as const, text }] };
 }
 
+// Mirrors SES_SIMULATOR_ADDRESSES.SUCCESS in the wraps repo at
+// packages/cli/src/utils/email/ses-simulator.ts. AWS pre-verifies this
+// address, so it is deliverable from a sandbox account with no recipient
+// verification. The SENDER identity must still be verified.
+export const SES_SIMULATOR_SUCCESS = 'success@simulator.amazonses.com';
+
+/**
+ * True when an SES failure is the sandbox's unverified-recipient rejection.
+ * AWS SDK v3 error names are unreliable, so check name AND message.
+ */
+export function isUnverifiedRecipientError(error: unknown): boolean {
+  const err = error as { name?: string; message?: string };
+  const message = typeof err?.message === 'string' ? err.message : '';
+  return (
+    err?.name === 'MessageRejected' ||
+    message.includes('MessageRejected') ||
+    message.includes('not verified')
+  );
+}
+
 /**
  * Enforced-mode send_email. The customer-side enforcer Lambda is authoritative
  * for every policy decision (kill-switch, allowlist, caps), so local guard
@@ -221,6 +241,28 @@ export function registerSendEmail(server: McpServer, config: MCPConfig): void {
           ],
         };
       } catch (error) {
+        if (isUnverifiedRecipientError(error)) {
+          return {
+            isError: true,
+            content: [
+              {
+                type: 'text' as const,
+                text: [
+                  'Send rejected: this AWS SES account is in the sandbox, so it can only send to verified recipients.',
+                  '',
+                  'You do NOT need production access to prove sending works. Options, cheapest first:',
+                  `1. Send to the AWS mailbox simulator instead: to: "${SES_SIMULATOR_SUCCESS}". AWS pre-verifies it, so it needs no recipient verification and produces a real Delivery event. Your "from" address must already be verified (it is, since this send got as far as SES).`,
+                  '2. Verify the intended recipient as an SES identity in this AWS account, then retry. Verified identities can both send and receive while in the sandbox.',
+                  '3. Request SES production access to send to anyone. This is an AWS support review and is NOT something this tool can do for you.',
+                  '',
+                  "Call get_setup_status for this account's current sandbox state and a recommended next action.",
+                  '',
+                  `Original SES error: ${error instanceof Error ? error.message : String(error)}`,
+                ].join('\n'),
+              },
+            ],
+          };
+        }
         return {
           isError: true,
           content: [
