@@ -68,6 +68,16 @@ function registerEnforcedSendEmail(server: McpServer, config: MCPConfig): void {
         'Send a transactional email through your Wraps agent enforcer. The send is checked against your agent policy (kill-switch, recipient allowlist, rate caps) before delivery. Exactly one recipient per send is supported. The result disposition is one of: sent, pending_approval (an operator must approve — poll check_send_status with the returned approvalId), or blocked.',
       inputSchema: EnforcedSendEmailInputSchema,
       outputSchema: EnforcerResultSchema,
+      // send_email is the only tool here with a real-world side effect, and email
+      // cannot be recalled. Stated explicitly rather than left to the spec's
+      // defaults: destructiveHint/idempotentHint are only consulted when
+      // readOnlyHint is false, so all four are set together.
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
     },
     async (input) => {
       const from = input.from ?? config.fromEmail;
@@ -129,6 +139,16 @@ export function registerSendEmail(server: McpServer, config: MCPConfig): void {
       description:
         'Send a transactional email via your AWS SES account. Requires WRAPS_WRITE_ENABLED=true. The `from` address must be a verified Wraps domain. The `to` field accepts a single address or an array of addresses.',
       inputSchema: SendEmailInputSchema,
+      // send_email is the only tool here with a real-world side effect, and email
+      // cannot be recalled. Stated explicitly rather than left to the spec's
+      // defaults: destructiveHint/idempotentHint are only consulted when
+      // readOnlyHint is false, so all four are set together.
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
     },
     async (input) => {
       if (!config.writeEnabled) {

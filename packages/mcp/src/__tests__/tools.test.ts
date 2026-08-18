@@ -21,6 +21,7 @@ const {
   mockEventsList,
   mockEventsGet,
   mockSuppressionList,
+  mockSuppressionGet,
   mockSesv2Send,
   capturedSesv2Commands,
   mockEmailEventsNull,
@@ -33,6 +34,7 @@ const {
   mockEventsList: vi.fn(),
   mockEventsGet: vi.fn(),
   mockSuppressionList: vi.fn(),
+  mockSuppressionGet: vi.fn(),
   mockSesv2Send: vi.fn(),
   capturedSesv2Commands: [] as unknown[],
   mockEmailEventsNull: { value: false },
@@ -72,7 +74,7 @@ vi.mock('@wraps.dev/email', () => ({
     send = mockEmailSend;
     destroy = mockEmailDestroy;
     events = mockEmailEventsNull.value ? null : { list: mockEventsList, get: mockEventsGet };
-    suppression = { list: mockSuppressionList };
+    suppression = { list: mockSuppressionList, get: mockSuppressionGet };
   },
 }));
 
@@ -554,7 +556,13 @@ describe('get_email_event_log tool', () => {
     });
     await cleanup();
     expect(result.isError).toBeUndefined();
-    expect(getText(result)).toBe('No events found for messageId: unknown-id');
+    const text = getText(result);
+    expect(text).toContain('No events recorded for messageId: unknown-id');
+    // The three states must stay distinguishable: lag, wrong id, stalled pipeline.
+    expect(text).toContain('does NOT mean the send failed');
+    expect(text).toContain('do NOT re-send');
+    expect(text).toContain('list_recent_sends');
+    expect(text).toContain('wraps-email-history');
   });
 
   it('returns isError: true when email history table is not configured', async () => {
@@ -623,7 +631,28 @@ describe('verify_domain_status tool', () => {
     });
     await cleanup();
     expect(result.isError).toBe(true);
-    expect(getText(result)).toBe('Domain not found in SES: missing.com');
+    const text = getText(result);
+    expect(text).toContain('Domain not found in SES: missing.com');
+    expect(text).toContain('checked region: us-east-1');
+    expect(text).toContain('AWS_REGION');
+    expect(text).toContain('wraps email domains add --domain missing.com --region us-east-1');
+    expect(text).toContain('get_setup_status');
+  });
+
+  it('names the region actually checked, not a hardcoded default', async () => {
+    const notFound = Object.assign(new Error('NotFoundException'), { name: 'NotFoundException' });
+    mockSesv2Send.mockRejectedValueOnce(notFound);
+    const { client, cleanup } = await createTestClient(registerVerifyDomainStatus, {
+      ...baseConfig,
+      region: 'eu-west-1',
+    });
+    const result = await client.callTool({
+      name: 'verify_domain_status',
+      arguments: { domain: 'missing.com' },
+    });
+    await cleanup();
+    expect(getText(result)).toContain('checked region: eu-west-1');
+    expect(getText(result)).not.toContain('us-east-1');
   });
 
   it('returns isError: true with "Domain not found" when error name is "Error" but message contains NotFoundException', async () => {
@@ -636,7 +665,7 @@ describe('verify_domain_status tool', () => {
     });
     await cleanup();
     expect(result.isError).toBe(true);
-    expect(getText(result)).toBe('Domain not found in SES: missing.com');
+    expect(getText(result)).toContain('Domain not found in SES: missing.com');
   });
 });
 
@@ -659,6 +688,9 @@ describe('get_setup_status tool', () => {
     const text = getText(result);
     expect(text).toContain('sandbox: true');
     expect(text).toContain('success@simulator.amazonses.com');
+    // The region is reported because verify_domain_status and
+    // get_email_event_log both send agents here to resolve a region mismatch.
+    expect(text).toContain('region: us-east-1');
   });
 
   it('reports sandbox: false and does not recommend the simulator when production access is enabled', async () => {
@@ -902,5 +934,234 @@ describe('list_suppressions tool', () => {
     expect(mockSuppressionList).toHaveBeenCalledWith(
       expect.objectContaining({ reason: undefined })
     );
+  });
+
+  it('says the listing is complete when SES returns no continuation token', async () => {
+    mockSuppressionList.mockResolvedValueOnce({
+      entries: [{ email: 'a@example.com', reason: 'BOUNCE', lastUpdated: new Date('2024-01-01') }],
+      nextToken: undefined,
+    });
+    const { client, cleanup } = await createTestClient(registerListSuppressions);
+    const result = await client.callTool({ name: 'list_suppressions', arguments: {} });
+    await cleanup();
+    expect(getText(result)).toContain('Showing all 1 suppressed addresses.');
+  });
+});
+
+describe('list_suppressions pagination', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function page(count: number, offset: number, nextToken: string | undefined) {
+    return {
+      entries: Array.from({ length: count }, (_, i) => ({
+        email: `addr${offset + i}@example.com`,
+        reason: 'BOUNCE' as const,
+        lastUpdated: new Date('2024-01-01'),
+      })),
+      nextToken,
+    };
+  }
+
+  it('does not report a false negative: a truncated listing says so explicitly', async () => {
+    // 100 entries and a token — the exact shape that used to be returned as if
+    // it were the whole suppression list.
+    mockSuppressionList.mockResolvedValueOnce(page(100, 0, 'tok-1'));
+    const { client, cleanup } = await createTestClient(registerListSuppressions);
+    const result = await client.callTool({ name: 'list_suppressions', arguments: {} });
+    await cleanup();
+    const text = getText(result);
+    expect(text).toContain('Showing 20 suppressed addresses; more exist.');
+    expect(text).toContain('email=<address>');
+    expect(text).toContain('not read this partial list as proof that an address is unsuppressed');
+    // Only `limit` rows are rendered, not the whole page.
+    expect(text).toContain('addr19@example.com');
+    expect(text).not.toContain('addr20@example.com');
+  });
+
+  it('follows the continuation token across pages until it can answer exactly', async () => {
+    mockSuppressionList
+      .mockResolvedValueOnce(page(2, 0, 'tok-1'))
+      .mockResolvedValueOnce(page(2, 2, 'tok-2'))
+      .mockResolvedValueOnce(page(2, 4, 'tok-3'))
+      .mockResolvedValueOnce(page(0, 6, undefined));
+    const { client, cleanup } = await createTestClient(registerListSuppressions);
+    const result = await client.callTool({ name: 'list_suppressions', arguments: {} });
+    await cleanup();
+    expect(mockSuppressionList).toHaveBeenCalledTimes(4);
+    expect(mockSuppressionList).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ continuationToken: 'tok-1' })
+    );
+    const text = getText(result);
+    // SES hands back a token on the last non-empty page, so a trailing token is
+    // NOT evidence of more data. All six entries are present and complete.
+    expect(text).toContain('Showing all 6 suppressed addresses.');
+    expect(text).toContain('addr5@example.com');
+  });
+
+  it('stops walking one entry past the limit instead of draining the whole list', async () => {
+    mockSuppressionList
+      .mockResolvedValueOnce(page(2, 0, 'tok-1'))
+      .mockResolvedValueOnce(page(2, 2, 'tok-2'))
+      .mockResolvedValueOnce(page(2, 4, 'tok-3'));
+    const { client, cleanup } = await createTestClient(registerListSuppressions);
+    const result = await client.callTool({
+      name: 'list_suppressions',
+      arguments: { limit: 5 },
+    });
+    await cleanup();
+    expect(mockSuppressionList).toHaveBeenCalledTimes(3);
+    const text = getText(result);
+    expect(text).toContain('Showing 5 suppressed addresses; more exist.');
+    expect(text).not.toContain('addr5@example.com');
+  });
+
+  it('reports an incomplete answer rather than a wrong one when the page cap is hit', async () => {
+    mockSuppressionList.mockResolvedValue(page(1, 0, 'tok-forever'));
+    const { client, cleanup } = await createTestClient(registerListSuppressions);
+    const result = await client.callTool({
+      name: 'list_suppressions',
+      arguments: { limit: 100 },
+    });
+    await cleanup();
+    expect(mockSuppressionList).toHaveBeenCalledTimes(20);
+    const text = getText(result);
+    expect(text).toContain('may be incomplete');
+    expect(text).toContain('email=<address>');
+  });
+
+  it('carries the reason filter through every page request', async () => {
+    mockSuppressionList
+      .mockResolvedValueOnce(page(2, 0, 'tok-1'))
+      .mockResolvedValueOnce(page(0, 2, undefined));
+    const { client, cleanup } = await createTestClient(registerListSuppressions);
+    const result = await client.callTool({
+      name: 'list_suppressions',
+      arguments: { reason: 'COMPLAINT' },
+    });
+    await cleanup();
+    for (const call of mockSuppressionList.mock.calls) {
+      expect(call[0]).toMatchObject({ reason: 'COMPLAINT' });
+    }
+    expect(getText(result)).toContain('with reason COMPLAINT');
+  });
+});
+
+describe('list_suppressions single-address check', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('answers "is X suppressed?" from an exact SES lookup, never from the listing', async () => {
+    mockSuppressionGet.mockResolvedValueOnce({
+      email: 'bob@example.com',
+      reason: 'BOUNCE',
+      lastUpdated: new Date('2024-03-04T05:06:07Z'),
+    });
+    const { client, cleanup } = await createTestClient(registerListSuppressions);
+    const result = await client.callTool({
+      name: 'list_suppressions',
+      arguments: { email: 'bob@example.com' },
+    });
+    await cleanup();
+    expect(mockSuppressionGet).toHaveBeenCalledWith('bob@example.com');
+    expect(mockSuppressionList).not.toHaveBeenCalled();
+    const text = getText(result);
+    expect(text).toContain('bob@example.com IS on the SES suppression list.');
+    expect(text).toContain('reason: BOUNCE');
+    expect(text).toContain('since: 2024-03-04T05:06:07.000Z');
+  });
+
+  it('reports a clean address as an exact result, naming the region checked', async () => {
+    mockSuppressionGet.mockResolvedValueOnce(null);
+    const { client, cleanup } = await createTestClient(registerListSuppressions);
+    const result = await client.callTool({
+      name: 'list_suppressions',
+      arguments: { email: 'clean@example.com' },
+    });
+    await cleanup();
+    expect(mockSuppressionList).not.toHaveBeenCalled();
+    const text = getText(result);
+    expect(text).toContain('clean@example.com is NOT on the SES suppression list.');
+    expect(text).toContain('us-east-1');
+    expect(text).toContain('exact lookup');
+  });
+
+  it('surfaces a lookup failure as isError instead of an implied "not suppressed"', async () => {
+    mockSuppressionGet.mockRejectedValueOnce(new Error('AccessDenied'));
+    const { client, cleanup } = await createTestClient(registerListSuppressions);
+    const result = await client.callTool({
+      name: 'list_suppressions',
+      arguments: { email: 'bob@example.com' },
+    });
+    await cleanup();
+    expect(result.isError).toBe(true);
+    const text = getText(result);
+    expect(text).toContain('AccessDenied');
+    expect(text).not.toContain('is NOT on the SES suppression list');
+  });
+
+  it('advertises the exact-check path in its tool description', async () => {
+    const { client, cleanup } = await createTestClient(registerListSuppressions);
+    const { tools } = await client.listTools();
+    await cleanup();
+    const tool = tools.find((t) => t.name === 'list_suppressions');
+    expect(tool?.description).toContain('paginated');
+    expect(tool?.inputSchema.properties).toHaveProperty('email');
+    expect(tool?.inputSchema.properties).toHaveProperty('limit');
+  });
+});
+
+describe('tool annotations', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('labels send_email as a non-read-only, non-idempotent, destructive open-world action', async () => {
+    const { client, cleanup } = await createTestClient(registerSendEmail);
+    const { tools } = await client.listTools();
+    await cleanup();
+    const sendEmail = tools.find((t) => t.name === 'send_email');
+    expect(sendEmail?.annotations).toEqual({
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+    });
+  });
+
+  it('labels enforced-mode send_email the same way — the enforcer does not make it read-only', async () => {
+    const { client, cleanup } = await createTestClient(registerSendEmail, {
+      ...baseConfig,
+      agentId: 'agent-abc',
+      enforcerFunction: 'arn:aws:lambda:us-east-1:123456789012:function:e:agent-abc',
+      enforcedMode: true,
+    });
+    const { tools } = await client.listTools();
+    await cleanup();
+    const sendEmail = tools.find((t) => t.name === 'send_email');
+    expect(sendEmail?.annotations).toMatchObject({
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+    });
+  });
+
+  it('keeps readOnlyHint: true on the read tools', async () => {
+    const { client, cleanup } = await createTestClient((server, config) => {
+      registerListSuppressions(server, config);
+      registerListRecentSends(server, config);
+      registerGetEmailEventLog(server, config);
+      registerVerifyDomainStatus(server, config);
+      registerGetSetupStatus(server, config);
+    });
+    const { tools } = await client.listTools();
+    await cleanup();
+    expect(tools).toHaveLength(5);
+    for (const tool of tools) {
+      expect(tool.annotations?.readOnlyHint).toBe(true);
+    }
   });
 });

@@ -33,7 +33,17 @@ export function registerGetEmailEventLog(server: McpServer, config: MCPConfig): 
         if (!status) {
           return {
             content: [
-              { type: 'text' as const, text: `No events found for messageId: ${input.messageId}` },
+              {
+                type: 'text' as const,
+                text: [
+                  `No events recorded for messageId: ${input.messageId}.`,
+                  '',
+                  'This does NOT mean the send failed. Three different states produce it:',
+                  '1. The message was sent seconds ago. SES delivery events lag by seconds to minutes. Wait ~30s and call this tool again — do NOT re-send, that would deliver a duplicate.',
+                  '2. The messageId is wrong. Call list_recent_sends to get valid IDs.',
+                  `3. The event pipeline is not writing into ${config.historyTableName}. A send can succeed while its events never arrive. Call get_setup_status to check the account, and compare against list_recent_sends: if recent sends are listed but none of them have events, the pipeline is the problem, not this message.`,
+                ].join('\n'),
+              },
             ],
           };
         }

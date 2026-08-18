@@ -44,7 +44,21 @@ export function registerVerifyDomainStatus(server: McpServer, config: MCPConfig)
         ) {
           return {
             isError: true,
-            content: [{ type: 'text' as const, text: `Domain not found in SES: ${input.domain}` }],
+            content: [
+              {
+                type: 'text' as const,
+                text: [
+                  `Domain not found in SES: ${input.domain} (checked region: ${config.region}).`,
+                  '',
+                  'Three things cause this:',
+                  `1. Wrong region. SES identities are per-region, and this server only checks ${config.region}. If ${input.domain} was verified in a different region, restart this MCP server with AWS_REGION set to that region.`,
+                  `2. Not added yet. Run \`wraps email domains add --domain ${input.domain} --region ${config.region}\` to create the identity and print the DNS records to add, or \`wraps email init --domain ${input.domain}\` for a first-time setup.`,
+                  '3. A typo in the domain name.',
+                  '',
+                  "Call get_setup_status for this account's region, sandbox state, and a recommended next action.",
+                ].join('\n'),
+              },
+            ],
           };
         }
         return {
@@ -52,7 +66,7 @@ export function registerVerifyDomainStatus(server: McpServer, config: MCPConfig)
           content: [
             {
               type: 'text' as const,
-              text: `Failed to check domain status: ${error instanceof Error ? error.message : String(error)}`,
+              text: `Failed to check domain status for ${input.domain} in ${config.region}: ${error instanceof Error ? error.message : String(error)}`,
             },
           ],
         };

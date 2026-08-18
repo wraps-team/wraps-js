@@ -17,7 +17,7 @@ Runs locally via stdio. Your AWS credentials never leave your machine.
 | `list_recent_sends` | List recent sends from your email history | No |
 | `get_email_event_log` | Get the full delivery event log for a message (Send, Delivery, Bounce, Complaint, Open, Click) | No |
 | `verify_domain_status` | Check verification and DKIM status of a sending domain | No |
-| `list_suppressions` | List addresses on your SES suppression list, optionally filtered by BOUNCE or COMPLAINT | No |
+| `list_suppressions` | List addresses on your SES suppression list (paginated, with an explicit truncation notice), or check one address exactly with `email` | No |
 | `estimate_cost` | Estimate monthly Wraps + AWS cost for a send volume, including which SES pricing plan the account is on. No AWS credentials needed | No |
 | `check_send_status` | Poll the outcome of a `pending_approval` send by `approvalId` (enforced mode only) | No |
 
@@ -51,13 +51,16 @@ Add to `.mcp.json` in your project root:
   "mcpServers": {
     "wraps": {
       "command": "npx",
-      "args": ["-y", "@wraps.dev/mcp"]
+      "args": ["-y", "@wraps.dev/mcp"],
+      "env": {
+        "AWS_REGION": "us-east-1"
+      }
     }
   }
 }
 ```
 
-Claude Code inherits your shell's AWS environment, so no extra `env` config is needed if your credentials are already set.
+Set `AWS_REGION` to the region your Wraps stack is deployed in — SES identities are per-region, and a domain verified in another region reads as "not found". Claude Code inherits your shell's AWS environment, so you can drop the `env` block entirely if `AWS_REGION` (or a region in your active AWS profile) is already set there; the server fails at startup if neither supplies one.
 
 ## Configuration
 
@@ -65,7 +68,7 @@ All configuration is via environment variables.
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `AWS_REGION` | Yes | — | AWS region where your Wraps stack is deployed |
+| `AWS_REGION` | Yes* | — | AWS region where your Wraps stack is deployed. *Required unless your active AWS profile (`~/.aws/config`) supplies a region — the server resolves `AWS_REGION`, then `AWS_DEFAULT_REGION`, then the profile, and errors at startup if none of them do. |
 | `WRAPS_HISTORY_TABLE_NAME` | No | `wraps-email-history` | DynamoDB table name for email history |
 | `WRAPS_ACCOUNT_ID` | No | auto-detected via STS | Your AWS account ID (skip STS call if set) |
 | `WRAPS_WRITE_ENABLED` | No | `false` | Set to `true` to enable `send_email` |

@@ -38,6 +38,7 @@ export function registerGetSetupStatus(server: McpServer, config: MCPConfig): vo
         }
 
         const text = [
+          `region: ${config.region}`,
           `sandbox: ${sandbox}`,
           `enforcementStatus: ${enforcementStatus}`,
           `maxSend24Hour: ${maxSend24Hour}`,
