@@ -1,17 +1,87 @@
 import { SESClient, type SESClientConfig } from '@aws-sdk/client-ses';
 import { fromTokenFile } from '@aws-sdk/credential-providers';
 import type { WrapsEmailConfig } from '../types';
+import { USER_AGENT } from '../version';
 
-export function createSESClient(config: WrapsEmailConfig): SESClient {
+/** Last resort only, after the whole resolution chain has come up empty. */
+const FALLBACK_REGION = 'us-east-1';
+
+/** Async region provider, the shape AWS SDK v3 client config accepts. */
+export type RegionProvider = () => Promise<string>;
+
+async function resolveRegionOnce(explicit?: string): Promise<string> {
+  if (explicit) {
+    return explicit;
+  }
+
+  const fromEnv = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION;
+  if (fromEnv) {
+    return fromEnv;
+  }
+
+  // A region-less client runs the SDK's own chain (shared config profile, then
+  // IMDS). Probing it costs no network call unless the caller is actually on
+  // EC2 with nothing else configured.
+  const probe = new SESClient({});
+  try {
+    const resolved = await probe.config.region();
+    if (resolved) {
+      return resolved;
+    }
+  } catch {
+    // The SDK resolver throws when nothing in the chain supplies a region.
+    // Fall through to the fallback below.
+  } finally {
+    probe.destroy();
+  }
+
+  return FALLBACK_REGION;
+}
+
+/**
+ * Resolve the region the way every other AWS tool does, in this order:
+ * explicit config > `AWS_REGION` > `AWS_DEFAULT_REGION` > active profile
+ * (`~/.aws/config`) or IMDS > `us-east-1`.
+ *
+ * Ported from `resolveRegion()` in `@wraps.dev/mcp` (`src/config.ts`). Returns a
+ * provider rather than a string so the profile/IMDS legs stay lazy and off the
+ * constructor's synchronous path; the result is memoized, so the probe runs at
+ * most once per client.
+ *
+ * The previous `config.region || 'us-east-1'` hardcoded the fallback into the
+ * client config, which *disabled* the SDK's own resolution and silently ignored
+ * `AWS_REGION`.
+ */
+export function resolveRegion(explicit?: string): RegionProvider {
+  let cached: Promise<string> | undefined;
+  return () => {
+    if (!cached) {
+      cached = resolveRegionOnce(explicit);
+    }
+    return cached;
+  };
+}
+
+/**
+ * Region + user-agent every AWS client this SDK creates should carry. Callers
+ * pass a shared `region` provider so one WrapsEmail instance resolves the region
+ * once for all of its clients.
+ */
+export function baseClientConfig(region: RegionProvider): {
+  region: RegionProvider;
+  customUserAgent: string;
+} {
+  return { region, customUserAgent: USER_AGENT };
+}
+
+export function createSESClient(config: WrapsEmailConfig, region?: RegionProvider): SESClient {
   // Priority 1: If pre-configured client is provided, use it directly
   if (config.client) {
     return config.client;
   }
 
   // Priority 2+: Create client based on config options
-  const clientConfig: SESClientConfig = {
-    region: config.region || 'us-east-1',
-  };
+  const clientConfig: SESClientConfig = baseClientConfig(region ?? resolveRegion(config.region));
 
   // Resolve roleArn from config or AWS_ROLE_ARN environment variable
   const roleArn = config.roleArn || process.env.AWS_ROLE_ARN;

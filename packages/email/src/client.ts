@@ -16,7 +16,7 @@ import { SESv2Client } from '@aws-sdk/client-sesv2';
 import { SSMClient } from '@aws-sdk/client-ssm';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { sendBatch as sendBatchImpl } from './batch';
-import { mapAwsSdkError, ValidationError } from './errors';
+import { isUnverifiedIdentityError, mapAwsSdkError, ValidationError } from './errors';
 import { WrapsEmailEvents } from './events';
 import { WrapsInbox } from './inbox';
 import { renderReactEmail } from './react';
@@ -38,7 +38,12 @@ import type {
   UpdateTemplateParams,
   WrapsEmailConfig,
 } from './types';
-import { createSESClient } from './utils/credentials';
+import {
+  baseClientConfig,
+  createSESClient,
+  type RegionProvider,
+  resolveRegion,
+} from './utils/credentials';
 import { htmlToPlainText } from './utils/html-to-text';
 import { buildRawEmailMessage } from './utils/mime';
 import {
@@ -85,6 +90,12 @@ export class WrapsEmail {
   private readonly ownedClients: Array<{ destroy(): void }> = [];
 
   /**
+   * Region resolution shared by every client this instance builds, so the
+   * profile/IMDS legs of the chain are walked at most once.
+   */
+  private readonly region: RegionProvider;
+
+  /**
    * Template management methods
    */
   public readonly templates: {
@@ -97,16 +108,15 @@ export class WrapsEmail {
   };
 
   constructor(config: WrapsEmailConfig = {}) {
-    this.sesClient = createSESClient(config);
+    this.region = resolveRegion(config.region);
+    this.sesClient = createSESClient(config, this.region);
 
     // Initialize inbox if bucket name provided
     if (config.inboxBucketName) {
       if (config.s3Client) {
         this.inbox = new WrapsInbox(config.s3Client, config.inboxBucketName, this.sesClient);
       } else {
-        const s3Config: Record<string, unknown> = {
-          region: config.region || 'us-east-1',
-        };
+        const s3Config: Record<string, unknown> = { ...baseClientConfig(this.region) };
         if (config.credentials) {
           s3Config.credentials = config.credentials;
         }
@@ -126,9 +136,7 @@ export class WrapsEmail {
       if (config.dynamodbClient) {
         this.events = new WrapsEmailEvents(config.dynamodbClient, config.historyTableName);
       } else {
-        const dynamoConfig: Record<string, unknown> = {
-          region: config.region || 'us-east-1',
-        };
+        const dynamoConfig: Record<string, unknown> = { ...baseClientConfig(this.region) };
         if (config.credentials) {
           dynamoConfig.credentials = config.credentials;
         }
@@ -150,9 +158,7 @@ export class WrapsEmail {
     if (config.sesv2Client) {
       this.sesv2Client = config.sesv2Client;
     } else {
-      const sesv2Config: Record<string, unknown> = {
-        region: config.region || 'us-east-1',
-      };
+      const sesv2Config: Record<string, unknown> = { ...baseClientConfig(this.region) };
       if (config.credentials) {
         sesv2Config.credentials = config.credentials;
       }
@@ -168,9 +174,7 @@ export class WrapsEmail {
     if (config.replyThreading) {
       let ssmClient = config.replyThreading.ssmClient;
       if (!ssmClient) {
-        const ssmConfig: Record<string, unknown> = {
-          region: config.region || 'us-east-1',
-        };
+        const ssmConfig: Record<string, unknown> = { ...baseClientConfig(this.region) };
         if (config.credentials) {
           ssmConfig.credentials = config.credentials;
         }
@@ -202,6 +206,51 @@ export class WrapsEmail {
     };
   }
 
+  /**
+   * Send a single email through SES.
+   *
+   * Exactly one primary body is required — `html`, `react`, or `text` — and the
+   * type rejects both "no body" and `html` + `react` together at compile time.
+   * A plain-text part is auto-generated from `html` when `text` is omitted.
+   * Passing `attachments` switches to `SendRawEmail` transparently.
+   *
+   * @param params - Sender, recipients, subject, and body. See {@link SendEmailParams}.
+   * @returns The SES `messageId` and `requestId`, plus `conversationId` /
+   *   `sendId` when the send was signed for reply threading.
+   * @throws {ValidationError} Before any network call, when a field is missing
+   *   or an address is malformed. `error.field` names the offender.
+   * @throws {CredentialsError} When the AWS credential chain produced nothing —
+   *   nothing was sent. The message lists every way to supply credentials.
+   * @throws {SandboxError} When SES rejects the send because an identity is not
+   *   verified in the region used. The message separates the two causes: a
+   *   region mismatch and the SES sandbox.
+   * @throws {SESError} For every other SES failure, carrying `code`,
+   *   `requestId`, and `retryable`.
+   *
+   * @example
+   * ```typescript
+   * import { WrapsEmail, SandboxError } from '@wraps.dev/email';
+   *
+   * // Region comes from AWS_REGION when not passed explicitly.
+   * const email = new WrapsEmail();
+   *
+   * try {
+   *   const result = await email.send({
+   *     from: 'hello@yourdomain.com',
+   *     to: 'user@example.com',
+   *     subject: 'Welcome!',
+   *     html: '<h1>Hello</h1>',
+   *   });
+   *   console.log(result.messageId);
+   * } catch (error) {
+   *   if (error instanceof SandboxError) {
+   *     // Sandboxed accounts can still prove the pipeline works:
+   *     // send to success@simulator.amazonses.com.
+   *     console.error(error.message);
+   *   }
+   * }
+   * ```
+   */
   async send(params: SendEmailParams): Promise<SendEmailResult> {
     // Validate parameters
     validateEmailParams(params);
@@ -294,7 +343,7 @@ export class WrapsEmail {
       }
       return result;
     } catch (error) {
-      throw this.handleSESError(error);
+      throw await this.handleSESError(error);
     }
   }
 
@@ -393,7 +442,7 @@ export class WrapsEmail {
       }
       return result;
     } catch (error) {
-      throw this.handleSESError(error);
+      throw await this.handleSESError(error);
     }
   }
 
@@ -444,8 +493,24 @@ export class WrapsEmail {
     return {};
   }
 
-  private handleSESError(error: unknown): Error {
-    return mapAwsSdkError(error);
+  /**
+   * Resolve the region this client actually sends to. Errors name it, so an
+   * identity verified in another region is distinguishable from a sandbox block.
+   */
+  private async resolvedRegion(): Promise<string | undefined> {
+    try {
+      return await this.sesClient.config.region();
+    } catch {
+      return undefined;
+    }
+  }
+
+  private async handleSESError(error: unknown): Promise<Error> {
+    // Only the unverified-identity guidance names the region, and resolving it
+    // can walk to IMDS. Skip that work for every other failure — including the
+    // credential error that is the most common first-run outcome.
+    const region = isUnverifiedIdentityError(error) ? await this.resolvedRegion() : undefined;
+    return mapAwsSdkError(error, 'SES request failed', { region });
   }
 
   /**
@@ -499,7 +564,7 @@ export class WrapsEmail {
       }
       return result;
     } catch (error) {
-      throw this.handleSESError(error);
+      throw await this.handleSESError(error);
     }
   }
 
@@ -573,7 +638,7 @@ export class WrapsEmail {
       }
       return result;
     } catch (error) {
-      throw this.handleSESError(error);
+      throw await this.handleSESError(error);
     }
   }
 
@@ -621,7 +686,7 @@ export class WrapsEmail {
     try {
       await this.sesClient.send(command);
     } catch (error) {
-      throw this.handleSESError(error);
+      throw await this.handleSESError(error);
     }
   }
 
@@ -655,7 +720,7 @@ export class WrapsEmail {
     try {
       await this.sesClient.send(command);
     } catch (error) {
-      throw this.handleSESError(error);
+      throw await this.handleSESError(error);
     }
   }
 
@@ -682,7 +747,7 @@ export class WrapsEmail {
         createdTimestamp: new Date(), // SES doesn't return timestamp in GetTemplate
       };
     } catch (error) {
-      throw this.handleSESError(error);
+      throw await this.handleSESError(error);
     }
   }
 
@@ -704,7 +769,7 @@ export class WrapsEmail {
           createdTimestamp: t.CreatedTimestamp as Date,
         }));
     } catch (error) {
-      throw this.handleSESError(error);
+      throw await this.handleSESError(error);
     }
   }
 
@@ -719,7 +784,7 @@ export class WrapsEmail {
     try {
       await this.sesClient.send(command);
     } catch (error) {
-      throw this.handleSESError(error);
+      throw await this.handleSESError(error);
     }
   }
 

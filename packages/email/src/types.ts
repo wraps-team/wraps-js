@@ -145,7 +145,13 @@ export interface Attachment {
   encoding?: 'base64' | 'utf-8';
 }
 
-export interface SendEmailParams {
+/**
+ * Fields shared by every `send()` call, whichever body it carries.
+ *
+ * Use {@link SendEmailParams} — this interface exists so the body invariants can
+ * be expressed as a union on top of it.
+ */
+export interface SendEmailParamsBase {
   /**
    * Sender email address (must be verified in SES)
    */
@@ -177,19 +183,10 @@ export interface SendEmailParams {
   subject: string;
 
   /**
-   * HTML body (mutually exclusive with 'react')
-   */
-  html?: string;
-
-  /**
-   * Plain text body (optional, auto-generated from html if not provided)
+   * Plain text body. Auto-generated from `html` when omitted, and usable on its
+   * own as the only body.
    */
   text?: string;
-
-  /**
-   * React.email component (mutually exclusive with 'html')
-   */
-  react?: React.ReactElement;
 
   /**
    * Email attachments (optional)
@@ -227,6 +224,41 @@ export interface SendEmailParams {
    */
   replyTtlSeconds?: number;
 }
+
+/**
+ * The body of a send. Exactly one primary body is required, and `html` and
+ * `react` are mutually exclusive — both invariants were runtime-only before and
+ * now fail to compile.
+ *
+ * - `{ html }` — optionally with `text` for the plain-text part
+ * - `{ react }` — a React Email component, rendered to HTML at send time
+ * - `{ text }` — plain text only
+ */
+export type SendEmailBody =
+  | {
+      /** HTML body. Cannot be combined with `react`. */
+      html: string;
+      react?: never;
+    }
+  | {
+      /** React.email component. Cannot be combined with `html`. */
+      react: React.ReactElement;
+      html?: never;
+    }
+  | {
+      /** Plain-text-only send. */
+      text: string;
+      html?: never;
+      react?: never;
+    };
+
+/**
+ * Parameters for {@link WrapsEmail.send}.
+ *
+ * A send with no body, or with both `html` and `react`, is a type error —
+ * `validateEmailParams()` still enforces both at runtime for JavaScript callers.
+ */
+export type SendEmailParams = SendEmailParamsBase & SendEmailBody;
 
 export interface SendEmailResult {
   messageId: string;

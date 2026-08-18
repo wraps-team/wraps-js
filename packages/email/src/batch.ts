@@ -1,5 +1,11 @@
 import { type SESv2Client, SendBulkEmailCommand } from '@aws-sdk/client-sesv2';
-import { mapAwsSdkError, SESError, ValidationError } from './errors';
+import {
+  isCredentialsChainError,
+  isUnverifiedIdentityError,
+  mapAwsSdkError,
+  SESError,
+  ValidationError,
+} from './errors';
 import { renderReactEmail } from './react';
 import type { BatchEmailEntry, BatchEntryResult, SendBatchParams, SendBatchResult } from './types';
 import { htmlToPlainText } from './utils/html-to-text';
@@ -121,33 +127,38 @@ async function sendChunk(
     ConfigurationSetName: params.configurationSetName,
   });
 
+  // Errors propagate raw: the caller maps them once, with the resolved region.
+  const response = await sesv2Client.send(command);
+
+  if (!response.BulkEmailEntryResults) {
+    throw new Error('Invalid response from SES: missing BulkEmailEntryResults');
+  }
+
+  return response.BulkEmailEntryResults.map((result, i) => {
+    const status = result.Status === 'SUCCESS' ? 'success' : 'failure';
+    return {
+      index: startIndex + i,
+      messageId: result.MessageId,
+      status,
+      error: result.Error,
+    } as BatchEntryResult;
+  });
+}
+
+/**
+ * Region the batch client actually sends to, so a chunk failure caused by an
+ * identity verified elsewhere reads as a region problem rather than a mystery.
+ */
+async function resolveClientRegion(sesv2Client: SESv2Client): Promise<string | undefined> {
   try {
-    const response = await sesv2Client.send(command);
-
-    if (!response.BulkEmailEntryResults) {
-      throw new Error('Invalid response from SES: missing BulkEmailEntryResults');
-    }
-
-    return response.BulkEmailEntryResults.map((result, i) => {
-      const status = result.Status === 'SUCCESS' ? 'success' : 'failure';
-      return {
-        index: startIndex + i,
-        messageId: result.MessageId,
-        status,
-        error: result.Error,
-      } as BatchEntryResult;
-    });
-  } catch (error) {
-    throw handleSESv2Error(error);
+    return await sesv2Client.config.region();
+  } catch {
+    return undefined;
   }
 }
 
-function handleSESv2Error(error: unknown): Error {
-  return mapAwsSdkError(error);
-}
-
-function describeChunkError(error: unknown): string {
-  const mapped = mapAwsSdkError(error);
+function describeChunkError(error: unknown, region: string | undefined): string {
+  const mapped = mapAwsSdkError(error, 'SES request failed', { region });
   if (mapped instanceof SESError) {
     return `${mapped.code}: ${mapped.message}${mapped.retryable ? ' (retryable)' : ''}`;
   }
@@ -163,9 +174,18 @@ function describeChunkError(error: unknown): string {
  * Uses SES v2 `SendBulkEmailCommand` with inline template content.
  * Each entry can have its own subject, html, and text.
  *
+ * Never rejects on a send failure — partial *and* total failures come back as
+ * per-entry `status: 'failure'` rows in the resolved result, including
+ * chunk-level SES errors. Always inspect `failureCount`.
+ *
+ * A credential-chain failure is the exception: nothing was ever sent, so it
+ * throws rather than reporting every entry as failed with the same message.
+ *
  * @param sesv2Client - SES v2 client instance
  * @param params - Batch send parameters
  * @returns Aggregated results for all entries
+ * @throws {ValidationError} On an empty, oversized, or malformed entries array.
+ * @throws {CredentialsError} When the AWS credential chain produced nothing.
  */
 export async function sendBatch(
   sesv2Client: SESv2Client,
@@ -189,13 +209,30 @@ export async function sendBatch(
     chunkOffsets.push(offset);
   }
 
+  // Only the unverified-identity message names the region, and resolving it can
+  // walk to IMDS. Resolve on first need, at most once for the whole batch.
+  let regionOnce: Promise<string | undefined> | undefined;
+  const region = () => {
+    regionOnce ??= resolveClientRegion(sesv2Client);
+    return regionOnce;
+  };
+
   const chunkResultSets = await Promise.all(
     chunkOffsets.map(async (offset) => {
       const chunk = resolved.slice(offset, offset + CHUNK_SIZE);
       try {
         return await sendChunk(sesv2Client, params, chunk, offset);
       } catch (error) {
-        const detail = describeChunkError(error);
+        // Nothing was signed, so no entry was attempted. Reporting this as N
+        // identical failure rows would bury one credential problem in N copies
+        // of the same multi-line guidance.
+        if (isCredentialsChainError(error)) {
+          throw mapAwsSdkError(error, 'SES request failed');
+        }
+        const detail = describeChunkError(
+          error,
+          isUnverifiedIdentityError(error) ? await region() : undefined
+        );
         return chunk.map((_, i) => ({
           index: offset + i,
           status: 'failure' as const,

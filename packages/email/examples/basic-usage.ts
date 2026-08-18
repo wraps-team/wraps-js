@@ -3,7 +3,7 @@ import { WrapsEmail } from '@wraps.dev/email';
 async function main() {
   // Initialize client (credentials auto-detected from environment)
   const email = new WrapsEmail({
-    region: 'us-east-1', // optional, defaults to us-east-1
+    region: 'us-east-1', // optional — resolved from AWS_REGION when omitted
   });
 
   // Send simple email

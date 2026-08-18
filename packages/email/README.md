@@ -109,14 +109,68 @@ Scope the IAM key to `ses:SendEmail` only. Store credentials as Wrangler secrets
 consider enqueueing emails via a Cloudflare Queue rather than blocking the request
 so transient SES errors don't surface to end users.
 
+## Before your first send
+
+Three things decide whether your first send works. All three produce AWS errors
+that name the wrong cause if you don't know them up front.
+
+**1. Region.** SES identities are per-region: a domain verified in `eu-west-1`
+does not exist in `us-east-1`. The SDK resolves the region in this order —
+
+1. `region` passed to the constructor
+2. `AWS_REGION`
+3. `AWS_DEFAULT_REGION`
+4. The active profile's `region` (`~/.aws/config`), or EC2 instance metadata
+5. `us-east-1`, as a last resort
+
+— so `export AWS_REGION=eu-west-1` is honored, and only reaching step 5 gives you
+`us-east-1`. Send to the region your identity actually lives in.
+
+**2. A verified sender.** The `from` address (or its domain) must be a verified
+SES identity **in that region**. `npx wraps email init` sets one up.
+
+**3. The SES sandbox.** Every new AWS account starts sandboxed and can only send
+**to** verified recipients. You do not need production access to prove your setup
+works — send to the AWS mailbox simulator, which AWS pre-verifies:
+
+```typescript
+await email.send({
+  from: 'you@yourdomain.com',
+  to: 'success@simulator.amazonses.com', // deliverable from a sandboxed account
+  subject: 'Pipeline check',
+  html: '<p>It works.</p>',
+});
+```
+
+Requesting production access to send to anyone else is an AWS support review;
+no SDK can do it for you.
+
+Both a region mismatch and a sandbox block surface as the same AWS text —
+*"Email address is not verified"*. `send()` throws a `SandboxError` for that case
+whose message names the region actually used and separates the two causes, so you
+don't re-verify an identity that is already verified somewhere else.
+
+To check where you stand:
+
+```bash
+aws sesv2 get-account --region <region>            # productionAccessEnabled: false means sandbox
+aws sesv2 list-email-identities --region <region>  # what is verified there
+npx wraps email status --region <region>
+```
+
 ## Authentication
 
 Wraps Email uses the AWS credential chain in the following order:
 
-1. Explicit credentials passed to constructor
-2. Environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`)
-3. Shared credentials file (`~/.aws/credentials`)
-4. IAM role (EC2, ECS, Lambda)
+1. Pre-configured `client` passed to the constructor
+2. `roleArn` (OIDC federation on Vercel, GitHub Actions, EKS)
+3. Explicit credentials passed to the constructor
+4. Environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`)
+5. Shared credentials file (`~/.aws/credentials`), AWS SSO, IAM role (EC2, ECS, Lambda)
+
+When none of them produce credentials, `send()` throws a `CredentialsError`
+listing every option — it does not leak the AWS SDK's raw
+`Could not load credentials from any providers`.
 
 ### With explicit credentials
 
@@ -136,12 +190,15 @@ const email = new WrapsEmail({
 ```bash
 export AWS_ACCESS_KEY_ID=your_access_key
 export AWS_SECRET_ACCESS_KEY=your_secret_key
-export AWS_REGION=us-east-1
+export AWS_REGION=eu-west-1
 ```
 
 ```typescript
-const email = new WrapsEmail(); // Credentials auto-detected
+const email = new WrapsEmail(); // Credentials and region auto-detected
 ```
+
+`AWS_REGION` (or `AWS_DEFAULT_REGION`, or your profile's region) is used as-is.
+Pass `region` to the constructor only when you want to override it.
 
 ## Usage Examples
 
@@ -566,11 +623,36 @@ try {
 ```
 
 `WrapsEmailError` is the catch-all base class every other email error extends —
-useful for a single `instanceof` check that covers all of them.
+useful for a single `instanceof` check that covers all of them. That includes
+credential failures: an unresolvable credential chain throws `CredentialsError`,
+not the AWS SDK's own error type.
 
-`BatchError` is exported for type compatibility but **is not currently thrown**.
-`sendBatch()` never throws on partial failure — it reports per-entry outcomes in
-its resolved `SendBatchResult` instead. Always inspect the result:
+```typescript
+import { CredentialsError, SandboxError } from '@wraps.dev/email';
+
+try {
+  await email.send({ ... });
+} catch (error) {
+  if (error instanceof CredentialsError) {
+    // Nothing was sent — the credential chain came up empty. The message lists
+    // every way to supply credentials (SSO, access keys, env vars, AWS_PROFILE,
+    // or passing them to the constructor).
+    console.error(error.message);
+  } else if (error instanceof SandboxError) {
+    // SES rejected the send: the identity is not verified in the region used.
+    // Either the region is wrong or the account is sandboxed — error.message
+    // walks through both, and error.region names the region actually used.
+    console.error(error.region, error.message);
+  }
+}
+```
+
+`SandboxError` extends `SESError`, so existing `instanceof SESError` handling
+keeps working unchanged.
+
+`sendBatch()` never throws on send failure — partial *and* total failures come
+back as per-entry outcomes in its resolved `SendBatchResult`, including
+chunk-level SES errors. Only input validation throws. Always inspect the result:
 
 ```typescript
 const result = await email.sendBatch({ from, entries });
@@ -597,7 +679,9 @@ interface WrapsEmailConfig {
   // When provided, enables the inbox API (email.inbox).
   inboxBucketName?: string;
 
-  // AWS region for SES (defaults to us-east-1). Ignored if `client` is provided.
+  // AWS region for SES. When omitted, resolved from AWS_REGION, then
+  // AWS_DEFAULT_REGION, then the active profile, then us-east-1 as a last
+  // resort. Ignored if `client` is provided.
   region?: string;
 
   // AWS credentials — static or a credential provider (e.g. Vercel OIDC).

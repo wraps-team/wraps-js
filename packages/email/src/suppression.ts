@@ -5,7 +5,7 @@ import {
   ListSuppressedDestinationsCommand,
   PutSuppressedDestinationCommand,
 } from '@aws-sdk/client-sesv2';
-import { SESError, ValidationError } from './errors';
+import { isUnverifiedIdentityError, mapAwsSdkError, ValidationError } from './errors';
 import type {
   SuppressionEntry,
   SuppressionListOptions,
@@ -45,7 +45,7 @@ export class WrapsEmailSuppression {
       if ((error as { name?: string }).name === 'NotFoundException') {
         return null;
       }
-      throw this.handleError(error);
+      throw await this.handleError(error);
     }
   }
 
@@ -69,7 +69,7 @@ export class WrapsEmailSuppression {
         })
       );
     } catch (error) {
-      throw this.handleError(error);
+      throw await this.handleError(error);
     }
   }
 
@@ -88,7 +88,7 @@ export class WrapsEmailSuppression {
       if ((error as { name?: string }).name === 'NotFoundException') {
         return;
       }
-      throw this.handleError(error);
+      throw await this.handleError(error);
     }
   }
 
@@ -124,25 +124,31 @@ export class WrapsEmailSuppression {
         nextToken: response.NextToken,
       };
     } catch (error) {
-      throw this.handleError(error);
+      throw await this.handleError(error);
     }
   }
 
-  private handleError(error: unknown): Error {
-    const err = error as {
-      $metadata?: { requestId?: string };
-      $retryable?: { throttling?: boolean };
-      message?: string;
-      name?: string;
-    };
-    if (err.$metadata) {
-      return new SESError(
-        err.message || 'SES request failed',
-        err.name || 'Unknown',
-        err.$metadata.requestId || 'unknown',
-        err.$retryable?.throttling || false
-      );
+  /**
+   * Route through the shared mapper so a credential-chain failure here becomes
+   * a `CredentialsError` rather than escaping as raw AWS text, exactly as it
+   * does on the send path.
+   */
+  private async handleError(error: unknown): Promise<Error> {
+    return mapAwsSdkError(error, 'SES request failed', { region: await this.errorRegion(error) });
+  }
+
+  /**
+   * The region to name in an error, resolved only when the message will use it.
+   * Resolution can walk to IMDS, so every other failure skips it.
+   */
+  private async errorRegion(error: unknown): Promise<string | undefined> {
+    if (!isUnverifiedIdentityError(error)) {
+      return undefined;
     }
-    return error instanceof Error ? error : new Error(String(error));
+    try {
+      return await this.client.config.region();
+    } catch {
+      return undefined;
+    }
   }
 }

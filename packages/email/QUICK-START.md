@@ -37,6 +37,11 @@ If you're in AWS SES sandbox mode, verify your email addresses:
 4. Check your inbox and click the verification link
 5. Repeat for both sender and recipient emails
 
+To prove the pipeline works without verifying a recipient, send to
+`success@simulator.amazonses.com` — AWS pre-verifies it, so it is deliverable
+from a sandboxed account. Identities are per-region: verify in the same region
+`AWS_REGION` points at.
+
 ## Basic Usage
 
 ```typescript
@@ -44,7 +49,7 @@ import { WrapsEmail } from '@wraps.dev/email';
 
 // Initialize client
 const email = new WrapsEmail({
-  region: 'us-east-1', // optional, defaults to us-east-1
+  region: 'us-east-1', // optional — resolved from AWS_REGION when omitted
 });
 
 // Send your first email

@@ -1,5 +1,13 @@
 export { WrapsEmail } from './client';
-export { BatchError, DynamoDBError, SESError, ValidationError, WrapsEmailError } from './errors';
+export {
+  CredentialsError,
+  DynamoDBError,
+  SandboxError,
+  SES_SIMULATOR_SUCCESS,
+  SESError,
+  ValidationError,
+  WrapsEmailError,
+} from './errors';
 export { WrapsEmailEvents } from './events';
 export { WrapsInbox } from './inbox';
 export type {
@@ -36,7 +44,9 @@ export type {
   SendBatchResult,
   SendBulkTemplateParams,
   SendBulkTemplateResult,
+  SendEmailBody,
   SendEmailParams,
+  SendEmailParamsBase,
   SendEmailResult,
   SendTemplateParams,
   SuppressionEntry,

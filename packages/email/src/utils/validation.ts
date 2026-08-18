@@ -84,6 +84,26 @@ export function validateEmailParams(params: SendEmailParams): void {
   }
 }
 
+// Every address error states the expected format, gives a copyable example, and
+// echoes what was actually received — the standard set by the phone-number
+// validation in @wraps.dev/sms.
+const EXPECTED_FORMAT =
+  'Expected an email address (e.g., user@example.com) or RFC 5322 form (e.g., "Ada Lovelace" <user@example.com>)';
+
+/**
+ * Render what the caller actually passed, for the tail of an address error.
+ * Objects are shown in full so a missing `email` key is visible rather than
+ * echoing back an empty string.
+ */
+function describeAddress(address: string | EmailAddress): string {
+  if (typeof address === 'string') {
+    // Quote blank input; an unquoted empty or whitespace-only value makes the
+    // error trail off into nothing.
+    return address.trim() === '' ? `"${address}" (blank)` : address;
+  }
+  return JSON.stringify(address);
+}
+
 /**
  * Extract email from RFC 5322 format strings like "Name <email>" or "email"
  */
@@ -118,7 +138,10 @@ function validateEmailAddress(address: string | EmailAddress, field: string): vo
   const email = typeof address === 'string' ? extractEmail(address) : address.email;
 
   if (!email) {
-    throw new ValidationError(`Invalid email address in field: ${field}`, field);
+    throw new ValidationError(
+      `Missing email address in field: ${field}. ${EXPECTED_FORMAT}, got: ${describeAddress(address)}`,
+      field
+    );
   }
 
   // Zod Mini email validator — tree-shakeable; avoids bundling all of zod at the
@@ -126,6 +149,9 @@ function validateEmailAddress(address: string | EmailAddress, field: string): vo
   const result = safeParse(zEmail(), email);
 
   if (!result.success) {
-    throw new ValidationError(`Invalid email format in field: ${field} (${email})`, field);
+    throw new ValidationError(
+      `Invalid email format in field: ${field}. ${EXPECTED_FORMAT}, got: ${describeAddress(address)}`,
+      field
+    );
   }
 }

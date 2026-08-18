@@ -29,14 +29,24 @@ export interface WrapsEmailWorkerConfig {
 }
 
 /**
+ * `Omit` collapses a union into one object type, which would erase the
+ * body-invariant branches of {@link SendEmailParams}. Distribute over the union
+ * so each branch keeps its own shape.
+ */
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+
+/**
  * Subset of {@link SendEmailParams} supported at the edge.
  *
  * Not supported on the edge entry: `react` (render to HTML first),
  * `attachments` (MIME serialization requires Node built-ins),
  * `conversationId`, `sendId`, `replyTtlSeconds` (reply-threading uses SSM).
+ *
+ * `Extract` drops the `react` branch rather than omitting the field from it,
+ * which would otherwise leave a branch with no body at all.
  */
-export type WorkerSendEmailParams = Omit<
-  SendEmailParams,
+export type WorkerSendEmailParams = DistributiveOmit<
+  Extract<SendEmailParams, { react?: never }>,
   'react' | 'attachments' | 'conversationId' | 'sendId' | 'replyTtlSeconds'
 >;
 

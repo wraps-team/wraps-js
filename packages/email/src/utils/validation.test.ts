@@ -216,7 +216,54 @@ describe('validateEmailParams', () => {
     };
 
     expect(() => validateEmailParams(params)).toThrow(ValidationError);
-    expect(() => validateEmailParams(params)).toThrow('Invalid email address');
+    // Names the field, states the expected format, gives an example, and echoes
+    // what was received — the standard set by @wraps.dev/sms.
+    expect(() => validateEmailParams(params)).toThrow(
+      'Missing email address in field: from. Expected an email address (e.g., user@example.com) or RFC 5322 form (e.g., "Ada Lovelace" <user@example.com>), got: {"email":"","name":"Sender"}'
+    );
+  });
+
+  it('names the field, the expected format, an example, and the value received', () => {
+    const params = {
+      from: 'sender@example.com',
+      to: 'not-an-email',
+      subject: 'Test',
+      html: '<p>Test</p>',
+    } as SendEmailParams;
+
+    let thrown: ValidationError | undefined;
+    try {
+      validateEmailParams(params);
+    } catch (error) {
+      thrown = error as ValidationError;
+    }
+
+    expect(thrown).toBeInstanceOf(ValidationError);
+    expect(thrown?.field).toBe('to[0]');
+    expect(thrown?.message).toContain('Invalid email format in field: to[0]');
+    expect(thrown?.message).toContain('Expected an email address (e.g., user@example.com)');
+    expect(thrown?.message).toContain('got: not-an-email');
+  });
+
+  it('echoes a blank address recognizably rather than trailing off', () => {
+    const params = {
+      from: '',
+      to: 'recipient@example.com',
+      subject: 'Test',
+      html: '<p>Test</p>',
+    } as SendEmailParams;
+
+    // An empty `from` is caught by the required-field check first.
+    expect(() => validateEmailParams(params)).toThrow('Missing required field: from');
+
+    const emptyTo = {
+      from: 'sender@example.com',
+      to: '   ',
+      subject: 'Test',
+      html: '<p>Test</p>',
+    } as SendEmailParams;
+
+    expect(() => validateEmailParams(emptyTo)).toThrow('got: "   " (blank)');
   });
 
   it('should accept RFC 5322 format with display name (Name <email>)', () => {

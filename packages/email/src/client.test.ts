@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WrapsEmail } from './client';
-import { SESError, ValidationError } from './errors';
+import { CredentialsError, SandboxError, SESError, ValidationError } from './errors';
 
 // Mock the SES client
 vi.mock('@aws-sdk/client-ses', () => {
@@ -11,6 +11,8 @@ vi.mock('@aws-sdk/client-ses', () => {
     SESClient: vi.fn(function (this: any) {
       this.send = mockSend;
       this.destroy = mockDestroy;
+      // Mirrors the resolved client config: errors read the region back off it.
+      this.config = { region: vi.fn().mockResolvedValue('eu-west-1') };
     }),
     SendEmailCommand: vi.fn(function (this: any, input: any) {
       Object.assign(this, input);
@@ -278,6 +280,57 @@ describe('WrapsEmail', () => {
           html: '<p>Test</p>',
         })
       ).rejects.toThrow(SESError);
+    });
+
+    it('surfaces a credential-chain failure as a CredentialsError, not raw AWS text', async () => {
+      // No $metadata: the credential chain failed before anything was signed.
+      mockSend.mockRejectedValue(
+        Object.assign(new Error('Could not load credentials from any providers'), {
+          name: 'CredentialsProviderError',
+        })
+      );
+
+      const send = () =>
+        email.send({
+          from: 'sender@example.com',
+          to: 'recipient@example.com',
+          subject: 'Test',
+          html: '<p>Test</p>',
+        });
+
+      await expect(send()).rejects.toThrow(CredentialsError);
+      await expect(send()).rejects.toThrow("Wraps couldn't find working AWS credentials");
+      await expect(send()).rejects.toThrow('AWS_PROFILE');
+    });
+
+    it('turns an unverified-identity rejection into region-and-sandbox guidance', async () => {
+      mockSend.mockRejectedValue({
+        message:
+          'Email address is not verified. The following identities failed the check in region US-EAST-1: recipient@example.com',
+        name: 'MessageRejected',
+        $metadata: { requestId: 'rejected-request-id' },
+      });
+
+      let thrown: SandboxError | undefined;
+      try {
+        await email.send({
+          from: 'sender@example.com',
+          to: 'recipient@example.com',
+          subject: 'Test',
+          html: '<p>Test</p>',
+        });
+      } catch (error) {
+        thrown = error as SandboxError;
+      }
+
+      expect(thrown).toBeInstanceOf(SandboxError);
+      // Names the region this client used (eu-west-1), which is what separates a
+      // region mismatch from a sandbox block — SES's own text says US-EAST-1.
+      expect(thrown?.region).toBe('eu-west-1');
+      expect(thrown?.message).toContain('region eu-west-1');
+      expect(thrown?.message).toContain('Region mismatch');
+      expect(thrown?.message).toContain('success@simulator.amazonses.com');
+      expect(thrown?.requestId).toBe('rejected-request-id');
     });
   });
 

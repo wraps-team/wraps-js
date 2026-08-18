@@ -1,6 +1,12 @@
 import { defineConfig } from 'tsup';
+import pkg from './package.json' with { type: 'json' };
 
 export default defineConfig({
+  // Bake the published version in, so the AWS customUserAgent can't drift from
+  // the manifest.
+  define: {
+    __WRAPS_EMAIL_VERSION__: JSON.stringify(pkg.version),
+  },
   entry: ['src/index.ts', 'src/workers.ts'],
   format: ['cjs', 'esm'],
   dts: true,
