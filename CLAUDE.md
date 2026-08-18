@@ -1,12 +1,16 @@
 # CLAUDE.md - Wraps JS SDKs
 
+> Writing code that **uses** these packages (rather than changing them)? [AGENTS.md](./AGENTS.md)
+> is the consumer-facing entry point. This file is about working on the repo itself.
+
 ## Project Overview
 
-Monorepo containing three TypeScript SDKs for AWS services, published under the `@wraps.dev` npm namespace:
+Monorepo containing four TypeScript packages, published under the `@wraps.dev` npm namespace:
 
 - **@wraps.dev/email** (see package.json) - Email SDK for AWS SES with React.email support
 - **@wraps.dev/sms** (see package.json) - SMS SDK for AWS End User Messaging (Pinpoint SMS Voice V2)
 - **@wraps.dev/client** (see package.json) - Type-safe API client for the Wraps Platform (OpenAPI-generated)
+- **@wraps.dev/mcp** (see package.json) - MCP server exposing the email SDK to agents
 
 ## Key Principles
 
@@ -41,13 +45,17 @@ wraps-js/
 │   │   │   ├── errors.ts
 │   │   │   └── utils/         # Credentials, E.164 validation
 │   │   └── examples/
-│   └── client/                # @wraps.dev/client
+│   ├── client/                # @wraps.dev/client
+│   │   └── src/
+│   │       ├── index.ts
+│   │       ├── client.ts      # createPlatformClient (openapi-fetch)
+│   │       ├── config.ts      # defineConfig, defineBrand
+│   │       ├── workflow*.ts   # Workflow definitions
+│   │       └── schema.d.ts    # Auto-generated OpenAPI types
+│   └── mcp/                   # @wraps.dev/mcp
 │       └── src/
-│           ├── index.ts
-│           ├── client.ts      # createPlatformClient (openapi-fetch)
-│           ├── config.ts      # defineConfig, defineBrand
-│           ├── workflow*.ts   # Workflow definitions
-│           └── schema.d.ts    # Auto-generated OpenAPI types
+│           ├── config.ts      # resolveRegion — canonical region chain
+│           └── tools/         # One file per MCP tool
 ├── biome.json                 # Code style (100 char width, single quotes, 2-space indent)
 └── CONTRIBUTING.md
 ```
@@ -87,17 +95,27 @@ Both email and SMS follow the same pattern:
 
 ```
 WrapsEmailError / WrapsSMSError (base)
-├── ValidationError       (invalid input, has .field?)
-├── SESError / SMSError   (AWS API error, has .code, .requestId, .retryable)
-├── BatchError            (email only, has .results, .successCount, .failureCount —
-│                          exported, never thrown; email sendBatch() returns
-│                          partial failures in its result instead)
-├── DynamoDBError         (email only — email events, has .code, .requestId, .retryable)
-├── OptedOutError         (SMS only, has .phoneNumber)
-└── RateLimitError        (SMS only, has .retryAfter?)
+├── ValidationError           (invalid input, has .field?)
+├── CredentialsError          (both — AWS credential chain produced nothing, has .cause?)
+├── SESError / SMSError       (AWS API error, has .code, .requestId, .retryable)
+│   └── SandboxError          (email only, extends SESError — identity not verified in
+│                              the region used, has .region?)
+├── DynamoDBError             (email only — email events, has .code, .requestId, .retryable)
+├── ConfigurationError        (SMS only — no region resolvable, has .cause?)
+├── SendingRestrictionError   (SMS only — account-level block, has .restriction)
+├── OptedOutError             (SMS only, has .phoneNumber)
+└── RateLimitError            (SMS only, has .retryAfter?)
 ```
 
 Always set `this.name` in error constructors. Always include `retryable` boolean on AWS errors.
+
+Every error a package throws must extend its base class — a single
+`catch (e) { if (e instanceof WrapsEmailError) }` has to cover all of them. AWS's own
+`CredentialsProviderError` does not, which is why it gets wrapped rather than passed through.
+
+`sendBatch()` reports per-entry send failures in its result rather than throwing, so there is
+no `BatchError`. A credential failure is not a send failure — nothing was attempted — so that
+one throws.
 
 ### 3. AWS SDK Is External — Never Bundle It
 
@@ -217,7 +235,7 @@ Users check before using: `if (email.inbox) { ... }`
 Export types alongside implementations from `index.ts`:
 ```typescript
 export { WrapsEmail };
-export { SESError, ValidationError, BatchError, WrapsEmailError };
+export { CredentialsError, SandboxError, SESError, ValidationError, WrapsEmailError };
 export type { SendEmailParams, SendEmailResult, Attachment, /* ... */ };
 export { calculateSegments, validatePhoneNumber }; // Utility exports for SMS
 ```
