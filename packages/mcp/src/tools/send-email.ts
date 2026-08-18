@@ -231,7 +231,17 @@ export function registerSendEmail(server: McpServer, config: MCPConfig): void {
         };
       }
 
-      if (!input.html && !input.text) {
+      // `SendEmailParams` requires a definite body, and two independent optional
+      // fields cannot narrow each other. Build it once so the type carries the
+      // invariant the guard below enforces.
+      const body: { html: string; text?: string } | { text: string } | undefined =
+        input.html !== undefined
+          ? { html: input.html, ...(input.text !== undefined ? { text: input.text } : {}) }
+          : input.text !== undefined
+            ? { text: input.text }
+            : undefined;
+
+      if (!body) {
         return {
           isError: true,
           content: [{ type: 'text' as const, text: 'Either `html` or `text` body is required.' }],
@@ -247,8 +257,7 @@ export function registerSendEmail(server: McpServer, config: MCPConfig): void {
           to: input.to,
           from,
           subject: input.subject,
-          html: input.html,
-          text: input.text,
+          ...body,
           configurationSetName: config.configurationSetName,
         });
 
