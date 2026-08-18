@@ -1,0 +1,23 @@
+// Replaced at build time with the literal `version` from package.json — by
+// tsup's `define` for the published bundles, and by vitest's for tests. Reading
+// it from the manifest rather than hardcoding keeps the user-agent from drifting
+// away from what is actually published.
+declare const __WRAPS_SMS_VERSION__: string;
+
+/**
+ * The package version. The fallback covers running the TypeScript sources
+ * directly, where the identifier stays free. A missing version must not crash
+ * a send.
+ */
+export const VERSION: string =
+  typeof __WRAPS_SMS_VERSION__ === 'string' ? __WRAPS_SMS_VERSION__ : '0.0.0-dev';
+
+/**
+ * `customUserAgent` for every AWS client this SDK creates, so Wraps-originated
+ * SMS traffic is identifiable in the customer's own account (CloudTrail,
+ * support cases, and telling Wraps sends apart from other AWS End User
+ * Messaging traffic).
+ *
+ * Identification only — this SDK sends no telemetry anywhere.
+ */
+export const USER_AGENT = `wraps-sms/${VERSION}`;

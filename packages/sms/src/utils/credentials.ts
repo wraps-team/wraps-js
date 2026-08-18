@@ -4,6 +4,8 @@ import {
 } from '@aws-sdk/client-pinpoint-sms-voice-v2';
 import { fromTokenFile } from '@aws-sdk/credential-providers';
 import type { WrapsSMSConfig } from '../types';
+import { USER_AGENT } from '../version';
+import { resolveRegion } from './region';
 
 /**
  * Create a configured Pinpoint SMS Voice V2 client based on the provided config
@@ -16,8 +18,18 @@ export function createSMSClient(config: WrapsSMSConfig): PinpointSMSVoiceV2Clien
 
   // Priority 2+: Create client based on config options
   const clientConfig: PinpointSMSVoiceV2ClientConfig = {
-    region: config.region || 'us-east-1',
+    // Tags this account's traffic as Wraps-originated in CloudTrail and in
+    // AWS's own logs. Identification only — no telemetry is sent anywhere.
+    customUserAgent: USER_AGENT,
   };
+
+  // Only pin a region when one was actually supplied. Setting `region` is what
+  // disables the AWS SDK's own resolution chain, so leaving it off is how a
+  // profile-configured or instance-metadata region gets honoured at all.
+  const region = resolveRegion(config.region);
+  if (region) {
+    clientConfig.region = region;
+  }
 
   // Resolve roleArn from config or AWS_ROLE_ARN environment variable
   const roleArn = config.roleArn || process.env.AWS_ROLE_ARN;

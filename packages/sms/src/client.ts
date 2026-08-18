@@ -6,7 +6,6 @@ import {
   PutOptedOutNumberCommand,
   SendTextMessageCommand,
 } from '@aws-sdk/client-pinpoint-sms-voice-v2';
-import { OptedOutError, RateLimitError, SMSError } from './errors';
 import type {
   BatchMessageResult,
   BatchOptions,
@@ -17,6 +16,7 @@ import type {
   SendResult,
   WrapsSMSConfig,
 } from './types';
+import { mapAwsSMSError } from './utils/aws-errors';
 import { createSMSClient } from './utils/credentials';
 import { calculateSegments, validateBatchOptions, validateSendOptions } from './utils/validation';
 
@@ -79,6 +79,14 @@ export class WrapsSMS {
    *
    * @param options - Send options including recipient, message, and optional settings
    * @returns Promise resolving to send result with message ID and status
+   * @throws {ValidationError} If the recipient, message, or any option is invalid
+   * @throws {CredentialsError} If AWS credentials could not be resolved
+   * @throws {ConfigurationError} If no AWS region could be resolved
+   * @throws {SendingRestrictionError} If the account is in the AWS End User
+   *   Messaging SMS sandbox, has no origination identity, or hit a spend limit
+   * @throws {OptedOutError} If the recipient has opted out
+   * @throws {RateLimitError} If AWS throttled the request
+   * @throws {SMSError} If the AWS API call fails for any other reason
    *
    * @example
    * ```typescript
@@ -133,7 +141,7 @@ export class WrapsSMS {
         segments: calculateSegments(options.message),
       };
     } catch (error) {
-      throw this.handleSMSError(error);
+      throw this.handleSMSError(error, { destination: options.to });
     }
   }
 
@@ -142,6 +150,8 @@ export class WrapsSMS {
    *
    * @param options - Batch options including array of messages
    * @returns Promise resolving to batch result with individual message statuses
+   * @throws {ValidationError} If the batch or any message in it is invalid.
+   *   Per-message send failures are reported in `results`, not thrown.
    *
    * @example
    * ```typescript
@@ -337,41 +347,8 @@ export class WrapsSMS {
   /**
    * Handle AWS SDK errors and convert to WrapsSMS errors
    */
-  private handleSMSError(error: unknown): Error {
-    const err = error as {
-      $metadata?: { requestId?: string };
-      $retryable?: { throttling?: boolean };
-      message?: string;
-      name?: string;
-    };
-
-    // Check for opt-out error
-    if (err.name === 'ConflictException' && err.message?.includes('opted out')) {
-      // Extract phone number from error message if possible
-      const phoneMatch = err.message.match(/\+\d+/);
-      if (phoneMatch) {
-        return new OptedOutError(phoneMatch[0]);
-      }
-    }
-
-    // Detect throttling / rate limit errors
-    if (err.name === 'ThrottlingException' || err.$retryable?.throttling) {
-      return new RateLimitError(err.message || 'Rate limit exceeded');
-    }
-
-    if (err.$metadata) {
-      // AWS SDK error
-      return new SMSError(
-        err.message || 'SMS request failed',
-        err.name || 'Unknown',
-        err.$metadata.requestId || 'unknown',
-        err.$retryable?.throttling || false
-      );
-    }
-
-    return error instanceof Error
-      ? error
-      : new SMSError(String(error), 'Unknown', 'unknown', false);
+  private handleSMSError(error: unknown, context: { destination?: string } = {}): Error {
+    return mapAwsSMSError(error, context);
   }
 
   /**

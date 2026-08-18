@@ -21,8 +21,15 @@ export interface WrapsSMSConfig {
   client?: PinpointSMSVoiceV2Client;
 
   /**
-   * AWS region (defaults to us-east-1)
-   * Ignored if `client` is provided
+   * AWS region.
+   *
+   * Omit it and the SDK resolves one the way every other AWS tool does:
+   * `AWS_REGION`, then `AWS_DEFAULT_REGION`, then the `region` key of the
+   * active profile in ~/.aws/config, then instance metadata. There is no
+   * hardcoded default — if nothing in that chain supplies a region, the first
+   * call throws a {@link ConfigurationError} naming every way to set one.
+   *
+   * Ignored if `client` is provided.
    */
   region?: string;
 
@@ -268,63 +275,6 @@ export interface BatchResult {
 }
 
 /**
- * Options for sending MMS with media
- */
-export interface MediaOptions extends SendOptions {
-  /**
-   * URLs to media files (images, videos, etc.)
-   * Must be publicly accessible HTTPS URLs
-   */
-  mediaUrls: string[];
-}
-
-/**
- * Options for scheduling a message
- */
-export interface ScheduleOptions extends SendOptions {
-  /**
-   * When to send the message (ISO 8601 format or Date object)
-   */
-  sendAt: Date | string;
-
-  /**
-   * IANA timezone (e.g., 'America/Los_Angeles')
-   * Used to interpret sendAt if it's a local time
-   */
-  timezone?: string;
-}
-
-/**
- * A scheduled message
- */
-export interface ScheduledMessage {
-  /**
-   * Unique message identifier
-   */
-  messageId: string;
-
-  /**
-   * When the message is scheduled to send (ISO 8601)
-   */
-  scheduledFor: string;
-
-  /**
-   * Current status of the scheduled message
-   */
-  status: 'SCHEDULED' | 'SENT' | 'CANCELLED';
-
-  /**
-   * Recipient phone number
-   */
-  to: string;
-
-  /**
-   * Message body
-   */
-  message: string;
-}
-
-/**
  * Phone number information
  */
 export interface PhoneNumber {
@@ -382,109 +332,6 @@ export interface OptOutEntry {
    * When the opt-out was recorded
    */
   optedOutAt: string;
-}
-
-/**
- * Options for listing inbox messages
- */
-export interface InboxListOptions {
-  /**
-   * Only return messages received after this date
-   */
-  since?: Date;
-
-  /**
-   * Maximum number of messages to return
-   */
-  limit?: number;
-
-  /**
-   * Filter by sender phone number
-   */
-  from?: string;
-}
-
-/**
- * An incoming SMS message
- */
-export interface IncomingMessage {
-  /**
-   * Unique message identifier
-   */
-  messageId: string;
-
-  /**
-   * Sender's phone number
-   */
-  from: string;
-
-  /**
-   * Your phone number that received the message
-   */
-  to: string;
-
-  /**
-   * Message body
-   */
-  message: string;
-
-  /**
-   * When the message was received (ISO 8601)
-   */
-  receivedAt: string;
-
-  /**
-   * Whether a reply has been sent
-   */
-  replied?: boolean;
-}
-
-/**
- * Message status details (for getStatus)
- */
-export interface MessageStatusDetails {
-  /**
-   * Message ID
-   */
-  messageId: string;
-
-  /**
-   * Current delivery status
-   */
-  status: MessageStatus;
-
-  /**
-   * Recipient phone number
-   */
-  to: string;
-
-  /**
-   * Sender phone number
-   */
-  from: string;
-
-  /**
-   * Number of segments
-   */
-  segments: number;
-
-  /**
-   * When the message was sent
-   */
-  sentAt?: string;
-
-  /**
-   * When the message was delivered
-   */
-  deliveredAt?: string;
-
-  /**
-   * Error details (if failed)
-   */
-  error?: {
-    code: string;
-    message: string;
-  };
 }
 
 /**

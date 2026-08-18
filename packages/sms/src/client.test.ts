@@ -43,7 +43,12 @@ vi.mock('@aws-sdk/client-pinpoint-sms-voice-v2', () => ({
 
 // Import after mocking
 import { WrapsSMS } from './client';
-import { RateLimitError, ValidationError } from './errors';
+import {
+  CredentialsError,
+  RateLimitError,
+  SendingRestrictionError,
+  ValidationError,
+} from './errors';
 import { calculateSegments, validatePhoneNumber } from './utils/validation';
 
 describe('WrapsSMS', () => {
@@ -182,6 +187,45 @@ describe('WrapsSMS', () => {
           message: 'Hello',
         })
       ).rejects.toThrow(RateLimitError);
+    });
+  });
+
+  describe('send() error mapping', () => {
+    it('surfaces the sandbox restriction as a typed error naming the recipient', async () => {
+      const awsError = Object.assign(new Error('Conflict'), {
+        name: 'ConflictException',
+        Reason: 'DESTINATION_PHONE_NUMBER_NOT_VERIFIED',
+        $metadata: { requestId: 'req-1' },
+      });
+      mockSend.mockRejectedValueOnce(awsError);
+
+      await expect(sms.send({ to: '+14155551234', message: 'Hello!' })).rejects.toBeInstanceOf(
+        SendingRestrictionError
+      );
+    });
+
+    it('passes the destination through so the message can name it', async () => {
+      const awsError = Object.assign(new Error('Conflict'), {
+        name: 'ConflictException',
+        Reason: 'DESTINATION_PHONE_NUMBER_NOT_VERIFIED',
+        $metadata: { requestId: 'req-1' },
+      });
+      mockSend.mockRejectedValueOnce(awsError);
+
+      await expect(sms.send({ to: '+14155551234', message: 'Hello!' })).rejects.toThrow(
+        /\+14155551234/
+      );
+    });
+
+    it('wraps a credential-chain failure instead of leaking raw AWS text', async () => {
+      const awsError = Object.assign(new Error('Could not load credentials from any providers'), {
+        name: 'CredentialsProviderError',
+      });
+      mockSend.mockRejectedValueOnce(awsError);
+
+      await expect(sms.send({ to: '+14155551234', message: 'Hello!' })).rejects.toBeInstanceOf(
+        CredentialsError
+      );
     });
   });
 
