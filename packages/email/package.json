@@ -1,6 +1,6 @@
 {
   "name": "@wraps.dev/email",
-  "version": "0.12.2",
+  "version": "0.12.3",
   "description": "Send email via AWS SES with TypeScript. Bounce and complaint handling, suppression lists, delivery and open tracking, templates, batch sending, inbound email, attachments, and React Email support. Your AWS account, no vendor lock-in.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
