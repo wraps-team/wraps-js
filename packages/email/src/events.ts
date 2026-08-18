@@ -23,6 +23,25 @@ const STATUS_PRIORITY: Record<string, number> = {
   bounced: 9,
 };
 
+/** Rough events-per-message ratio, used to size the GSI scan against a message limit. */
+const EVENTS_PER_MESSAGE_ESTIMATE = 4;
+
+/** Ceiling on GSI pages read per list() call, so a sparse account cannot scan forever. */
+const MAX_SCAN_PAGES = 10;
+
+/** Base table keys plus GSI keys — everything DynamoDB needs to resume a query. */
+const KEY_ATTRIBUTES = ['messageId', 'sentAt', 'accountId'] as const;
+
+function keyOf(item: Record<string, unknown>): Record<string, unknown> {
+  const key: Record<string, unknown> = {};
+  for (const attribute of KEY_ATTRIBUTES) {
+    if (item[attribute] !== undefined) {
+      key[attribute] = item[attribute];
+    }
+  }
+  return key;
+}
+
 function deriveStatus(events: EmailEvent[]): EmailStatus['status'] {
   let highest: EmailStatus['status'] = 'sent';
   let highestPriority = STATUS_PRIORITY.sent;
@@ -56,22 +75,7 @@ export class WrapsEmailEvents {
     }
 
     try {
-      const response = await this.client.send(
-        new QueryCommand({
-          TableName: this.tableName,
-          KeyConditionExpression: 'messageId = :mid',
-          ExpressionAttributeValues: {
-            ':mid': messageId,
-          },
-          ScanIndexForward: true,
-        })
-      );
-
-      if (!response.Items || response.Items.length === 0) {
-        return null;
-      }
-
-      return this.aggregateStatus(response.Items);
+      return await this.fetchMessage(messageId);
     } catch (error) {
       throw this.handleDynamoDBError(error);
     }
@@ -80,6 +84,12 @@ export class WrapsEmailEvents {
   /**
    * List emails with events, queried via the accountId-sentAt GSI
    * Requires accountId for efficient querying
+   *
+   * `maxResults` bounds *messages*, not events. The GSI stores one row per
+   * event, so a single DynamoDB page holds a mix of partial event sets; this
+   * pages until enough distinct messages are found, then re-reads each message's
+   * full event set from the base table. Without that second read `sentAt` would
+   * be whichever event happened to fall inside the scan window.
    */
   async list(options: EmailListOptions): Promise<EmailListResult> {
     if (!options.accountId) {
@@ -116,40 +126,63 @@ export class WrapsEmailEvents {
       }
     }
 
+    // Events per message vary (send, delivery, opens, clicks...), so scan wider
+    // than the message limit and page when a scan still comes up short.
+    const scanSize = Math.min(Math.max(limit * EVENTS_PER_MESSAGE_ESTIMATE, 40), 500);
+
     try {
-      const response = await this.client.send(
-        new QueryCommand({
-          TableName: this.tableName,
-          IndexName: 'accountId-sentAt-index',
-          KeyConditionExpression: keyCondition,
-          ExpressionAttributeValues: expressionValues,
-          ScanIndexForward: false,
-          Limit: limit,
-          ExclusiveStartKey: exclusiveStartKey,
-        })
-      );
+      const messageIds: string[] = [];
+      const seen = new Set<string>();
+      // Where the next page resumes: the first row of the first message we did
+      // not have room for, so nothing between pages is skipped or repeated.
+      let cutKey: Record<string, unknown> | undefined;
+      let pagesRead = 0;
+      let exhausted = false;
 
-      const items = response.Items || [];
+      scan: while (pagesRead < MAX_SCAN_PAGES) {
+        const response = await this.client.send(
+          new QueryCommand({
+            TableName: this.tableName,
+            IndexName: 'accountId-sentAt-index',
+            KeyConditionExpression: keyCondition,
+            ExpressionAttributeValues: expressionValues,
+            ScanIndexForward: false,
+            Limit: scanSize,
+            ExclusiveStartKey: exclusiveStartKey,
+          })
+        );
+        pagesRead++;
 
-      // Group items by messageId
-      const grouped = new Map<string, Record<string, unknown>[]>();
-      for (const item of items) {
-        const mid = item.messageId as string;
-        const group = grouped.get(mid) ?? [];
-        group.push(item);
-        grouped.set(mid, group);
+        for (const item of response.Items || []) {
+          const mid = item.messageId as string;
+          if (seen.has(mid)) {
+            continue;
+          }
+          if (messageIds.length === limit) {
+            cutKey = keyOf(item);
+            break scan;
+          }
+          seen.add(mid);
+          messageIds.push(mid);
+        }
+
+        exclusiveStartKey = response.LastEvaluatedKey;
+        if (!exclusiveStartKey) {
+          exhausted = true;
+          break;
+        }
       }
 
-      // Aggregate each group into an EmailStatus
-      const emails: EmailStatus[] = [];
-      for (const groupItems of grouped.values()) {
-        emails.push(this.aggregateStatus(groupItems));
-      }
+      // Re-read each message whole. The scan only proves a message exists; its
+      // event set is almost always split across the window boundary.
+      const hydrated = await Promise.all(messageIds.map((mid) => this.fetchMessage(mid)));
+      const emails = hydrated.filter((email): email is EmailStatus => email !== null);
+      emails.sort((a, b) => b.sentAt - a.sentAt);
 
-      let nextToken: string | undefined;
-      if (response.LastEvaluatedKey) {
-        nextToken = Buffer.from(JSON.stringify(response.LastEvaluatedKey)).toString('base64');
-      }
+      const resumeKey = cutKey ?? (exhausted ? undefined : exclusiveStartKey);
+      const nextToken = resumeKey
+        ? Buffer.from(JSON.stringify(resumeKey)).toString('base64')
+        : undefined;
 
       return { emails, nextToken };
     } catch (error) {
@@ -157,10 +190,30 @@ export class WrapsEmailEvents {
     }
   }
 
-  private aggregateStatus(items: Record<string, unknown>[]): EmailStatus {
-    const first = items[0];
+  /** All events for one messageId, read from the base table's partition. */
+  private async fetchMessage(messageId: string): Promise<EmailStatus | null> {
+    const response = await this.client.send(
+      new QueryCommand({
+        TableName: this.tableName,
+        KeyConditionExpression: 'messageId = :mid',
+        ExpressionAttributeValues: {
+          ':mid': messageId,
+        },
+        ScanIndexForward: true,
+      })
+    );
 
-    const events: EmailEvent[] = items.map((item) => {
+    if (!response.Items || response.Items.length === 0) {
+      return null;
+    }
+
+    return this.aggregateStatus(response.Items);
+  }
+
+  private aggregateStatus(items: Record<string, unknown>[]): EmailStatus {
+    const ordered = [...items].sort((a, b) => (a.sentAt as number) - (b.sentAt as number));
+
+    const events: EmailEvent[] = ordered.map((item) => {
       let metadata: Record<string, unknown> | undefined;
       if (item.additionalData) {
         try {
@@ -177,18 +230,22 @@ export class WrapsEmailEvents {
       };
     });
 
-    // Sort events chronologically
-    events.sort((a, b) => a.timestamp - b.timestamp);
+    // The send event carries the true send time and the envelope fields; opens
+    // and bounces may carry neither. Fall back to the earliest event only when
+    // the send row is genuinely absent.
+    const sendIndex = events.findIndex((event) => event.type === 'send');
+    const primaryIndex = sendIndex >= 0 ? sendIndex : 0;
+    const primary = ordered[primaryIndex];
 
-    const to = Array.isArray(first.to) ? (first.to as string[]) : [first.to as string];
+    const to = Array.isArray(primary.to) ? (primary.to as string[]) : [primary.to as string];
 
     return {
-      messageId: first.messageId as string,
-      from: first.from as string,
+      messageId: primary.messageId as string,
+      from: primary.from as string,
       to,
-      subject: (first.subject as string) || '',
+      subject: (primary.subject as string) || '',
       status: deriveStatus(events),
-      sentAt: events[0].timestamp,
+      sentAt: events[primaryIndex].timestamp,
       lastEventAt: events[events.length - 1].timestamp,
       events,
     };

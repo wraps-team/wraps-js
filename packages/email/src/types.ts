@@ -691,7 +691,7 @@ export interface EmailListOptions {
   startTime?: Date;
   /** Only events before this time */
   endTime?: Date;
-  /** Max results per page (default 50) */
+  /** Max *messages* returned per page — not events (default 50) */
   maxResults?: number;
   /** Pagination token from previous response */
   continuationToken?: string;

@@ -207,42 +207,228 @@ describe('WrapsEmailEvents', () => {
   });
 
   describe('list', () => {
-    it('should query GSI with accountId and return paginated results', async () => {
-      mockSend.mockResolvedValue({
-        Items: [
-          {
-            messageId: 'msg-1',
-            sentAt: 1700000005000,
-            accountId: '123456789012',
-            from: 'sender@example.com',
-            to: ['user1@example.com'],
-            subject: 'Email 1',
-            eventType: 'Delivery',
-            additionalData: '{}',
-          },
-          {
-            messageId: 'msg-2',
-            sentAt: 1700000003000,
-            accountId: '123456789012',
-            from: 'sender@example.com',
-            to: ['user2@example.com'],
-            subject: 'Email 2',
-            eventType: 'Send',
-            additionalData: '{}',
-          },
-        ],
-        LastEvaluatedKey: { messageId: 'msg-2', sentAt: 1700000003000 },
-        $metadata: { requestId: 'req-list-1' },
+    type Row = {
+      messageId: string;
+      sentAt: number;
+      eventType: string;
+      accountId?: string;
+      from?: string;
+      to?: string[];
+      subject?: string;
+      additionalData?: string;
+    };
+
+    /**
+     * Stands in for the real table: one row per event, a GSI paged newest-first
+     * with a hard Limit, and a base-table partition read per messageId. The
+     * defects this suite guards against only appear when the GSI window cuts a
+     * message's event set in half, so the mock has to page for real.
+     */
+    function seedTable(rows: Row[]): { gsiQueries: any[]; baseQueries: any[] } {
+      const gsiQueries: any[] = [];
+      const baseQueries: any[] = [];
+
+      mockSend.mockImplementation(async (command: any) => {
+        if (command.IndexName) {
+          gsiQueries.push(command);
+          const descending = [...rows].sort((a, b) => b.sentAt - a.sentAt);
+          let start = 0;
+          if (command.ExclusiveStartKey) {
+            start = descending.findIndex(
+              (row) =>
+                row.messageId === command.ExclusiveStartKey.messageId &&
+                row.sentAt === command.ExclusiveStartKey.sentAt
+            );
+          }
+          const page = descending.slice(start, start + command.Limit);
+          const last = descending[start + command.Limit];
+          return {
+            Items: page,
+            LastEvaluatedKey: last
+              ? { messageId: last.messageId, sentAt: last.sentAt, accountId: last.accountId }
+              : undefined,
+            $metadata: { requestId: 'req-gsi' },
+          };
+        }
+
+        baseQueries.push(command);
+        const messageId = command.ExpressionAttributeValues[':mid'];
+        return {
+          Items: rows
+            .filter((row) => row.messageId === messageId)
+            .sort((a, b) => a.sentAt - b.sentAt),
+          $metadata: { requestId: 'req-base' },
+        };
       });
 
-      const result = await events.list({ accountId: '123456789012' });
+      return { gsiQueries, baseQueries };
+    }
+
+    function messageRows(messageId: string, sendAt: number, extraEventOffsets: number[]): Row[] {
+      const base = {
+        messageId,
+        accountId: '123456789012',
+        from: 'sender@example.com',
+        to: [`${messageId}@example.com`],
+        subject: `Subject ${messageId}`,
+        additionalData: '{}',
+      };
+      return [
+        { ...base, sentAt: sendAt, eventType: 'Send' },
+        ...extraEventOffsets.map((offset) => ({
+          ...base,
+          sentAt: sendAt + offset,
+          eventType: 'Open',
+        })),
+      ];
+    }
+
+    it('bounds maxResults by messages, not by event rows', async () => {
+      // 10 messages x 3 events each. The old implementation passed maxResults
+      // straight through as the DynamoDB item Limit, so asking for 5 messages
+      // returned 5 event rows grouped into 2.
+      const rows = Array.from({ length: 10 }, (_, i) =>
+        messageRows(`msg-${i}`, 1_700_000_000_000 + i * 10_000, [1000, 2000])
+      ).flat();
+      seedTable(rows);
+
+      const result = await events.list({ accountId: '123456789012', maxResults: 5 });
+
+      expect(result.emails).toHaveLength(5);
+    });
+
+    it('returns every message when fewer exist than maxResults', async () => {
+      seedTable(
+        [
+          messageRows('msg-a', 1_700_000_000_000, [500]),
+          messageRows('msg-b', 1_700_000_010_000, [500]),
+        ].flat()
+      );
+
+      const result = await events.list({ accountId: '123456789012', maxResults: 25 });
 
       expect(result.emails).toHaveLength(2);
-      expect(result.nextToken).toBeDefined();
+      expect(result.nextToken).toBeUndefined();
+    });
 
-      // Verify base64 encoded token
-      const decoded = JSON.parse(Buffer.from(result.nextToken ?? '', 'base64').toString('utf-8'));
-      expect(decoded).toEqual({ messageId: 'msg-2', sentAt: 1700000003000 });
+    it('orders results newest send first', async () => {
+      // Deliberately interleaved: msg-old is the oldest send but has the most
+      // recent open, which is what previously floated it to the top.
+      seedTable(
+        [
+          messageRows('msg-old', 1_700_000_000_000, [900_000]),
+          messageRows('msg-mid', 1_700_000_300_000, [1000]),
+          messageRows('msg-new', 1_700_000_600_000, [1000]),
+        ].flat()
+      );
+
+      const result = await events.list({ accountId: '123456789012', maxResults: 10 });
+
+      expect(result.emails.map((email) => email.messageId)).toEqual([
+        'msg-new',
+        'msg-mid',
+        'msg-old',
+      ]);
+      const timestamps = result.emails.map((email) => email.sentAt);
+      expect([...timestamps].sort((a, b) => b - a)).toEqual(timestamps);
+    });
+
+    it('reports the same sentAt for a messageId regardless of maxResults', async () => {
+      // The regression: with a small window the send row fell outside the scan
+      // and sentAt became whichever open event landed inside it.
+      const rows = Array.from({ length: 12 }, (_, i) =>
+        messageRows(`msg-${i}`, 1_700_000_000_000 + i * 60_000, [10_000, 20_000, 30_000])
+      ).flat();
+      seedTable(rows);
+
+      const small = await events.list({ accountId: '123456789012', maxResults: 3 });
+      const large = await events.list({ accountId: '123456789012', maxResults: 12 });
+
+      const target = small.emails[0].messageId;
+      const fromSmall = small.emails.find((email) => email.messageId === target);
+      const fromLarge = large.emails.find((email) => email.messageId === target);
+
+      expect(fromLarge).toBeDefined();
+      expect(fromSmall?.sentAt).toBe(fromLarge?.sentAt);
+    });
+
+    it('derives sentAt from the send event, not the earliest scanned event', async () => {
+      seedTable(messageRows('msg-x', 1_700_000_000_000, [5000, 9000]));
+
+      const result = await events.list({ accountId: '123456789012', maxResults: 10 });
+
+      expect(result.emails[0].sentAt).toBe(1_700_000_000_000);
+      expect(result.emails[0].lastEventAt).toBe(1_700_000_009_000);
+      expect(result.emails[0].events).toHaveLength(3);
+    });
+
+    it('re-reads each message whole so events split across the scan window survive', async () => {
+      const { baseQueries } = seedTable(
+        [
+          messageRows('msg-a', 1_700_000_000_000, [1000, 2000, 3000]),
+          messageRows('msg-b', 1_700_000_500_000, [1000]),
+        ].flat()
+      );
+
+      const result = await events.list({ accountId: '123456789012', maxResults: 2 });
+
+      expect(baseQueries.map((q) => q.ExpressionAttributeValues[':mid']).sort()).toEqual([
+        'msg-a',
+        'msg-b',
+      ]);
+      expect(result.emails.find((e) => e.messageId === 'msg-a')?.events).toHaveLength(4);
+    });
+
+    it('pages the GSI when one scan does not surface enough messages', async () => {
+      // 40 messages x 6 events = 240 rows; a single scan cannot reach 20 messages.
+      const rows = Array.from({ length: 40 }, (_, i) =>
+        messageRows(`msg-${i}`, 1_700_000_000_000 + i * 10_000, [1, 2, 3, 4, 5])
+      ).flat();
+      const { gsiQueries } = seedTable(rows);
+
+      const result = await events.list({ accountId: '123456789012', maxResults: 20 });
+
+      expect(result.emails).toHaveLength(20);
+      expect(gsiQueries.length).toBeGreaterThan(1);
+    });
+
+    it('returns a continuation token that resumes without skipping or repeating', async () => {
+      const rows = Array.from({ length: 6 }, (_, i) =>
+        messageRows(`msg-${i}`, 1_700_000_000_000 + i * 10_000, [1000])
+      ).flat();
+      seedTable(rows);
+
+      const page1 = await events.list({ accountId: '123456789012', maxResults: 4 });
+      expect(page1.emails).toHaveLength(4);
+      expect(page1.nextToken).toBeDefined();
+
+      const page2 = await events.list({
+        accountId: '123456789012',
+        maxResults: 4,
+        continuationToken: page1.nextToken,
+      });
+
+      const seen = [...page1.emails, ...page2.emails].map((email) => email.messageId);
+      expect(new Set(seen).size).toBe(6);
+      expect(page2.nextToken).toBeUndefined();
+    });
+
+    it('omits nextToken when the source is exhausted', async () => {
+      seedTable(messageRows('msg-only', 1_700_000_000_000, [1000]));
+
+      const result = await events.list({ accountId: '123456789012', maxResults: 50 });
+
+      expect(result.nextToken).toBeUndefined();
+    });
+
+    it('should query the accountId-sentAt GSI newest-first', async () => {
+      const { gsiQueries } = seedTable(messageRows('msg-a', 1_700_000_000_000, []));
+
+      await events.list({ accountId: '123456789012' });
+
+      expect(gsiQueries[0].IndexName).toBe('accountId-sentAt-index');
+      expect(gsiQueries[0].ScanIndexForward).toBe(false);
+      expect(gsiQueries[0].ExpressionAttributeValues[':aid']).toBe('123456789012');
     });
 
     it('should handle continuationToken (base64 decode)', async () => {
@@ -319,41 +505,18 @@ describe('WrapsEmailEvents', () => {
     });
 
     it('should group items by messageId correctly', async () => {
-      mockSend.mockResolvedValue({
-        Items: [
-          {
-            messageId: 'msg-a',
-            sentAt: 1700000005000,
-            accountId: '123456789012',
-            from: 'sender@example.com',
-            to: ['user1@example.com'],
-            subject: 'Email A',
-            eventType: 'Delivery',
-            additionalData: '{}',
-          },
-          {
-            messageId: 'msg-a',
-            sentAt: 1700000003000,
-            accountId: '123456789012',
-            from: 'sender@example.com',
-            to: ['user1@example.com'],
-            subject: 'Email A',
-            eventType: 'Send',
-            additionalData: '{}',
-          },
-          {
-            messageId: 'msg-b',
-            sentAt: 1700000004000,
-            accountId: '123456789012',
-            from: 'sender@example.com',
-            to: ['user2@example.com'],
-            subject: 'Email B',
-            eventType: 'Send',
-            additionalData: '{}',
-          },
-        ],
-        $metadata: { requestId: 'req-list-6' },
-      });
+      seedTable(
+        [
+          messageRows('msg-a', 1_700_000_003_000, [2000]),
+          messageRows('msg-b', 1_700_000_004_000, []),
+        ]
+          .flat()
+          .map((row) =>
+            row.messageId === 'msg-a' && row.eventType === 'Open'
+              ? { ...row, eventType: 'Delivery' }
+              : row
+          )
+      );
 
       const result = await events.list({ accountId: '123456789012' });
 
