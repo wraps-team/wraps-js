@@ -14,6 +14,8 @@ import { registerVerifyDomainStatus } from '../tools/verify-domain-status.ts';
 
 const {
   mockStsSend,
+  mockStsRegion,
+  mockStsDestroy,
   mockEmailSend,
   mockEmailDestroy,
   mockEventsList,
@@ -24,6 +26,8 @@ const {
   mockEmailEventsNull,
 } = vi.hoisted(() => ({
   mockStsSend: vi.fn(),
+  mockStsRegion: vi.fn(),
+  mockStsDestroy: vi.fn(),
   mockEmailSend: vi.fn(),
   mockEmailDestroy: vi.fn(),
   mockEventsList: vi.fn(),
@@ -37,6 +41,11 @@ const {
 vi.mock('@aws-sdk/client-sts', () => ({
   STSClient: class MockSTSClient {
     send = mockStsSend;
+    // The real client resolves region lazily through the SDK's provider chain
+    // (env, then the active profile in ~/.aws/config). loadConfig() reads it
+    // and always destroys the probe, so the mock must offer both.
+    config = { region: mockStsRegion };
+    destroy = mockStsDestroy;
   },
   GetCallerIdentityCommand: class MockGetCallerIdentityCommand {},
 }));
@@ -82,6 +91,12 @@ describe('loadConfig()', () => {
     delete process.env.WRAPS_AGENT_ENFORCER_ARN;
     vi.clearAllMocks();
     mockStsSend.mockReset();
+    mockStsDestroy.mockReset();
+    // Default: nothing in the SDK chain supplies a region, matching a machine
+    // with no AWS_REGION and no profile. Tests that exercise the fallback
+    // override this.
+    mockStsRegion.mockReset();
+    mockStsRegion.mockRejectedValue(new Error('Region is missing'));
     resetAccountIdCache();
   });
 
@@ -89,9 +104,35 @@ describe('loadConfig()', () => {
     process.env = originalEnv;
   });
 
-  it('throws ConfigError when neither AWS_REGION nor AWS_DEFAULT_REGION is set', async () => {
+  it('throws ConfigError when no env var, profile, or SDK default supplies a region', async () => {
     await expect(loadConfig()).rejects.toThrow(ConfigError);
     await expect(loadConfig()).rejects.toThrow(/region/i);
+  });
+
+  it('names every way to supply a region without ranking them', async () => {
+    const error = await loadConfig().catch((err: Error) => err);
+    const message = (error as Error).message;
+    expect(message).toContain('AWS_REGION');
+    expect(message).toContain('AWS_DEFAULT_REGION');
+    expect(message).toContain('AWS_PROFILE');
+    expect(message).toContain('MCP');
+  });
+
+  it('falls back to the active AWS profile region when no env var is set', async () => {
+    mockStsRegion.mockResolvedValue('eu-west-2');
+    process.env.WRAPS_ACCOUNT_ID = '123456789012';
+    const config = await loadConfig();
+    expect(config.region).toBe('eu-west-2');
+    expect(mockStsDestroy).toHaveBeenCalled();
+  });
+
+  it('prefers AWS_REGION over the profile region without probing the SDK', async () => {
+    mockStsRegion.mockResolvedValue('eu-west-2');
+    process.env.AWS_REGION = 'us-east-1';
+    process.env.WRAPS_ACCOUNT_ID = '123456789012';
+    const config = await loadConfig();
+    expect(config.region).toBe('us-east-1');
+    expect(mockStsRegion).not.toHaveBeenCalled();
   });
 
   it('returns full config with default historyTableName when WRAPS_HISTORY_TABLE_NAME not set', async () => {
@@ -424,7 +465,7 @@ describe('list_recent_sends tool', () => {
     await cleanup();
     expect(result.isError).toBeUndefined();
     expect(getText(result)).toBe(
-      '[delivered] Welcome → user@example.com at 2023-11-14T22:13:20.000Z (id: abc-123)'
+      '[delivered] Welcome → user@example.com at 2023-11-14T22:13:20.000Z (id: abc-123)\n\nShowing all 1 matching sends.'
     );
   });
 

@@ -19,11 +19,48 @@ export interface MCPConfig {
 
 let cachedAccountId: string | undefined;
 
-export async function loadConfig(): Promise<MCPConfig> {
-  const region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION;
-  if (!region) {
-    throw new ConfigError('AWS region is required. Set AWS_REGION or AWS_DEFAULT_REGION.');
+const REGION_NOT_FOUND = `Wraps couldn't resolve an AWS region. Any of these work:
+
+MCP server config:
+  add "env": { "AWS_REGION": "us-east-1" } to the wraps entry in your MCP config file
+
+Environment variables:
+  export AWS_REGION=us-east-1
+  export AWS_DEFAULT_REGION=us-east-1
+
+AWS profile (~/.aws/config):
+  aws configure set region us-east-1
+  export AWS_PROFILE=<profile-name>`;
+
+/**
+ * Resolve the region the way every other AWS tool does: environment first, then
+ * the `region` key of the active profile in ~/.aws/config. The SDK's own client
+ * config runs that chain, so a user with only AWS_PROFILE set is not blocked.
+ */
+async function resolveRegion(): Promise<string> {
+  const fromEnv = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION;
+  if (fromEnv) {
+    return fromEnv;
   }
+
+  const probe = new STSClient({});
+  try {
+    const resolved = await probe.config.region();
+    if (resolved) {
+      return resolved;
+    }
+  } catch {
+    // The SDK resolver throws when nothing in the chain supplies a region.
+    // Fall through to the ConfigError below, which is the actionable message.
+  } finally {
+    probe.destroy();
+  }
+
+  throw new ConfigError(REGION_NOT_FOUND);
+}
+
+export async function loadConfig(): Promise<MCPConfig> {
+  const region = await resolveRegion();
 
   const historyTableName = process.env.WRAPS_HISTORY_TABLE_NAME || 'wraps-email-history';
   const writeEnabled = process.env.WRAPS_WRITE_ENABLED === 'true';
