@@ -2488,6 +2488,8 @@ export interface operations {
                          * @description Creation timestamp
                          */
                         createdAt: string;
+                        /** @description Set when the broadcast was accepted but something about it needs saying — e.g. it was marked scheduled in an environment with no scheduler configured, so it will never fire. */
+                        warning?: string;
                     };
                     "multipart/form-data": {
                         /** @description Batch ID */
@@ -2503,6 +2505,8 @@ export interface operations {
                          * @description Creation timestamp
                          */
                         createdAt: string;
+                        /** @description Set when the broadcast was accepted but something about it needs saying — e.g. it was marked scheduled in an environment with no scheduler configured, so it will never fire. */
+                        warning?: string;
                     };
                     "text/plain": {
                         /** @description Batch ID */
@@ -2518,6 +2522,8 @@ export interface operations {
                          * @description Creation timestamp
                          */
                         createdAt: string;
+                        /** @description Set when the broadcast was accepted but something about it needs saying — e.g. it was marked scheduled in an environment with no scheduler configured, so it will never fire. */
+                        warning?: string;
                     };
                 };
             };
@@ -2738,14 +2744,17 @@ export interface operations {
                     "application/json": {
                         id: string;
                         status: string;
+                        warning?: string;
                     };
                     "multipart/form-data": {
                         id: string;
                         status: string;
+                        warning?: string;
                     };
                     "text/plain": {
                         id: string;
                         status: string;
+                        warning?: string;
                     };
                 };
             };
