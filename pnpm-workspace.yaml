@@ -1,2 +1,30 @@
 packages:
   - 'packages/*'
+
+# pnpm 10+ reads settings from here, NOT the `pnpm` field in package.json --
+# a pnpm 9 install silently ignores this file and drops floors below their
+# minimums, so `packageManager` must stay pinned to 10.x or later.
+# Most of these are CVE floors; check the advisory before loosening one.
+overrides:
+  'fast-xml-parser': '^5.7.0'
+  'vite': '^7.3.6'
+  'rollup': '^4.59.0'
+  'brace-expansion': '>=2.1.4'
+  'picomatch': '^4.0.4'
+  'minimatch': '^5.1.8'
+  'fast-uri': '>=4.1.2'
+  'vitest': '>=4.1.0'
+  'postcss': '>=8.5.23'
+  'esbuild': '^0.28.1'
+  'js-yaml': '>=4.3.1 <5'
+  'hono': '>=4.12.34'
+  '@hono/node-server': '>=2.0.5'
+  'body-parser': '>=2.3.0'
+  'ip-address': '>=10.3.1'
+  'nanoid': '>=3.3.18'
+
+# pnpm 10 blocks dependency lifecycle scripts by default. esbuild currently
+# falls back to its optional platform package, but allowing the postinstall
+# keeps behaviour identical to pnpm 9 and silences the install warning.
+onlyBuiltDependencies:
+  - esbuild
