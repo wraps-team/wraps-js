@@ -15,7 +15,7 @@ overrides:
   vitest: '>=4.1.0'
   postcss: '>=8.5.23'
   esbuild: ^0.28.1
-  js-yaml: '>=4.3.1'
+  js-yaml: '>=4.3.1 <5'
   hono: '>=4.12.34'
   '@hono/node-server': '>=2.0.5'
   body-parser: '>=2.3.0'
@@ -2085,8 +2085,8 @@ packages:
   js-tokens@9.0.1:
     resolution: {integrity: sha512-mxa9E9ITFOt0ban3j6L5MpjwegGz6lBQmM1IJkWeBZGcMxto50+eWdjC/52xDbS2vy0k7vIMK0Fe2wfL9OQSpQ==}
 
-  js-yaml@5.3.0:
-    resolution: {integrity: sha512-muutsYr+e2+d3rTgUGslq5rxbBlUy3cJ61IsHag2QNDQV+7zXWjkUpmALIajhrlLlrgRUiymj6U3zUr/TMK84Q==}
+  js-yaml@4.3.1:
+    resolution: {integrity: sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ==}
     hasBin: true
 
   json-schema-traverse@1.0.0:
@@ -4724,7 +4724,7 @@ snapshots:
       colorette: 1.4.0
       https-proxy-agent: 7.0.6(supports-color@10.2.2)
       js-levenshtein: 1.1.6
-      js-yaml: 5.3.0
+      js-yaml: 4.3.1
       minimatch: 5.1.9
       pluralize: 8.0.0
       yaml-ast-parser: 0.0.43
@@ -5695,7 +5695,7 @@ snapshots:
 
   js-tokens@9.0.1: {}
 
-  js-yaml@5.3.0:
+  js-yaml@4.3.1:
     dependencies:
       argparse: 2.0.1
 
