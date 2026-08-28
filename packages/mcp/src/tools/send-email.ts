@@ -20,6 +20,23 @@ const EnforcedSendEmailInputSchema = {
     .describe(
       'Recipient email address. Enforced (agent) mode supports a single recipient per send — pass one address as a string, or a one-element array. Arrays with more than one recipient are rejected; send one email per recipient.'
     ),
+  replyTo: z
+    .string()
+    .email()
+    .optional()
+    .describe(
+      'Where a human reply should land. Use this when a person, not the agent, should receive replies.'
+    ),
+  inReplyTo: z
+    .string()
+    .optional()
+    .describe(
+      "Message-ID of the message being replied to, e.g. <abc@mail.example.com>. Threads the reply in the recipient's client."
+    ),
+  references: z
+    .string()
+    .optional()
+    .describe('Space-separated Message-ID chain of the conversation so far.'),
 };
 
 export const EnforcerResultSchema = {
@@ -65,7 +82,7 @@ function registerEnforcedSendEmail(server: McpServer, config: MCPConfig): void {
     'send_email',
     {
       description:
-        'Send a transactional email through your Wraps agent enforcer. The send is checked against your agent policy (kill-switch, recipient allowlist, rate caps) before delivery. Exactly one recipient per send is supported. The result disposition is one of: sent, pending_approval (an operator must approve — poll check_send_status with the returned approvalId), or blocked.',
+        'Send a transactional email through your Wraps agent enforcer. The send is checked against your agent policy (kill-switch, recipient allowlist, rate caps) before delivery. Exactly one recipient per send is supported. The result disposition is one of: sent, pending_approval (an operator must approve — poll check_send_status with the returned approvalId), or blocked. Set `replyTo` to route human replies to a person instead of the agent, and `inReplyTo`/`references` to thread a follow-up.',
       inputSchema: EnforcedSendEmailInputSchema,
       outputSchema: EnforcerResultSchema,
       // send_email is the only tool here with a real-world side effect, and email
@@ -101,6 +118,9 @@ function registerEnforcedSendEmail(server: McpServer, config: MCPConfig): void {
         subject: input.subject,
         html: input.html ?? '',
         text: input.text ?? '',
+        ...(input.replyTo ? { replyTo: input.replyTo } : {}),
+        ...(input.inReplyTo ? { inReplyTo: input.inReplyTo } : {}),
+        ...(input.references ? { references: input.references } : {}),
       };
 
       const result = await invokeEnforcerForTool(config, { action: 'send', payload });

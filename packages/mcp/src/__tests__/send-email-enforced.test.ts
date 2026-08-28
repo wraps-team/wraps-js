@@ -210,6 +210,58 @@ describe('send_email enforced mode', () => {
     expect(result.isError).toBeFalsy();
   });
 
+  it('forwards replyTo, inReplyTo, and references to the enforcer payload', async () => {
+    mockLambdaSend.mockResolvedValueOnce({
+      Payload: encodeResponse({ status: 'pending_approval', approvalId: 'appr-10' }),
+    });
+    const { client, cleanup } = await createTestClient(registerSendEmail);
+    const result = await client.callTool({
+      name: 'send_email',
+      arguments: {
+        to: 'user@example.com',
+        subject: 'Hello',
+        html: '<p>Hi</p>',
+        replyTo: 'human@example.com',
+        inReplyTo: '<abc@mail.example.com>',
+        references: '<abc@mail.example.com> <def@mail.example.com>',
+      },
+    });
+    await cleanup();
+
+    expect(mockLambdaSend).toHaveBeenCalledOnce();
+    const sent = lambdaPayload(capturedInvokeCommands[0]);
+    expect(sent).toEqual(
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          replyTo: 'human@example.com',
+          inReplyTo: '<abc@mail.example.com>',
+          references: '<abc@mail.example.com> <def@mail.example.com>',
+        }),
+      })
+    );
+    expect(result.isError).toBeFalsy();
+  });
+
+  it('omits replyTo, inReplyTo, and references from the payload when not supplied', async () => {
+    mockLambdaSend.mockResolvedValueOnce({
+      Payload: encodeResponse({ status: 'pending_approval', approvalId: 'appr-11' }),
+    });
+    const { client, cleanup } = await createTestClient(registerSendEmail);
+    const result = await client.callTool({
+      name: 'send_email',
+      arguments: { to: 'user@example.com', subject: 'Hello', html: '<p>Hi</p>' },
+    });
+    await cleanup();
+
+    expect(mockLambdaSend).toHaveBeenCalledOnce();
+    const sent = lambdaPayload(capturedInvokeCommands[0]);
+    const payload = sent.payload as Record<string, unknown>;
+    expect(payload).not.toHaveProperty('replyTo');
+    expect(payload).not.toHaveProperty('inReplyTo');
+    expect(payload).not.toHaveProperty('references');
+    expect(result.isError).toBeFalsy();
+  });
+
   it('rejects a multi-recipient array with isError and never invokes the Lambda', async () => {
     const { client, cleanup } = await createTestClient(registerSendEmail);
     const result = await client.callTool({
