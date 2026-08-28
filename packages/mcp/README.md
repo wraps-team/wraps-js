@@ -126,6 +126,26 @@ Only transport or configuration failures are returned as errors. The `check_send
 
 Enforced mode supports **a single recipient per send**. Pass one address as a string, or a one-element array; a `to` array with more than one recipient is rejected as an error (send one email per recipient). Note that `WRAPS_ALLOWED_RECIPIENTS`, `WRAPS_ALLOWED_RECIPIENT_DOMAINS`, `WRAPS_MAX_RECIPIENTS`, and `WRAPS_ALLOW_FROM_OVERRIDE` do not apply in enforced mode — recipient and sender policy is enforced entirely by the Lambda.
 
+### Replies and threading
+
+Enforced-mode `send_email` accepts three optional fields for conversational sends —
+an SDR sequence, a scheduling follow-up, anything where a human replies:
+
+| Field | Purpose |
+|-------|---------|
+| `replyTo` | A single address where a human's reply should land. Without it, replies reach the agent's own mailbox — right for `support@`, wrong when a person should pick the conversation up. |
+| `inReplyTo` | `Message-ID` of the message being replied to, e.g. `<abc@mail.example.com>`. |
+| `references` | Space-separated `Message-ID` chain of the conversation so far. Set it alongside `inReplyTo` so a follow-up threads instead of arriving as an orphan. |
+
+`replyTo` does **not** loosen sender pinning: `from` is still forced to the agent's own
+verified identity, and pointing `replyTo` at a teammate is the intended use. The enforcer
+rejects a `replyTo` carrying more than one address, and rejects `inReplyTo`/`references`
+containing newlines or non-printable characters — both come back as a `blocked` disposition
+with a reason, and neither consumes a rate-limit slot.
+
+Requires an enforcer Lambda built from `@wraps/core` 2026-08-28 or later; against an older
+enforcer the fields are ignored rather than erroring.
+
 ## License
 
 MIT
