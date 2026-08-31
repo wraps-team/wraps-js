@@ -820,8 +820,99 @@ export interface paths {
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: never;
-    responses: never;
+    schemas: {
+        /** @description Returned by every 4xx and 5xx response. Branch on `code`, show `error`, quote `requestId` to support. */
+        ApiError: {
+            /**
+             * @description Human-readable message. Wording may change; do not parse it.
+             * @example AWS account does not belong to this organization
+             */
+            error: string;
+            /**
+             * @description Stable machine-readable code. Safe to branch on across releases.
+             * @example FORBIDDEN
+             * @enum {string}
+             */
+            code: "BAD_REQUEST" | "CONFLICT" | "FORBIDDEN" | "INTERNAL_ERROR" | "MALFORMED_REQUEST" | "NOT_FOUND" | "PAYLOAD_TOO_LARGE" | "PAYMENT_REQUIRED" | "RATE_LIMITED" | "REQUEST_FAILED" | "UNAUTHORIZED" | "VALIDATION_FAILED";
+            /** @description Correlates with the `x-request-id` response header and with server logs. */
+            requestId?: string;
+        };
+    };
+    responses: {
+        /** @description Malformed request — unparseable body or an invalid parameter. */
+        BadRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+        /** @description Missing, malformed, or revoked credentials. Send `Authorization: Bearer <api key>`. */
+        Unauthorized: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+        /** @description Authenticated, but the resource belongs to another organization. */
+        Forbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+        /** @description No such route, or no such resource in this organization. */
+        NotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+        /** @description The request parsed but failed schema validation. */
+        ValidationFailed: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+        /** @description Rate limit exceeded. Wait for the window named by the RateLimit headers. */
+        RateLimited: {
+            headers: {
+                /** @description Requests permitted in the window closest to exhaustion. */
+                "RateLimit-Limit"?: number;
+                /** @description Requests still available in that window. */
+                "RateLimit-Remaining"?: number;
+                /** @description Seconds until that window resets. */
+                "RateLimit-Reset"?: number;
+                /** @description Every policy in force, as "<limit>;w=<window seconds>", comma-separated. */
+                "RateLimit-Policy"?: string;
+                /** @description Seconds to wait before retrying. */
+                "Retry-After"?: number;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+        /** @description Unexpected server failure. Safe to retry with backoff; quote `requestId` if it persists. */
+        InternalError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+    };
     parameters: never;
     requestBodies: never;
     headers: never;
@@ -896,6 +987,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     getIndex: {
@@ -938,6 +1036,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     getV1Connections: {
@@ -955,6 +1060,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1Connections: {
@@ -1011,6 +1123,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     deleteV1ConnectionsById: {
@@ -1031,6 +1150,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     getV1EmailLogs: {
@@ -1052,6 +1178,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     getV1EmailLogsByMessageId: {
@@ -1072,6 +1205,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     getV1Contacts: {
@@ -1274,6 +1414,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1Contacts: {
@@ -1560,6 +1707,9 @@ export interface operations {
                     };
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1579,6 +1729,9 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     deleteV1Contacts: {
@@ -1646,6 +1799,12 @@ export interface operations {
                     };
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     getV1ContactsById: {
@@ -1826,6 +1985,9 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1845,6 +2007,9 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     deleteV1ContactsById: {
@@ -1875,6 +2040,9 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1894,6 +2062,9 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     patchV1ContactsById: {
@@ -2164,6 +2335,9 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2202,6 +2376,9 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     putV1ContactsByIdTopics: {
@@ -2271,6 +2448,9 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2290,6 +2470,9 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1Batch: {
@@ -2527,6 +2710,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     getV1BatchById: {
@@ -2587,6 +2777,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     deleteV1BatchById: {
@@ -2623,6 +2820,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1BatchByIdSend: {
@@ -2758,6 +2962,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1BatchByIdResume: {
@@ -2793,6 +3004,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1Events: {
@@ -2935,6 +3153,12 @@ export interface operations {
                     };
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1EventsBatch: {
@@ -3025,6 +3249,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1WorkflowsByWorkflowIdTrigger: {
@@ -3103,6 +3334,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1WorkflowsByWorkflowIdTriggerBatch: {
@@ -3199,6 +3437,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1WorkflowsExecutionsByExecutionIdRetry: {
@@ -3235,6 +3480,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1WorkflowsExecutionsByExecutionIdCancel: {
@@ -3268,6 +3520,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postWebhooksSesByAwsAccountNumber: {
@@ -3310,6 +3569,7 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3326,6 +3586,10 @@ export interface operations {
                     };
                 };
             };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3377,6 +3641,8 @@ export interface operations {
                     "text/html": string;
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             /** @description HTML error page (contact not found) */
             404: {
                 headers: {
@@ -3386,6 +3652,9 @@ export interface operations {
                     "text/html": string;
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postUnsubscribeByToken: {
@@ -3447,6 +3716,8 @@ export interface operations {
                     };
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3463,6 +3734,9 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     "postV1Preference-events": {
@@ -3529,6 +3803,7 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3545,6 +3820,11 @@ export interface operations {
                     };
                 };
             };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1TemplatesPush: {
@@ -3658,6 +3938,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1TemplatesPushBatch: {
@@ -3738,6 +4025,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     getV1TemplatesPull: {
@@ -3755,6 +4049,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1WorkflowsPush: {
@@ -3937,6 +4238,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1WorkflowsPushBatch: {
@@ -4089,6 +4397,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     getV1WorkflowsPull: {
@@ -4106,6 +4421,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     "postToolsEmail-check": {
@@ -4481,6 +4803,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     "getToolsEmail-checkByDomain": {
@@ -4826,6 +5155,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     "postV1Workflow-schedulesByWorkflowIdEnable": {
@@ -4860,6 +5196,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     "postV1Workflow-schedulesByWorkflowIdDisable": {
@@ -4879,6 +5222,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     "putV1Workflow-schedulesByWorkflowId": {
@@ -4913,6 +5263,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     getV1Agents: {
@@ -5018,6 +5375,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1Agents: {
@@ -5168,6 +5532,8 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5187,6 +5553,7 @@ export interface operations {
                     };
                 };
             };
+            404: components["responses"]["NotFound"];
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -5206,6 +5573,9 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     getV1AgentsById: {
@@ -5307,6 +5677,9 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5326,6 +5699,9 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1AgentsByIdKill: {
@@ -5439,6 +5815,8 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5477,6 +5855,9 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     "postV1AgentsByIdPolicy-sync": {
@@ -5615,6 +5996,7 @@ export interface operations {
                     };
                 };
             };
+            401: components["responses"]["Unauthorized"];
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5653,6 +6035,9 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     getV1AgentsApprovals: {
@@ -5682,6 +6067,9 @@ export interface operations {
                                 subject: string;
                                 html?: string;
                                 text?: string;
+                                replyTo?: string;
+                                inReplyTo?: string;
+                                references?: string;
                             };
                             reason: string | null;
                             status: string;
@@ -5706,6 +6094,9 @@ export interface operations {
                                 subject: string;
                                 html?: string;
                                 text?: string;
+                                replyTo?: string;
+                                inReplyTo?: string;
+                                references?: string;
                             };
                             reason: string | null;
                             status: string;
@@ -5730,6 +6121,9 @@ export interface operations {
                                 subject: string;
                                 html?: string;
                                 text?: string;
+                                replyTo?: string;
+                                inReplyTo?: string;
+                                references?: string;
                             };
                             reason: string | null;
                             status: string;
@@ -5745,6 +6139,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1AgentsApprovalsByIdApprove: {
@@ -5773,6 +6174,9 @@ export interface operations {
                             subject: string;
                             html?: string;
                             text?: string;
+                            replyTo?: string;
+                            inReplyTo?: string;
+                            references?: string;
                         };
                         reason: string | null;
                         status: string;
@@ -5795,6 +6199,9 @@ export interface operations {
                             subject: string;
                             html?: string;
                             text?: string;
+                            replyTo?: string;
+                            inReplyTo?: string;
+                            references?: string;
                         };
                         reason: string | null;
                         status: string;
@@ -5817,6 +6224,9 @@ export interface operations {
                             subject: string;
                             html?: string;
                             text?: string;
+                            replyTo?: string;
+                            inReplyTo?: string;
+                            references?: string;
                         };
                         reason: string | null;
                         status: string;
@@ -5831,6 +6241,8 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5888,6 +6300,9 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1AgentsApprovalsByIdReject: {
@@ -5916,6 +6331,9 @@ export interface operations {
                             subject: string;
                             html?: string;
                             text?: string;
+                            replyTo?: string;
+                            inReplyTo?: string;
+                            references?: string;
                         };
                         reason: string | null;
                         status: string;
@@ -5938,6 +6356,9 @@ export interface operations {
                             subject: string;
                             html?: string;
                             text?: string;
+                            replyTo?: string;
+                            inReplyTo?: string;
+                            references?: string;
                         };
                         reason: string | null;
                         status: string;
@@ -5960,6 +6381,9 @@ export interface operations {
                             subject: string;
                             html?: string;
                             text?: string;
+                            replyTo?: string;
+                            inReplyTo?: string;
+                            references?: string;
                         };
                         reason: string | null;
                         status: string;
@@ -5974,6 +6398,8 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6031,6 +6457,9 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1AgentsWebhook: {
@@ -6051,6 +6480,9 @@ export interface operations {
                         subject: string;
                         html?: string;
                         text?: string;
+                        replyTo?: string;
+                        inReplyTo?: string;
+                        references?: string;
                     };
                     reason?: string;
                 };
@@ -6063,6 +6495,9 @@ export interface operations {
                         subject: string;
                         html?: string;
                         text?: string;
+                        replyTo?: string;
+                        inReplyTo?: string;
+                        references?: string;
                     };
                     reason?: string;
                 };
@@ -6075,6 +6510,9 @@ export interface operations {
                         subject: string;
                         html?: string;
                         text?: string;
+                        replyTo?: string;
+                        inReplyTo?: string;
+                        references?: string;
                     };
                     reason?: string;
                 };
@@ -6087,6 +6525,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
 }
