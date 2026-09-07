@@ -44,6 +44,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/account/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Org-wide SES health rollup
+         * @description Returns the SES health verdict the hourly account-health sweep last persisted for every AWS account connected to this organization, plus the org-wide rollup (worst status wins; `unknown` outranks `healthy`). Zero AWS calls — this is Postgres-only, bounded by the freshness of the last hourly sweep (`checkedAt`).
+         */
+        get: operations["getV1AccountHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/account/health/{awsAccountId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * SES health for one connected AWS account
+         * @description Returns the persisted SES health verdict for a single AWS account connected to this organization. 404 if the account does not exist or does not belong to the authenticated organization.
+         */
+        get: operations["getV1AccountHealthByAwsAccountId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/connections/": {
         parameters: {
             query?: never;
@@ -88,6 +128,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/domains/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List sending identities
+         * @description Lists SES sending identities (domains and email addresses) across the organization's connected AWS accounts, read live from SES. An account whose console-access role cannot be assumed is reported unreachable in `accounts` rather than failing the whole request.
+         */
+        get: operations["getV1Domains"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/domains/{identity}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get sending identity detail
+         * @description Returns full verification and DKIM detail for one identity (domain or email address), searching the organization's connected AWS accounts and stopping at the first that has it. `unreachableAccountIds` lists accounts whose role could not be assumed while searching. Returns 503 only when every connected account is unreachable.
+         */
+        get: operations["getV1DomainsByIdentity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/email/logs/": {
         parameters: {
             query?: never;
@@ -120,6 +200,26 @@ export interface paths {
          * @description Returns full log detail for a specific SES message ID.
          */
         get: operations["getV1EmailLogsByMessageId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/email/metrics/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get aggregate email metrics
+         * @description Returns aggregate email metrics for the organization, optionally grouped by period/domain/broadcast/template/source/account/region. `opened` excludes user agents matching a known-bot list; `openedRaw` reports the same count with no bot filter applied; `clicked` is currently unfiltered (see plan 107 for this asymmetry).
+         */
+        get: operations["getV1EmailMetrics"];
         put?: never;
         post?: never;
         delete?: never;
@@ -211,7 +311,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List batch sends
+         * @description Lists batch sends for the organization, paginated and optionally filtered by status, channel, or search.
+         */
+        get: operations["getV1Batch"];
         put?: never;
         /**
          * Create batch send
@@ -233,7 +337,7 @@ export interface paths {
         };
         /**
          * Get batch status
-         * @description Returns the current status of a batch send job
+         * @description Returns the current status of a batch send job. Counts are maintained incrementally during the send and reflect SES events received so far.
          */
         get: operations["getV1BatchById"];
         put?: never;
@@ -243,6 +347,46 @@ export interface paths {
          * @description Cancels a scheduled or queued batch send. If scheduled, also deletes the EventBridge schedule.
          */
         delete: operations["deleteV1BatchById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/batch/{id}/recipients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List batch recipients
+         * @description Returns per-recipient outcomes for a batch send. `limit` is capped at 1000 rows per page — this route returns JSON through Lambda, which has a response-size ceiling that a larger page could exceed.
+         */
+        get: operations["getV1BatchByIdRecipients"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/batch/{id}/clicks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Clicked links
+         * @description Returns the top clicked links for a batch send, ordered by click count and capped at 50 URLs — `truncated` is true when more distinct URLs exist than are returned. Per-recipient unsubscribe and preference-centre links are aggregated into `unsubscribeCount` and excluded from `data`.
+         */
+        get: operations["getV1BatchByIdClicks"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -282,6 +426,78 @@ export interface paths {
          * @description Resumes a 'processing' or 'failed' email batch from the last successfully completed chunk. Writes a resume entry to errorDetails and enqueues the next chunk.
          */
         post: operations["postV1BatchByIdResume"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/segments/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List segments
+         * @description Lists the organization's segments with live sendable-recipient counts. Requires a Pro plan or higher.
+         */
+        get: operations["getV1Segments"];
+        put?: never;
+        /**
+         * Create a segment
+         * @description Creates a segment. The condition is validated and snapshotted immediately — memberCount reflects live sendable recipients at creation time.
+         */
+        post: operations["postV1Segments"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/segments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a segment
+         * @description Returns a single segment, including its filter condition and live member count.
+         */
+        get: operations["getV1SegmentsById"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a segment
+         * @description Deletes a segment. Refuses with 409 while a scheduled, queued, or processing broadcast still targets it.
+         */
+        delete: operations["deleteV1SegmentsById"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a segment
+         * @description Partially updates a segment. Passing `condition` re-validates it and re-snapshots memberCount.
+         */
+        patch: operations["patchV1SegmentsById"];
+        trace?: never;
+    };
+    "/v1/segments/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview a condition
+         * @description Counts and samples the audience an unsaved condition would reach, without creating a segment.
+         */
+        post: operations["postV1SegmentsPreview"];
         delete?: never;
         options?: never;
         head?: never;
@@ -521,11 +737,99 @@ export interface paths {
         };
         /**
          * Pull templates for CLI sync
-         * @description Returns all templates pushed from CLI with their React Email source.
+         * @description Returns code-pushed templates with their React Email source. With no `limit`, returns every template in one response (the CLI's push/pull protocol depends on this). Pass `limit` to opt into cursor pagination — the response then includes `nextCursor` (null on the last page). `source=false` omits the `source` field from every row.
          */
         get: operations["getV1TemplatesPull"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/templates/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List templates
+         * @description Lists templates for the organization, paginated (cursor-based) and optionally filtered by status, channel, or a name search. Never returns source, content, compiledHtml, compiledText, createdBy, or lastEditedBy — use GET /:id for the full record.
+         */
+        get: operations["getV1Templates"];
+        put?: never;
+        /**
+         * Create a template
+         * @description Creates a DRAFT template. The API does not compile TSX — pass compiledHtml/compiledText if you have them, or publish will refuse the template until it's compiled. Always created as react-email format.
+         */
+        post: operations["postV1Templates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/templates/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a template
+         * @description Returns full template detail, org-scoped. `source=false` omits source, compiledHtml, and compiledText — sourceHash is still returned so a caller can tell whether the source changed.
+         */
+        get: operations["getV1TemplatesById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update a template
+         * @description Partial update, org-scoped. Last-write-wins unless ifUnmodifiedSince is sent. When source changes, a new templateVersion row is written (skipped if the source is unchanged from the latest version).
+         */
+        patch: operations["patchV1TemplatesById"];
+        trace?: never;
+    };
+    "/v1/templates/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish a template to SES
+         * @description Creates or updates the SES email template for this template's compiledHtml/compiledText, then marks it PUBLISHED. Requires compiledHtml — the API does not compile TSX, so provide it via PATCH first if it isn't already set.
+         */
+        post: operations["postV1TemplatesByIdPublish"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/templates/{id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Duplicate a template
+         * @description Copies name (with " (Copy)" appended), content, and channel/previewText (the dashboard's duplicate route omits these two — fixed here). slug, sesTemplateName, and publishedAt are never copied; the duplicate is always a DRAFT.
+         */
+        post: operations["postV1TemplatesByIdDuplicate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -820,8 +1124,99 @@ export interface paths {
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: never;
-    responses: never;
+    schemas: {
+        /** @description Returned by every 4xx and 5xx response. Branch on `code`, show `error`, quote `requestId` to support. */
+        ApiError: {
+            /**
+             * @description Human-readable message. Wording may change; do not parse it.
+             * @example AWS account does not belong to this organization
+             */
+            error: string;
+            /**
+             * @description Stable machine-readable code. Safe to branch on across releases.
+             * @example FORBIDDEN
+             * @enum {string}
+             */
+            code: "BAD_REQUEST" | "CONFLICT" | "FORBIDDEN" | "INTERNAL_ERROR" | "MALFORMED_REQUEST" | "NOT_FOUND" | "PAYLOAD_TOO_LARGE" | "PAYMENT_REQUIRED" | "RATE_LIMITED" | "REQUEST_FAILED" | "UNAUTHORIZED" | "VALIDATION_FAILED";
+            /** @description Correlates with the `x-request-id` response header and with server logs. */
+            requestId?: string;
+        };
+    };
+    responses: {
+        /** @description Malformed request — unparseable body or an invalid parameter. */
+        BadRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+        /** @description Missing, malformed, or revoked credentials. Send `Authorization: Bearer <api key>`. */
+        Unauthorized: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+        /** @description Authenticated, but the resource belongs to another organization. */
+        Forbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+        /** @description No such route, or no such resource in this organization. */
+        NotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+        /** @description The request parsed but failed schema validation. */
+        ValidationFailed: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+        /** @description Rate limit exceeded. Wait for the window named by the RateLimit headers. */
+        RateLimited: {
+            headers: {
+                /** @description Requests permitted in the window closest to exhaustion. */
+                "RateLimit-Limit"?: number;
+                /** @description Requests still available in that window. */
+                "RateLimit-Remaining"?: number;
+                /** @description Seconds until that window resets. */
+                "RateLimit-Reset"?: number;
+                /** @description Every policy in force, as "<limit>;w=<window seconds>", comma-separated. */
+                "RateLimit-Policy"?: string;
+                /** @description Seconds to wait before retrying. */
+                "Retry-After"?: number;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+        /** @description Unexpected server failure. Safe to retry with backoff; quote `requestId` if it persists. */
+        InternalError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+    };
     parameters: never;
     requestBodies: never;
     headers: never;
@@ -896,6 +1291,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     getIndex: {
@@ -938,6 +1340,251 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1AccountHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        status: "healthy" | "at_risk" | "in_danger" | "unknown";
+                        checkedAt: string | null;
+                        accounts: {
+                            id: string;
+                            accountNumber: string;
+                            region: string;
+                            status: "healthy" | "at_risk" | "in_danger" | "unknown";
+                            checkedAt: string | null;
+                            sandbox: boolean | null;
+                            productionAccessEnabled: boolean | null;
+                            sendingEnabled: boolean | null;
+                            enforcementStatus: string | null;
+                            quota: {
+                                max24Hour: number | null;
+                                sentLast24Hours: number | null;
+                                usedRatio: number | null;
+                                maxSendRate: number | null;
+                            };
+                            reputation: {
+                                bounceRate: number | null;
+                                complaintRate: number | null;
+                            };
+                            thresholds: {
+                                bounceReview: number;
+                                bouncePause: number;
+                                complaintReview: number;
+                                complaintPause: number;
+                                quotaWarn: number;
+                            };
+                            reasons: string[];
+                        }[];
+                    };
+                    "multipart/form-data": {
+                        status: "healthy" | "at_risk" | "in_danger" | "unknown";
+                        checkedAt: string | null;
+                        accounts: {
+                            id: string;
+                            accountNumber: string;
+                            region: string;
+                            status: "healthy" | "at_risk" | "in_danger" | "unknown";
+                            checkedAt: string | null;
+                            sandbox: boolean | null;
+                            productionAccessEnabled: boolean | null;
+                            sendingEnabled: boolean | null;
+                            enforcementStatus: string | null;
+                            quota: {
+                                max24Hour: number | null;
+                                sentLast24Hours: number | null;
+                                usedRatio: number | null;
+                                maxSendRate: number | null;
+                            };
+                            reputation: {
+                                bounceRate: number | null;
+                                complaintRate: number | null;
+                            };
+                            thresholds: {
+                                bounceReview: number;
+                                bouncePause: number;
+                                complaintReview: number;
+                                complaintPause: number;
+                                quotaWarn: number;
+                            };
+                            reasons: string[];
+                        }[];
+                    };
+                    "text/plain": {
+                        status: "healthy" | "at_risk" | "in_danger" | "unknown";
+                        checkedAt: string | null;
+                        accounts: {
+                            id: string;
+                            accountNumber: string;
+                            region: string;
+                            status: "healthy" | "at_risk" | "in_danger" | "unknown";
+                            checkedAt: string | null;
+                            sandbox: boolean | null;
+                            productionAccessEnabled: boolean | null;
+                            sendingEnabled: boolean | null;
+                            enforcementStatus: string | null;
+                            quota: {
+                                max24Hour: number | null;
+                                sentLast24Hours: number | null;
+                                usedRatio: number | null;
+                                maxSendRate: number | null;
+                            };
+                            reputation: {
+                                bounceRate: number | null;
+                                complaintRate: number | null;
+                            };
+                            thresholds: {
+                                bounceReview: number;
+                                bouncePause: number;
+                                complaintReview: number;
+                                complaintPause: number;
+                                quotaWarn: number;
+                            };
+                            reasons: string[];
+                        }[];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1AccountHealthByAwsAccountId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                awsAccountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        accountNumber: string;
+                        region: string;
+                        status: "healthy" | "at_risk" | "in_danger" | "unknown";
+                        checkedAt: string | null;
+                        sandbox: boolean | null;
+                        productionAccessEnabled: boolean | null;
+                        sendingEnabled: boolean | null;
+                        enforcementStatus: string | null;
+                        quota: {
+                            max24Hour: number | null;
+                            sentLast24Hours: number | null;
+                            usedRatio: number | null;
+                            maxSendRate: number | null;
+                        };
+                        reputation: {
+                            bounceRate: number | null;
+                            complaintRate: number | null;
+                        };
+                        thresholds: {
+                            bounceReview: number;
+                            bouncePause: number;
+                            complaintReview: number;
+                            complaintPause: number;
+                            quotaWarn: number;
+                        };
+                        reasons: string[];
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        accountNumber: string;
+                        region: string;
+                        status: "healthy" | "at_risk" | "in_danger" | "unknown";
+                        checkedAt: string | null;
+                        sandbox: boolean | null;
+                        productionAccessEnabled: boolean | null;
+                        sendingEnabled: boolean | null;
+                        enforcementStatus: string | null;
+                        quota: {
+                            max24Hour: number | null;
+                            sentLast24Hours: number | null;
+                            usedRatio: number | null;
+                            maxSendRate: number | null;
+                        };
+                        reputation: {
+                            bounceRate: number | null;
+                            complaintRate: number | null;
+                        };
+                        thresholds: {
+                            bounceReview: number;
+                            bouncePause: number;
+                            complaintReview: number;
+                            complaintPause: number;
+                            quotaWarn: number;
+                        };
+                        reasons: string[];
+                    };
+                    "text/plain": {
+                        id: string;
+                        accountNumber: string;
+                        region: string;
+                        status: "healthy" | "at_risk" | "in_danger" | "unknown";
+                        checkedAt: string | null;
+                        sandbox: boolean | null;
+                        productionAccessEnabled: boolean | null;
+                        sendingEnabled: boolean | null;
+                        enforcementStatus: string | null;
+                        quota: {
+                            max24Hour: number | null;
+                            sentLast24Hours: number | null;
+                            usedRatio: number | null;
+                            maxSendRate: number | null;
+                        };
+                        reputation: {
+                            bounceRate: number | null;
+                            complaintRate: number | null;
+                        };
+                        thresholds: {
+                            bounceReview: number;
+                            bouncePause: number;
+                            complaintReview: number;
+                            complaintPause: number;
+                            quotaWarn: number;
+                        };
+                        reasons: string[];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     getV1Connections: {
@@ -955,6 +1602,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1Connections: {
@@ -1011,6 +1665,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     deleteV1ConnectionsById: {
@@ -1030,6 +1691,199 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1Domains: {
+        parameters: {
+            query?: {
+                awsAccountId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            identity: string;
+                            identityType: string | null;
+                            sendingEnabled: boolean | null;
+                            verificationStatus: string | null;
+                            awsAccountId: string;
+                            region: string;
+                        }[];
+                        accounts: {
+                            id: string;
+                            accountId: string;
+                            region: string;
+                            reachable: boolean;
+                        }[];
+                    };
+                    "multipart/form-data": {
+                        data: {
+                            identity: string;
+                            identityType: string | null;
+                            sendingEnabled: boolean | null;
+                            verificationStatus: string | null;
+                            awsAccountId: string;
+                            region: string;
+                        }[];
+                        accounts: {
+                            id: string;
+                            accountId: string;
+                            region: string;
+                            reachable: boolean;
+                        }[];
+                    };
+                    "text/plain": {
+                        data: {
+                            identity: string;
+                            identityType: string | null;
+                            sendingEnabled: boolean | null;
+                            verificationStatus: string | null;
+                            awsAccountId: string;
+                            region: string;
+                        }[];
+                        accounts: {
+                            id: string;
+                            accountId: string;
+                            region: string;
+                            reachable: boolean;
+                        }[];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1DomainsByIdentity: {
+        parameters: {
+            query?: {
+                awsAccountId?: string;
+            };
+            header?: never;
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        identity: string;
+                        identityType: string | null;
+                        verifiedForSending: boolean;
+                        verificationStatus: string | null;
+                        dkim: {
+                            status: string | null;
+                            signingAttributesOrigin: string | null;
+                            tokens: string[];
+                        } | null;
+                        mailFromDomain: {
+                            domain: string;
+                            status: string | null;
+                        } | null;
+                        feedbackForwarding: boolean;
+                        configurationSet: string | null;
+                        awsAccountId: string;
+                        region: string;
+                        unreachableAccountIds: string[];
+                    };
+                    "multipart/form-data": {
+                        identity: string;
+                        identityType: string | null;
+                        verifiedForSending: boolean;
+                        verificationStatus: string | null;
+                        dkim: {
+                            status: string | null;
+                            signingAttributesOrigin: string | null;
+                            tokens: string[];
+                        } | null;
+                        mailFromDomain: {
+                            domain: string;
+                            status: string | null;
+                        } | null;
+                        feedbackForwarding: boolean;
+                        configurationSet: string | null;
+                        awsAccountId: string;
+                        region: string;
+                        unreachableAccountIds: string[];
+                    };
+                    "text/plain": {
+                        identity: string;
+                        identityType: string | null;
+                        verifiedForSending: boolean;
+                        verificationStatus: string | null;
+                        dkim: {
+                            status: string | null;
+                            signingAttributesOrigin: string | null;
+                            tokens: string[];
+                        } | null;
+                        mailFromDomain: {
+                            domain: string;
+                            status: string | null;
+                        } | null;
+                        feedbackForwarding: boolean;
+                        configurationSet: string | null;
+                        awsAccountId: string;
+                        region: string;
+                        unreachableAccountIds: string[];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        message: string;
+                        code?: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                        message: string;
+                        code?: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                        message: string;
+                        code?: string;
+                    };
+                };
             };
         };
     };
@@ -1052,6 +1906,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     getV1EmailLogsByMessageId: {
@@ -1072,6 +1933,55 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1EmailMetrics: {
+        parameters: {
+            query?: {
+                /** @description ISO 8601 date or datetime */
+                start_date?: string;
+                /** @description ISO 8601 date or datetime */
+                end_date?: string;
+                /** @description IANA timezone name, defaults to UTC */
+                timezone?: string;
+                granularity?: "hourly" | "daily" | "weekly" | "monthly";
+                /** @description Comma-separated: period, domain, broadcast, template, source, account, region */
+                dimensions?: string;
+                /** @description Comma-separated, max 100 */
+                broadcast_id?: string;
+                /** @description Comma-separated, max 100 */
+                template_id?: string;
+                /** @description Comma-separated, max 100 */
+                aws_account_id?: string;
+                /** @description Comma-separated, max 100 */
+                domain?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     getV1Contacts: {
@@ -1082,7 +1992,7 @@ export interface operations {
                 /** @description Number of items per page (max 100) */
                 pageSize?: string;
                 /** @description Filter by email status */
-                emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
+                emailStatus?: "active" | "unsubscribed" | "bounced" | "complained" | "suppressed";
                 /** @description Filter by SMS status */
                 smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
                 /** @description Search by email or phone */
@@ -1274,6 +2184,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1Contacts: {
@@ -1304,7 +2221,7 @@ export interface operations {
                     /** @description Job title */
                     jobTitle?: string;
                     /** @description Email subscription status */
-                    emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
+                    emailStatus?: "active" | "unsubscribed" | "bounced" | "complained" | "suppressed";
                     /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
                     /** @description Preferred communication channel */
@@ -1337,7 +2254,7 @@ export interface operations {
                     /** @description Job title */
                     jobTitle?: string;
                     /** @description Email subscription status */
-                    emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
+                    emailStatus?: "active" | "unsubscribed" | "bounced" | "complained" | "suppressed";
                     /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
                     /** @description Preferred communication channel */
@@ -1370,7 +2287,7 @@ export interface operations {
                     /** @description Job title */
                     jobTitle?: string;
                     /** @description Email subscription status */
-                    emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
+                    emailStatus?: "active" | "unsubscribed" | "bounced" | "complained" | "suppressed";
                     /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
                     /** @description Preferred communication channel */
@@ -1560,6 +2477,9 @@ export interface operations {
                     };
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1579,6 +2499,9 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     deleteV1Contacts: {
@@ -1646,6 +2569,12 @@ export interface operations {
                     };
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     getV1ContactsById: {
@@ -1826,6 +2755,9 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1845,6 +2777,9 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     deleteV1ContactsById: {
@@ -1875,6 +2810,9 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1894,6 +2832,9 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     patchV1ContactsById: {
@@ -1927,7 +2868,7 @@ export interface operations {
                     /** @description Job title */
                     jobTitle?: string | null;
                     /** @description Email subscription status */
-                    emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
+                    emailStatus?: "active" | "unsubscribed" | "bounced" | "complained" | "suppressed";
                     /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
                     /** @description Preferred communication channel (null to clear) */
@@ -1960,7 +2901,7 @@ export interface operations {
                     /** @description Job title */
                     jobTitle?: string | null;
                     /** @description Email subscription status */
-                    emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
+                    emailStatus?: "active" | "unsubscribed" | "bounced" | "complained" | "suppressed";
                     /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
                     /** @description Preferred communication channel (null to clear) */
@@ -1993,7 +2934,7 @@ export interface operations {
                     /** @description Job title */
                     jobTitle?: string | null;
                     /** @description Email subscription status */
-                    emailStatus?: "active" | "unsubscribed" | "bounced" | "complained";
+                    emailStatus?: "active" | "unsubscribed" | "bounced" | "complained" | "suppressed";
                     /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
                     /** @description Preferred communication channel (null to clear) */
@@ -2164,6 +3105,9 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2202,6 +3146,9 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     putV1ContactsByIdTopics: {
@@ -2271,6 +3218,9 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2290,6 +3240,145 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1Batch: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                status?: "draft" | "scheduled" | "queued" | "processing" | "completed" | "failed" | "cancelled";
+                channel?: "email" | "sms";
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            id: string;
+                            name: string | null;
+                            status: string;
+                            channel: string;
+                            subject: string | null;
+                            totalRecipients: number;
+                            processedRecipients: number;
+                            sent: number;
+                            delivered: number;
+                            opened: number;
+                            clicked: number;
+                            bounced: number;
+                            complained: number;
+                            suppressed: number;
+                            failed: number;
+                            scheduledFor: string | null;
+                            startedAt: string | null;
+                            completedAt: string | null;
+                            createdAt: string;
+                            template: {
+                                id: string;
+                                name: string;
+                            } | null;
+                            awsAccount: {
+                                id: string;
+                                name: string;
+                                region: string;
+                            } | null;
+                        }[];
+                        page: number;
+                        pageSize: number;
+                        total: number;
+                    };
+                    "multipart/form-data": {
+                        data: {
+                            id: string;
+                            name: string | null;
+                            status: string;
+                            channel: string;
+                            subject: string | null;
+                            totalRecipients: number;
+                            processedRecipients: number;
+                            sent: number;
+                            delivered: number;
+                            opened: number;
+                            clicked: number;
+                            bounced: number;
+                            complained: number;
+                            suppressed: number;
+                            failed: number;
+                            scheduledFor: string | null;
+                            startedAt: string | null;
+                            completedAt: string | null;
+                            createdAt: string;
+                            template: {
+                                id: string;
+                                name: string;
+                            } | null;
+                            awsAccount: {
+                                id: string;
+                                name: string;
+                                region: string;
+                            } | null;
+                        }[];
+                        page: number;
+                        pageSize: number;
+                        total: number;
+                    };
+                    "text/plain": {
+                        data: {
+                            id: string;
+                            name: string | null;
+                            status: string;
+                            channel: string;
+                            subject: string | null;
+                            totalRecipients: number;
+                            processedRecipients: number;
+                            sent: number;
+                            delivered: number;
+                            opened: number;
+                            clicked: number;
+                            bounced: number;
+                            complained: number;
+                            suppressed: number;
+                            failed: number;
+                            scheduledFor: string | null;
+                            startedAt: string | null;
+                            completedAt: string | null;
+                            createdAt: string;
+                            template: {
+                                id: string;
+                                name: string;
+                            } | null;
+                            awsAccount: {
+                                id: string;
+                                name: string;
+                                region: string;
+                            } | null;
+                        }[];
+                        page: number;
+                        pageSize: number;
+                        total: number;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1Batch: {
@@ -2527,6 +3616,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     getV1BatchById: {
@@ -2554,7 +3650,13 @@ export interface operations {
                         totalRecipients: number;
                         processedRecipients: number;
                         sent: number;
+                        delivered: number;
                         failed: number;
+                        opened: number;
+                        clicked: number;
+                        bounced: number;
+                        complained: number;
+                        suppressed: number;
                         startedAt: string | null;
                         completedAt: string | null;
                         createdAt: string;
@@ -2567,7 +3669,13 @@ export interface operations {
                         totalRecipients: number;
                         processedRecipients: number;
                         sent: number;
+                        delivered: number;
                         failed: number;
+                        opened: number;
+                        clicked: number;
+                        bounced: number;
+                        complained: number;
+                        suppressed: number;
                         startedAt: string | null;
                         completedAt: string | null;
                         createdAt: string;
@@ -2580,13 +3688,26 @@ export interface operations {
                         totalRecipients: number;
                         processedRecipients: number;
                         sent: number;
+                        delivered: number;
                         failed: number;
+                        opened: number;
+                        clicked: number;
+                        bounced: number;
+                        complained: number;
+                        suppressed: number;
                         startedAt: string | null;
                         completedAt: string | null;
                         createdAt: string;
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     deleteV1BatchById: {
@@ -2623,6 +3744,145 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1BatchByIdRecipients: {
+        parameters: {
+            query?: {
+                status?: "pending" | "queued" | "sent" | "delivered" | "opened" | "clicked" | "bounced" | "complained" | "suppressed" | "failed" | "opted_out";
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Batch ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            id: string;
+                            recipient: string;
+                            status: string;
+                            error: string | null;
+                            bounceType: string | null;
+                            bounceSubType: string | null;
+                            sentAt: string | null;
+                            createdAt: string;
+                        }[];
+                        limit: number;
+                        offset: number;
+                        total: number;
+                    };
+                    "multipart/form-data": {
+                        data: {
+                            id: string;
+                            recipient: string;
+                            status: string;
+                            error: string | null;
+                            bounceType: string | null;
+                            bounceSubType: string | null;
+                            sentAt: string | null;
+                            createdAt: string;
+                        }[];
+                        limit: number;
+                        offset: number;
+                        total: number;
+                    };
+                    "text/plain": {
+                        data: {
+                            id: string;
+                            recipient: string;
+                            status: string;
+                            error: string | null;
+                            bounceType: string | null;
+                            bounceSubType: string | null;
+                            sentAt: string | null;
+                            createdAt: string;
+                        }[];
+                        limit: number;
+                        offset: number;
+                        total: number;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1BatchByIdClicks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Batch ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            url: string;
+                            count: number;
+                        }[];
+                        unsubscribeCount: number;
+                        totalDistinctUrls: number;
+                        truncated: boolean;
+                    };
+                    "multipart/form-data": {
+                        data: {
+                            url: string;
+                            count: number;
+                        }[];
+                        unsubscribeCount: number;
+                        totalDistinctUrls: number;
+                        truncated: boolean;
+                    };
+                    "text/plain": {
+                        data: {
+                            url: string;
+                            count: number;
+                        }[];
+                        unsubscribeCount: number;
+                        totalDistinctUrls: number;
+                        truncated: boolean;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1BatchByIdSend: {
@@ -2758,6 +4018,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1BatchByIdResume: {
@@ -2793,6 +4060,522 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1Segments: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        segments: {
+                            id: string;
+                            name: string;
+                            description: string | null;
+                            /** @description Live count of contacts a broadcast to this segment would reach right now — never the cached column. */
+                            memberCount: number;
+                            trackMembership: boolean;
+                            lastComputedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        }[];
+                        total: number;
+                        limit: number;
+                        offset: number;
+                    };
+                    "multipart/form-data": {
+                        segments: {
+                            id: string;
+                            name: string;
+                            description: string | null;
+                            /** @description Live count of contacts a broadcast to this segment would reach right now — never the cached column. */
+                            memberCount: number;
+                            trackMembership: boolean;
+                            lastComputedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        }[];
+                        total: number;
+                        limit: number;
+                        offset: number;
+                    };
+                    "text/plain": {
+                        segments: {
+                            id: string;
+                            name: string;
+                            description: string | null;
+                            /** @description Live count of contacts a broadcast to this segment would reach right now — never the cached column. */
+                            memberCount: number;
+                            trackMembership: boolean;
+                            lastComputedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        }[];
+                        total: number;
+                        limit: number;
+                        offset: number;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    postV1Segments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    description?: string;
+                    /** @description Filter condition tree — see https://wraps.dev/docs/reference/segments for the shape. */
+                    condition: unknown;
+                    trackMembership?: boolean;
+                };
+                "multipart/form-data": {
+                    name: string;
+                    description?: string;
+                    /** @description Filter condition tree — see https://wraps.dev/docs/reference/segments for the shape. */
+                    condition: unknown;
+                    trackMembership?: boolean;
+                };
+                "text/plain": {
+                    name: string;
+                    description?: string;
+                    /** @description Filter condition tree — see https://wraps.dev/docs/reference/segments for the shape. */
+                    condition: unknown;
+                    trackMembership?: boolean;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        description: string | null;
+                        /** @description Filter condition tree — see https://wraps.dev/docs/reference/segments for the shape. */
+                        condition: unknown;
+                        memberCount: number;
+                        trackMembership: boolean;
+                        lastComputedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        name: string;
+                        description: string | null;
+                        /** @description Filter condition tree — see https://wraps.dev/docs/reference/segments for the shape. */
+                        condition: unknown;
+                        memberCount: number;
+                        trackMembership: boolean;
+                        lastComputedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                    };
+                    "text/plain": {
+                        id: string;
+                        name: string;
+                        description: string | null;
+                        /** @description Filter condition tree — see https://wraps.dev/docs/reference/segments for the shape. */
+                        condition: unknown;
+                        memberCount: number;
+                        trackMembership: boolean;
+                        lastComputedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1SegmentsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        description: string | null;
+                        /** @description Filter condition tree — see https://wraps.dev/docs/reference/segments for the shape. */
+                        condition: unknown;
+                        memberCount: number;
+                        trackMembership: boolean;
+                        lastComputedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        name: string;
+                        description: string | null;
+                        /** @description Filter condition tree — see https://wraps.dev/docs/reference/segments for the shape. */
+                        condition: unknown;
+                        memberCount: number;
+                        trackMembership: boolean;
+                        lastComputedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                    };
+                    "text/plain": {
+                        id: string;
+                        name: string;
+                        description: string | null;
+                        /** @description Filter condition tree — see https://wraps.dev/docs/reference/segments for the shape. */
+                        condition: unknown;
+                        memberCount: number;
+                        trackMembership: boolean;
+                        lastComputedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    deleteV1SegmentsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                    "multipart/form-data": {
+                        success: boolean;
+                    };
+                    "text/plain": {
+                        success: boolean;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    patchV1SegmentsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    description?: string;
+                    /** @description Filter condition tree — see https://wraps.dev/docs/reference/segments for the shape. */
+                    condition?: unknown;
+                    trackMembership?: boolean;
+                };
+                "multipart/form-data": {
+                    name?: string;
+                    description?: string;
+                    /** @description Filter condition tree — see https://wraps.dev/docs/reference/segments for the shape. */
+                    condition?: unknown;
+                    trackMembership?: boolean;
+                };
+                "text/plain": {
+                    name?: string;
+                    description?: string;
+                    /** @description Filter condition tree — see https://wraps.dev/docs/reference/segments for the shape. */
+                    condition?: unknown;
+                    trackMembership?: boolean;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        description: string | null;
+                        /** @description Filter condition tree — see https://wraps.dev/docs/reference/segments for the shape. */
+                        condition: unknown;
+                        memberCount: number;
+                        trackMembership: boolean;
+                        lastComputedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        name: string;
+                        description: string | null;
+                        /** @description Filter condition tree — see https://wraps.dev/docs/reference/segments for the shape. */
+                        condition: unknown;
+                        memberCount: number;
+                        trackMembership: boolean;
+                        lastComputedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                    };
+                    "text/plain": {
+                        id: string;
+                        name: string;
+                        description: string | null;
+                        /** @description Filter condition tree — see https://wraps.dev/docs/reference/segments for the shape. */
+                        condition: unknown;
+                        memberCount: number;
+                        trackMembership: boolean;
+                        lastComputedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    postV1SegmentsPreview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Filter condition tree — see https://wraps.dev/docs/reference/segments for the shape. */
+                    condition: unknown;
+                    limit?: number;
+                };
+                "multipart/form-data": {
+                    /** @description Filter condition tree — see https://wraps.dev/docs/reference/segments for the shape. */
+                    condition: unknown;
+                    limit?: number;
+                };
+                "text/plain": {
+                    /** @description Filter condition tree — see https://wraps.dev/docs/reference/segments for the shape. */
+                    condition: unknown;
+                    limit?: number;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        count: number;
+                        sample: string[];
+                    };
+                    "multipart/form-data": {
+                        count: number;
+                        sample: string[];
+                    };
+                    "text/plain": {
+                        count: number;
+                        sample: string[];
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1Events: {
@@ -2935,6 +4718,12 @@ export interface operations {
                     };
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1EventsBatch: {
@@ -3025,6 +4814,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1WorkflowsByWorkflowIdTrigger: {
@@ -3103,6 +4899,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1WorkflowsByWorkflowIdTriggerBatch: {
@@ -3199,6 +5002,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1WorkflowsExecutionsByExecutionIdRetry: {
@@ -3235,6 +5045,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1WorkflowsExecutionsByExecutionIdCancel: {
@@ -3268,6 +5085,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postWebhooksSesByAwsAccountNumber: {
@@ -3310,6 +5134,7 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3326,6 +5151,10 @@ export interface operations {
                     };
                 };
             };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3377,6 +5206,8 @@ export interface operations {
                     "text/html": string;
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             /** @description HTML error page (contact not found) */
             404: {
                 headers: {
@@ -3386,6 +5217,9 @@ export interface operations {
                     "text/html": string;
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postUnsubscribeByToken: {
@@ -3447,6 +5281,8 @@ export interface operations {
                     };
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3463,6 +5299,9 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     "postV1Preference-events": {
@@ -3529,6 +5368,7 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3545,6 +5385,11 @@ export interface operations {
                     };
                 };
             };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1TemplatesPush: {
@@ -3658,6 +5503,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1TemplatesPushBatch: {
@@ -3738,11 +5590,25 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     getV1TemplatesPull: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Page size. Omit for the legacy unpaginated behaviour the CLI relies on — every template in one response, no nextCursor. */
+                limit?: number;
+                /** @description Opaque cursor from a previous page's nextCursor */
+                cursor?: string;
+                /** @description Set to false to omit the TSX source from every row (sourceHash still lets a caller diff). */
+                source?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3755,6 +5621,664 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1Templates: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string;
+                status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+                channel?: "email" | "sms";
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            id: string;
+                            name: string;
+                            description: string | null;
+                            subject: string | null;
+                            previewText: string | null;
+                            emailType: string;
+                            channel: string;
+                            status: string;
+                            slug: string | null;
+                            publishedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        }[];
+                        nextCursor: string | null;
+                    };
+                    "multipart/form-data": {
+                        data: {
+                            id: string;
+                            name: string;
+                            description: string | null;
+                            subject: string | null;
+                            previewText: string | null;
+                            emailType: string;
+                            channel: string;
+                            status: string;
+                            slug: string | null;
+                            publishedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        }[];
+                        nextCursor: string | null;
+                    };
+                    "text/plain": {
+                        data: {
+                            id: string;
+                            name: string;
+                            description: string | null;
+                            subject: string | null;
+                            previewText: string | null;
+                            emailType: string;
+                            channel: string;
+                            status: string;
+                            slug: string | null;
+                            publishedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        }[];
+                        nextCursor: string | null;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    postV1Templates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    slug?: string;
+                    subject?: string;
+                    previewText?: string;
+                    description?: string;
+                    emailType?: "marketing" | "transactional";
+                    channel?: "email" | "sms";
+                    /** @description React Email TSX source */
+                    source?: string;
+                    compiledHtml?: string;
+                    compiledText?: string;
+                    variables?: {
+                        name: string;
+                        fallback?: string;
+                    }[];
+                };
+                "multipart/form-data": {
+                    name: string;
+                    slug?: string;
+                    subject?: string;
+                    previewText?: string;
+                    description?: string;
+                    emailType?: "marketing" | "transactional";
+                    channel?: "email" | "sms";
+                    /** @description React Email TSX source */
+                    source?: string;
+                    compiledHtml?: string;
+                    compiledText?: string;
+                    variables?: {
+                        name: string;
+                        fallback?: string;
+                    }[];
+                };
+                "text/plain": {
+                    name: string;
+                    slug?: string;
+                    subject?: string;
+                    previewText?: string;
+                    description?: string;
+                    emailType?: "marketing" | "transactional";
+                    channel?: "email" | "sms";
+                    /** @description React Email TSX source */
+                    source?: string;
+                    compiledHtml?: string;
+                    compiledText?: string;
+                    variables?: {
+                        name: string;
+                        fallback?: string;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        description: string | null;
+                        subject: string | null;
+                        previewText: string | null;
+                        emailType: string;
+                        channel: string;
+                        status: string;
+                        slug: string | null;
+                        publishedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                        sourceHash: string | null;
+                        variables: unknown[];
+                        lastEditedFrom: string | null;
+                        source?: string | null;
+                        compiledHtml?: string | null;
+                        compiledText?: string | null;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        name: string;
+                        description: string | null;
+                        subject: string | null;
+                        previewText: string | null;
+                        emailType: string;
+                        channel: string;
+                        status: string;
+                        slug: string | null;
+                        publishedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                        sourceHash: string | null;
+                        variables: unknown[];
+                        lastEditedFrom: string | null;
+                        source?: string | null;
+                        compiledHtml?: string | null;
+                        compiledText?: string | null;
+                    };
+                    "text/plain": {
+                        id: string;
+                        name: string;
+                        description: string | null;
+                        subject: string | null;
+                        previewText: string | null;
+                        emailType: string;
+                        channel: string;
+                        status: string;
+                        slug: string | null;
+                        publishedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                        sourceHash: string | null;
+                        variables: unknown[];
+                        lastEditedFrom: string | null;
+                        source?: string | null;
+                        compiledHtml?: string | null;
+                        compiledText?: string | null;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        message: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                        message: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                        message: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1TemplatesById: {
+        parameters: {
+            query?: {
+                source?: boolean;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        description: string | null;
+                        subject: string | null;
+                        previewText: string | null;
+                        emailType: string;
+                        channel: string;
+                        status: string;
+                        slug: string | null;
+                        publishedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                        sourceHash: string | null;
+                        variables: unknown[];
+                        lastEditedFrom: string | null;
+                        source?: string | null;
+                        compiledHtml?: string | null;
+                        compiledText?: string | null;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        name: string;
+                        description: string | null;
+                        subject: string | null;
+                        previewText: string | null;
+                        emailType: string;
+                        channel: string;
+                        status: string;
+                        slug: string | null;
+                        publishedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                        sourceHash: string | null;
+                        variables: unknown[];
+                        lastEditedFrom: string | null;
+                        source?: string | null;
+                        compiledHtml?: string | null;
+                        compiledText?: string | null;
+                    };
+                    "text/plain": {
+                        id: string;
+                        name: string;
+                        description: string | null;
+                        subject: string | null;
+                        previewText: string | null;
+                        emailType: string;
+                        channel: string;
+                        status: string;
+                        slug: string | null;
+                        publishedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                        sourceHash: string | null;
+                        variables: unknown[];
+                        lastEditedFrom: string | null;
+                        source?: string | null;
+                        compiledHtml?: string | null;
+                        compiledText?: string | null;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    patchV1TemplatesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    subject?: string;
+                    previewText?: string;
+                    description?: string;
+                    emailType?: "marketing" | "transactional";
+                    channel?: "email" | "sms";
+                    /** @description React Email TSX source */
+                    source?: string;
+                    compiledHtml?: string;
+                    compiledText?: string;
+                    variables?: {
+                        name: string;
+                        fallback?: string;
+                    }[];
+                    /**
+                     * Format: date-time
+                     * @description Optimistic-concurrency guard. When present and the stored updatedAt is later, the update is rejected with 409 instead of overwriting.
+                     */
+                    ifUnmodifiedSince?: string;
+                };
+                "multipart/form-data": {
+                    name?: string;
+                    subject?: string;
+                    previewText?: string;
+                    description?: string;
+                    emailType?: "marketing" | "transactional";
+                    channel?: "email" | "sms";
+                    /** @description React Email TSX source */
+                    source?: string;
+                    compiledHtml?: string;
+                    compiledText?: string;
+                    variables?: {
+                        name: string;
+                        fallback?: string;
+                    }[];
+                    /**
+                     * Format: date-time
+                     * @description Optimistic-concurrency guard. When present and the stored updatedAt is later, the update is rejected with 409 instead of overwriting.
+                     */
+                    ifUnmodifiedSince?: string;
+                };
+                "text/plain": {
+                    name?: string;
+                    subject?: string;
+                    previewText?: string;
+                    description?: string;
+                    emailType?: "marketing" | "transactional";
+                    channel?: "email" | "sms";
+                    /** @description React Email TSX source */
+                    source?: string;
+                    compiledHtml?: string;
+                    compiledText?: string;
+                    variables?: {
+                        name: string;
+                        fallback?: string;
+                    }[];
+                    /**
+                     * Format: date-time
+                     * @description Optimistic-concurrency guard. When present and the stored updatedAt is later, the update is rejected with 409 instead of overwriting.
+                     */
+                    ifUnmodifiedSince?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        description: string | null;
+                        subject: string | null;
+                        previewText: string | null;
+                        emailType: string;
+                        channel: string;
+                        status: string;
+                        slug: string | null;
+                        publishedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                        sourceHash: string | null;
+                        variables: unknown[];
+                        lastEditedFrom: string | null;
+                        source?: string | null;
+                        compiledHtml?: string | null;
+                        compiledText?: string | null;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        name: string;
+                        description: string | null;
+                        subject: string | null;
+                        previewText: string | null;
+                        emailType: string;
+                        channel: string;
+                        status: string;
+                        slug: string | null;
+                        publishedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                        sourceHash: string | null;
+                        variables: unknown[];
+                        lastEditedFrom: string | null;
+                        source?: string | null;
+                        compiledHtml?: string | null;
+                        compiledText?: string | null;
+                    };
+                    "text/plain": {
+                        id: string;
+                        name: string;
+                        description: string | null;
+                        subject: string | null;
+                        previewText: string | null;
+                        emailType: string;
+                        channel: string;
+                        status: string;
+                        slug: string | null;
+                        publishedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                        sourceHash: string | null;
+                        variables: unknown[];
+                        lastEditedFrom: string | null;
+                        source?: string | null;
+                        compiledHtml?: string | null;
+                        compiledText?: string | null;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        message: string;
+                        lastEditedFrom: string | null;
+                        updatedAt: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                        message: string;
+                        lastEditedFrom: string | null;
+                        updatedAt: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                        message: string;
+                        lastEditedFrom: string | null;
+                        updatedAt: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    postV1TemplatesByIdPublish: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description AWS account row id */
+                    awsAccountId?: string;
+                };
+                "multipart/form-data": {
+                    /** @description AWS account row id */
+                    awsAccountId?: string;
+                };
+                "text/plain": {
+                    /** @description AWS account row id */
+                    awsAccountId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        sesTemplateName: string;
+                        publishedAt: string;
+                    };
+                    "multipart/form-data": {
+                        success: boolean;
+                        sesTemplateName: string;
+                        publishedAt: string;
+                    };
+                    "text/plain": {
+                        success: boolean;
+                        sesTemplateName: string;
+                        publishedAt: string;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    postV1TemplatesByIdDuplicate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        description: string | null;
+                        subject: string | null;
+                        previewText: string | null;
+                        emailType: string;
+                        channel: string;
+                        status: string;
+                        slug: string | null;
+                        publishedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                        sourceHash: string | null;
+                        variables: unknown[];
+                        lastEditedFrom: string | null;
+                        source?: string | null;
+                        compiledHtml?: string | null;
+                        compiledText?: string | null;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        name: string;
+                        description: string | null;
+                        subject: string | null;
+                        previewText: string | null;
+                        emailType: string;
+                        channel: string;
+                        status: string;
+                        slug: string | null;
+                        publishedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                        sourceHash: string | null;
+                        variables: unknown[];
+                        lastEditedFrom: string | null;
+                        source?: string | null;
+                        compiledHtml?: string | null;
+                        compiledText?: string | null;
+                    };
+                    "text/plain": {
+                        id: string;
+                        name: string;
+                        description: string | null;
+                        subject: string | null;
+                        previewText: string | null;
+                        emailType: string;
+                        channel: string;
+                        status: string;
+                        slug: string | null;
+                        publishedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                        sourceHash: string | null;
+                        variables: unknown[];
+                        lastEditedFrom: string | null;
+                        source?: string | null;
+                        compiledHtml?: string | null;
+                        compiledText?: string | null;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1WorkflowsPush: {
@@ -3937,6 +6461,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1WorkflowsPushBatch: {
@@ -4089,6 +6620,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     getV1WorkflowsPull: {
@@ -4106,6 +6644,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     "postToolsEmail-check": {
@@ -4481,6 +7026,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     "getToolsEmail-checkByDomain": {
@@ -4826,6 +7378,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     "postV1Workflow-schedulesByWorkflowIdEnable": {
@@ -4860,6 +7419,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     "postV1Workflow-schedulesByWorkflowIdDisable": {
@@ -4879,6 +7445,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     "putV1Workflow-schedulesByWorkflowId": {
@@ -4913,6 +7486,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     getV1Agents: {
@@ -5018,6 +7598,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1Agents: {
@@ -5168,6 +7755,8 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5187,6 +7776,7 @@ export interface operations {
                     };
                 };
             };
+            404: components["responses"]["NotFound"];
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -5206,6 +7796,9 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     getV1AgentsById: {
@@ -5307,6 +7900,9 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5326,6 +7922,9 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1AgentsByIdKill: {
@@ -5439,6 +8038,8 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5477,6 +8078,9 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     "postV1AgentsByIdPolicy-sync": {
@@ -5615,6 +8219,7 @@ export interface operations {
                     };
                 };
             };
+            401: components["responses"]["Unauthorized"];
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5653,6 +8258,9 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     getV1AgentsApprovals: {
@@ -5682,6 +8290,9 @@ export interface operations {
                                 subject: string;
                                 html?: string;
                                 text?: string;
+                                replyTo?: string;
+                                inReplyTo?: string;
+                                references?: string;
                             };
                             reason: string | null;
                             status: string;
@@ -5706,6 +8317,9 @@ export interface operations {
                                 subject: string;
                                 html?: string;
                                 text?: string;
+                                replyTo?: string;
+                                inReplyTo?: string;
+                                references?: string;
                             };
                             reason: string | null;
                             status: string;
@@ -5730,6 +8344,9 @@ export interface operations {
                                 subject: string;
                                 html?: string;
                                 text?: string;
+                                replyTo?: string;
+                                inReplyTo?: string;
+                                references?: string;
                             };
                             reason: string | null;
                             status: string;
@@ -5745,6 +8362,13 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1AgentsApprovalsByIdApprove: {
@@ -5773,6 +8397,9 @@ export interface operations {
                             subject: string;
                             html?: string;
                             text?: string;
+                            replyTo?: string;
+                            inReplyTo?: string;
+                            references?: string;
                         };
                         reason: string | null;
                         status: string;
@@ -5795,6 +8422,9 @@ export interface operations {
                             subject: string;
                             html?: string;
                             text?: string;
+                            replyTo?: string;
+                            inReplyTo?: string;
+                            references?: string;
                         };
                         reason: string | null;
                         status: string;
@@ -5817,6 +8447,9 @@ export interface operations {
                             subject: string;
                             html?: string;
                             text?: string;
+                            replyTo?: string;
+                            inReplyTo?: string;
+                            references?: string;
                         };
                         reason: string | null;
                         status: string;
@@ -5831,6 +8464,8 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5888,6 +8523,9 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1AgentsApprovalsByIdReject: {
@@ -5916,6 +8554,9 @@ export interface operations {
                             subject: string;
                             html?: string;
                             text?: string;
+                            replyTo?: string;
+                            inReplyTo?: string;
+                            references?: string;
                         };
                         reason: string | null;
                         status: string;
@@ -5938,6 +8579,9 @@ export interface operations {
                             subject: string;
                             html?: string;
                             text?: string;
+                            replyTo?: string;
+                            inReplyTo?: string;
+                            references?: string;
                         };
                         reason: string | null;
                         status: string;
@@ -5960,6 +8604,9 @@ export interface operations {
                             subject: string;
                             html?: string;
                             text?: string;
+                            replyTo?: string;
+                            inReplyTo?: string;
+                            references?: string;
                         };
                         reason: string | null;
                         status: string;
@@ -5974,6 +8621,8 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6031,6 +8680,9 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
     postV1AgentsWebhook: {
@@ -6051,6 +8703,9 @@ export interface operations {
                         subject: string;
                         html?: string;
                         text?: string;
+                        replyTo?: string;
+                        inReplyTo?: string;
+                        references?: string;
                     };
                     reason?: string;
                 };
@@ -6063,6 +8718,9 @@ export interface operations {
                         subject: string;
                         html?: string;
                         text?: string;
+                        replyTo?: string;
+                        inReplyTo?: string;
+                        references?: string;
                     };
                     reason?: string;
                 };
@@ -6075,6 +8733,9 @@ export interface operations {
                         subject: string;
                         html?: string;
                         text?: string;
+                        replyTo?: string;
+                        inReplyTo?: string;
+                        references?: string;
                     };
                     reason?: string;
                 };
@@ -6087,6 +8748,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
         };
     };
 }
