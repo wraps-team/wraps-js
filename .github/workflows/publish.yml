@@ -83,7 +83,39 @@ jobs:
       # 2. Then configure trusted publishing at:
       #    https://www.npmjs.com/package/@wraps.dev/<pkg>/access
       #    Add GitHub Actions: wraps-team/wraps-js, publish.yml
+      # server.json carries the version twice (top level and in packages[0]).
+      # Both must match package.json or the registry rejects the publish after
+      # npm has already gone out — check before anything is published.
+      - name: Verify server.json versions match
+        if: steps.package.outputs.package == 'mcp'
+        run: |
+          node -e '
+            const s = require("./packages/mcp/server.json");
+            const tag = process.argv[1];
+            const found = [["version", s.version], ["packages[0].version", s.packages[0].version]];
+            const bad = found.filter(([, v]) => v !== tag);
+            for (const [path, v] of bad) {
+              console.error("::error::server.json " + path + " is " + v + ", expected " + tag);
+            }
+            if (bad.length) process.exit(1);
+            console.log("server.json versions match " + tag);
+          ' "${{ steps.package.outputs.version }}"
+
       - name: Publish ${{ steps.package.outputs.package }} to npm
         run: |
           cd packages/${{ steps.package.outputs.package }}
           npm publish --access public --provenance
+
+      # The registry validates that the published npm tarball carries the
+      # matching `mcpName`, so this has to run after the npm publish above.
+      - name: Publish to MCP Registry
+        if: steps.package.outputs.package == 'mcp'
+        env:
+          MCP_DNS_PRIVATE_KEY: ${{ secrets.MCP_DNS_PRIVATE_KEY }}
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" \
+            | tar xz mcp-publisher
+          sudo mv mcp-publisher /usr/local/bin/
+          cd packages/mcp
+          mcp-publisher login dns --domain wraps.dev --private-key "$MCP_DNS_PRIVATE_KEY"
+          mcp-publisher publish

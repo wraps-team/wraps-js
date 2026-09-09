@@ -1,0 +1,73 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "dev.wraps/email",
+  "description": "Query SES send history, delivery events, domains and suppressions, and send from your AWS account.",
+  "repository": {
+    "url": "https://github.com/wraps-team/wraps-js",
+    "source": "github",
+    "subfolder": "packages/mcp"
+  },
+  "version": "0.7.1",
+  "websiteUrl": "https://wraps.dev",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@wraps.dev/mcp",
+      "version": "0.7.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "AWS_REGION",
+          "description": "Region your Wraps stack is deployed in. Optional only if your active AWS profile supplies one — SES identities are per-region.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "AWS_PROFILE",
+          "description": "AWS profile to use. Credentials are read locally and never leave the machine.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "WRAPS_WRITE_ENABLED",
+          "description": "Set to true to enable the send_email tool. Read-only by default.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "boolean"
+        },
+        {
+          "name": "WRAPS_FROM_EMAIL",
+          "description": "Default from address for send_email. Must be a domain verified in your SES account.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "WRAPS_ALLOWED_RECIPIENTS",
+          "description": "Comma-separated addresses the agent may send to. Restricts send_email when write mode is on.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "WRAPS_ALLOWED_RECIPIENT_DOMAINS",
+          "description": "Comma-separated domains the agent may send to. Matching is exact; list subdomains explicitly.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "WRAPS_HISTORY_TABLE_NAME",
+          "description": "DynamoDB table holding email history. Defaults to wraps-email-history.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}
