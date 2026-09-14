@@ -8,3 +8,6 @@ dist
 coverage
 notes
 plans
+
+# MCPB bundles are build artifacts — rebuild with packages/mcp/mcpb-manifest.json
+*.mcpb

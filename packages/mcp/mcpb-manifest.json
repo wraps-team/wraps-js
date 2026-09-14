@@ -1,0 +1,52 @@
+{
+  "manifest_version": "0.2",
+  "name": "wraps-email",
+  "display_name": "Wraps Email",
+  "version": "0.7.1",
+  "description": "Query SES send history, delivery events, domains and suppressions, and send from your AWS account.",
+  "long_description": "Operate a deployed Wraps email stack from your agent. Read send history and delivery events, check domain verification and suppressions, and send guarded email — all through your own AWS credentials, read locally and never transmitted to Wraps.",
+  "author": {
+    "name": "Wraps",
+    "url": "https://wraps.dev"
+  },
+  "homepage": "https://wraps.dev",
+  "documentation": "https://wraps.dev/docs",
+  "support": "https://github.com/wraps-team/wraps-js/issues",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wraps-team/wraps-js"
+  },
+  "license": "MIT",
+  "keywords": ["aws", "ses", "email", "deliverability", "wraps"],
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/index.js"],
+      "env": {
+        "AWS_REGION": "${user_config.aws_region}",
+        "AWS_PROFILE": "${user_config.aws_profile}"
+      }
+    }
+  },
+  "user_config": {
+    "aws_region": {
+      "type": "string",
+      "title": "AWS region",
+      "description": "Region your Wraps stack is deployed in. SES identities are per-region. Optional if your AWS profile already supplies one.",
+      "required": false
+    },
+    "aws_profile": {
+      "type": "string",
+      "title": "AWS profile",
+      "description": "AWS profile to use. Credentials are read locally and never leave your machine.",
+      "required": false
+    }
+  },
+  "compatibility": {
+    "runtimes": {
+      "node": ">=20.0.0"
+    }
+  }
+}
