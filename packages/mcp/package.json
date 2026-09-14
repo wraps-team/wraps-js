@@ -39,7 +39,7 @@
     "@aws-sdk/client-sts": "^3.928.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@wraps.dev/email": "^0.13.0",
-    "zod": "^4.1.12"
+    "zod": "^4.6.2"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.5",

@@ -38,7 +38,7 @@
   "dependencies": {
     "@aws-sdk/client-pinpoint-sms-voice-v2": "^3.928.0",
     "@aws-sdk/credential-providers": "^3.928.0",
-    "zod": "^4.1.12"
+    "zod": "^4.6.2"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.5",
