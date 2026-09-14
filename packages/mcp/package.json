@@ -46,7 +46,7 @@
     "@types/node": "^24.10.0",
     "@vitest/coverage-v8": "^4.0.8",
     "tsup": "^8.5.1",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.0.8"
   },
   "keywords": [
