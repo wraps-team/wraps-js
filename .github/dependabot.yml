@@ -28,6 +28,15 @@ updates:
         patterns:
           - "@aws-sdk/*"
           - "@smithy/*"
+      # vitest and its coverage provider are version-locked to each other, and
+      # vitest also has a floor in pnpm-workspace.yaml. Split across two PRs,
+      # one pairs coverage-v8 5 with vitest 4; worse, a vitest major that the
+      # override still holds below installs the OLD version while the manifests
+      # claim the new one, so CI goes green without testing the upgrade at all.
+      vitest:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
     ignore:
       # These SDKs declare engines node >=20. Typechecking against a newer
       # @types/node lets tsc accept APIs that do not exist on the oldest
