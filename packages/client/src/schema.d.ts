@@ -44,6 +44,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/account/console-policy/{awsAccountId}/recheck": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-probe one account's console-access policy version
+         * @description Assumes the account's wraps-console-access-role and probes which version of the Wraps console policy it carries, then persists the reading. Exists so a customer who has just repaired their role sees it reflected immediately rather than waiting for the hourly sweep, which does not re-probe an account it checked within the last day. Rate limited to one probe per account per minute; inside that window, or when SES throttles the probe, the stored reading is returned with `rechecked: false`.
+         */
+        post: operations["postV1AccountConsole-policyByAwsAccountIdRecheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/account/health": {
         parameters: {
             query?: never;
@@ -1337,6 +1357,54 @@ export interface operations {
                         version: string;
                         /** @description Documentation URL */
                         docs: string;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    "postV1AccountConsole-policyByAwsAccountIdRecheck": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                awsAccountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        version: number | null;
+                        currentVersion: number;
+                        upToDate: boolean;
+                        checkedAt: string | null;
+                        rechecked: boolean;
+                    };
+                    "multipart/form-data": {
+                        version: number | null;
+                        currentVersion: number;
+                        upToDate: boolean;
+                        checkedAt: string | null;
+                        rechecked: boolean;
+                    };
+                    "text/plain": {
+                        version: number | null;
+                        currentVersion: number;
+                        upToDate: boolean;
+                        checkedAt: string | null;
+                        rechecked: boolean;
                     };
                 };
             };
@@ -8118,85 +8186,97 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        id: string;
-                        organizationId: string;
-                        name: string;
-                        emailAddress: string;
-                        domain: string;
-                        /** @description ACTIVE or KILLED */
-                        status: string;
-                        policy: {
-                            /** @description Max sends per rolling hour (0 flags every send) */
-                            maxPerHour: number;
-                            /** @description Max sends per rolling day (0 flags every send) */
-                            maxPerDay: number;
-                            /** @description Exact recipient addresses always allowed */
-                            allowedRecipients: string[];
-                            /** @description Recipient domains always allowed */
-                            allowedRecipientDomains: string[];
+                        agent: {
+                            id: string;
+                            organizationId: string;
+                            name: string;
+                            emailAddress: string;
+                            domain: string;
+                            /** @description ACTIVE or KILLED */
+                            status: string;
+                            policy: {
+                                /** @description Max sends per rolling hour (0 flags every send) */
+                                maxPerHour: number;
+                                /** @description Max sends per rolling day (0 flags every send) */
+                                maxPerDay: number;
+                                /** @description Exact recipient addresses always allowed */
+                                allowedRecipients: string[];
+                                /** @description Recipient domains always allowed */
+                                allowedRecipientDomains: string[];
+                            };
+                            credentialUserArn: string | null;
+                            enforcerFunctionArn: string | null;
+                            awsAccountId: string | null;
+                            createdBy: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
                         };
-                        credentialUserArn: string | null;
-                        enforcerFunctionArn: string | null;
-                        awsAccountId: string | null;
-                        createdBy: string | null;
-                        /** Format: date-time */
-                        createdAt: string;
-                        /** Format: date-time */
-                        updatedAt: string;
+                        syncStatus: "synced" | "skipped" | "failed";
+                        warning?: string;
                     };
                     "multipart/form-data": {
-                        id: string;
-                        organizationId: string;
-                        name: string;
-                        emailAddress: string;
-                        domain: string;
-                        /** @description ACTIVE or KILLED */
-                        status: string;
-                        policy: {
-                            /** @description Max sends per rolling hour (0 flags every send) */
-                            maxPerHour: number;
-                            /** @description Max sends per rolling day (0 flags every send) */
-                            maxPerDay: number;
-                            /** @description Exact recipient addresses always allowed */
-                            allowedRecipients: string[];
-                            /** @description Recipient domains always allowed */
-                            allowedRecipientDomains: string[];
+                        agent: {
+                            id: string;
+                            organizationId: string;
+                            name: string;
+                            emailAddress: string;
+                            domain: string;
+                            /** @description ACTIVE or KILLED */
+                            status: string;
+                            policy: {
+                                /** @description Max sends per rolling hour (0 flags every send) */
+                                maxPerHour: number;
+                                /** @description Max sends per rolling day (0 flags every send) */
+                                maxPerDay: number;
+                                /** @description Exact recipient addresses always allowed */
+                                allowedRecipients: string[];
+                                /** @description Recipient domains always allowed */
+                                allowedRecipientDomains: string[];
+                            };
+                            credentialUserArn: string | null;
+                            enforcerFunctionArn: string | null;
+                            awsAccountId: string | null;
+                            createdBy: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
                         };
-                        credentialUserArn: string | null;
-                        enforcerFunctionArn: string | null;
-                        awsAccountId: string | null;
-                        createdBy: string | null;
-                        /** Format: date-time */
-                        createdAt: string;
-                        /** Format: date-time */
-                        updatedAt: string;
+                        syncStatus: "synced" | "skipped" | "failed";
+                        warning?: string;
                     };
                     "text/plain": {
-                        id: string;
-                        organizationId: string;
-                        name: string;
-                        emailAddress: string;
-                        domain: string;
-                        /** @description ACTIVE or KILLED */
-                        status: string;
-                        policy: {
-                            /** @description Max sends per rolling hour (0 flags every send) */
-                            maxPerHour: number;
-                            /** @description Max sends per rolling day (0 flags every send) */
-                            maxPerDay: number;
-                            /** @description Exact recipient addresses always allowed */
-                            allowedRecipients: string[];
-                            /** @description Recipient domains always allowed */
-                            allowedRecipientDomains: string[];
+                        agent: {
+                            id: string;
+                            organizationId: string;
+                            name: string;
+                            emailAddress: string;
+                            domain: string;
+                            /** @description ACTIVE or KILLED */
+                            status: string;
+                            policy: {
+                                /** @description Max sends per rolling hour (0 flags every send) */
+                                maxPerHour: number;
+                                /** @description Max sends per rolling day (0 flags every send) */
+                                maxPerDay: number;
+                                /** @description Exact recipient addresses always allowed */
+                                allowedRecipients: string[];
+                                /** @description Recipient domains always allowed */
+                                allowedRecipientDomains: string[];
+                            };
+                            credentialUserArn: string | null;
+                            enforcerFunctionArn: string | null;
+                            awsAccountId: string | null;
+                            createdBy: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
                         };
-                        credentialUserArn: string | null;
-                        enforcerFunctionArn: string | null;
-                        awsAccountId: string | null;
-                        createdBy: string | null;
-                        /** Format: date-time */
-                        createdAt: string;
-                        /** Format: date-time */
-                        updatedAt: string;
+                        syncStatus: "synced" | "skipped" | "failed";
+                        warning?: string;
                     };
                 };
             };
