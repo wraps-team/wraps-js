@@ -13,6 +13,12 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # These packages are published libraries, so a declared range is a promise
+    # to consumers. Only widen the floor when the new version falls outside the
+    # existing range -- "^3.928.0" already permits @aws-sdk 3.1130.0, and
+    # ratcheting it forces every consumer onto a newer AWS SDK for no gain.
+    # The lockfile still moves, so CI keeps testing against current versions.
+    versioning-strategy: "increase-if-necessary"
     groups:
       # AWS SDK clients must move together. Bumping one client alone pulls a
       # newer @smithy/types beside the version the other clients still pin, and
