@@ -43,3 +43,12 @@ updates:
       # runtime we support, so major bumps here are a deliberate decision.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
+      # vitest is held below 5 by an override in pnpm-workspace.yaml, and
+      # Dependabot cannot see pnpm overrides. A major bump therefore rewrites
+      # the manifests to ^5 while the install stays on 4.x, and CI goes green
+      # without ever running the new version. Moving to 5 means raising that
+      # override deliberately; until then, stop proposing it.
+      - dependency-name: "vitest"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@vitest/*"
+        update-types: ["version-update:semver-major"]
