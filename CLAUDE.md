@@ -119,12 +119,23 @@ one throws.
 
 ### 3. AWS SDK Is External — Never Bundle It
 
-All `@aws-sdk/*` packages are marked `external` in tsup. They're peer dependencies, not bundled:
+All `@aws-sdk/*` packages are marked `external` in tsup, so they are never inlined into
+`dist`:
 
 ```typescript
 // tsup.config.ts
 external: ['@aws-sdk/*', 'react', '@react-email/components'],
 ```
+
+`external` only controls bundling — it says nothing about how the dependency is declared,
+and the entries above are not all the same kind:
+
+- `@aws-sdk/*` are regular `dependencies` of email, sms and mcp, so consumers get them
+  installed automatically. Keep the declared ranges wide (`^3.928.0`) — a floor raise
+  forces every BYOC consumer onto a newer AWS SDK, and `^3.928.0` already admits later
+  3.x releases.
+- `react` and `@react-email/components` are the only true `peerDependencies`, on email
+  alone: React.email rendering is opt-in, so the consumer supplies those.
 
 ### 4. Dual CJS + ESM Output
 
