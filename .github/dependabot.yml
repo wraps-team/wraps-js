@@ -6,8 +6,25 @@
 version: 2
 updates:
   - package-ecosystem: "npm" # See documentation for possible values
-    directories: 
-      - "/"
-      - "**/*"
+    # Root only. This is a pnpm workspace, so the root lockfile covers every
+    # package -- adding "**/*" makes Dependabot ALSO open a per-package PR for
+    # the same dependency, and a bump applied to one package but not the rest
+    # leaves two copies of a transitive dep in the tree and fails typecheck.
+    directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      # AWS SDK clients must move together. Bumping one client alone pulls a
+      # newer @smithy/types beside the version the other clients still pin, and
+      # the two nominally-distinct Command types stop being assignable --
+      # packages/email/src/events.ts fails to typecheck. Keep them in one PR.
+      aws-sdk:
+        patterns:
+          - "@aws-sdk/*"
+          - "@smithy/*"
+    ignore:
+      # These SDKs declare engines node >=20. Typechecking against a newer
+      # @types/node lets tsc accept APIs that do not exist on the oldest
+      # runtime we support, so major bumps here are a deliberate decision.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
