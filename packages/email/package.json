@@ -69,10 +69,10 @@
     "@types/node": "^24.10.0",
     "@types/react": "^19.2.3",
     "@vercel/oidc-aws-credentials-provider": "3.3.7",
-    "@vitest/coverage-v8": "^4.0.8",
+    "@vitest/coverage-v8": "^5.0.0",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.8"
+    "vitest": "^5.0.0"
   },
   "keywords": [
     "email",
