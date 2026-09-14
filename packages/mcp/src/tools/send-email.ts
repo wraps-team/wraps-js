@@ -2,15 +2,30 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WrapsEmail } from '@wraps.dev/email';
 import { z } from 'zod';
 import type { MCPConfig } from '../config.ts';
+import { requireAws } from '../config.ts';
 import { invokeEnforcerForTool } from '../enforcer-client.ts';
 import type { EnforcerResponse } from '../enforcer-contract.ts';
 
 const SendEmailInputSchema = {
-  to: z.union([z.string().email(), z.array(z.string().email()).min(1).max(1000)]),
-  from: z.string().email().optional(),
-  subject: z.string(),
-  html: z.string().optional(),
-  text: z.string().optional(),
+  to: z
+    .union([z.string().email(), z.array(z.string().email()).min(1).max(1000)])
+    .describe('Recipient address, or an array of up to 1000 addresses.'),
+  from: z
+    .string()
+    .email()
+    .optional()
+    .describe(
+      'Sender address. Must be a verified SES identity in this account. Defaults to WRAPS_FROM_EMAIL.'
+    ),
+  subject: z.string().describe('Subject line.'),
+  html: z
+    .string()
+    .optional()
+    .describe('HTML body. Provide `html`, `text`, or both; at least one is required.'),
+  text: z
+    .string()
+    .optional()
+    .describe('Plain-text body. Provide `html`, `text`, or both; at least one is required.'),
 };
 
 const EnforcedSendEmailInputSchema = {
@@ -37,6 +52,18 @@ const EnforcedSendEmailInputSchema = {
     .string()
     .optional()
     .describe('Space-separated Message-ID chain of the conversation so far.'),
+};
+
+/**
+ * The plain send path. Distinct from EnforcerResultSchema: without an agent
+ * enforcer there is no approval step, so a success is always a completed send.
+ */
+export const SendEmailResultSchema = {
+  messageId: z
+    .string()
+    .describe('SES message id; pass to get_email_event_log for delivery events.'),
+  to: z.array(z.string()).describe('Recipients the message was accepted for.'),
+  from: z.string(),
 };
 
 export const EnforcerResultSchema = {
@@ -159,6 +186,7 @@ export function registerSendEmail(server: McpServer, config: MCPConfig): void {
       description:
         'Send a transactional email via your AWS SES account. Requires WRAPS_WRITE_ENABLED=true. The `from` address must be a verified Wraps domain. The `to` field accepts a single address or an array of addresses.',
       inputSchema: SendEmailInputSchema,
+      outputSchema: SendEmailResultSchema,
       // send_email is the only tool here with a real-world side effect, and email
       // cannot be recalled. Stated explicitly rather than left to the spec's
       // defaults: destructiveHint/idempotentHint are only consulted when
@@ -268,8 +296,13 @@ export function registerSendEmail(server: McpServer, config: MCPConfig): void {
         };
       }
 
+      const awsResolved = await requireAws(config);
+      if (!awsResolved.ok) {
+        return awsResolved.error;
+      }
+
       const email = new WrapsEmail({
-        region: config.region,
+        region: awsResolved.aws.region,
         historyTableName: config.historyTableName,
       });
       try {
@@ -288,6 +321,11 @@ export function registerSendEmail(server: McpServer, config: MCPConfig): void {
               text: `Email sent successfully. messageId: ${result.messageId}`,
             },
           ],
+          structuredContent: {
+            messageId: result.messageId,
+            to: Array.isArray(input.to) ? input.to : [input.to],
+            from,
+          },
         };
       } catch (error) {
         if (isUnverifiedRecipientError(error)) {

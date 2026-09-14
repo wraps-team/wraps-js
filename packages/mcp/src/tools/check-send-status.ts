@@ -21,6 +21,9 @@ export function registerCheckSendStatus(server: McpServer, config: MCPConfig): v
         'Check the outcome of a send that returned pending_approval. Pass the approvalId from send_email. Returns the current disposition: sent (with messageId), blocked, pending_approval (still waiting), or unknown.',
       inputSchema: CheckSendStatusInputSchema,
       outputSchema: EnforcerResultSchema,
+      // Polling a verdict changes nothing, but the status it reports does move
+      // as an operator approves or blocks — so not idempotent.
+      annotations: { readOnlyHint: true, idempotentHint: false, openWorldHint: true },
     },
     async (input) => {
       const result = await invokeEnforcerForTool(config, {

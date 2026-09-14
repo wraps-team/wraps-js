@@ -4,7 +4,11 @@ import { ConfigError } from './errors.ts';
 import { createServer } from './server.ts';
 
 async function main(): Promise<void> {
-  const config = await loadConfig();
+  // Nothing before connect() may touch the network. Configuration is read from
+  // the environment synchronously and AWS credentials are resolved on first
+  // tool call, so a machine without credentials still gets a server that can
+  // list its tools and explain what it needs.
+  const config = loadConfig();
   const server = createServer(config);
   const transport = new StdioServerTransport();
   await server.connect(transport);

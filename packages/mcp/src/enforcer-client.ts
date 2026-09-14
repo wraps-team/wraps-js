@@ -103,8 +103,9 @@ export async function invokeEnforcerForTool(
   request: Omit<EnforcerRequest, 'agentId'>
 ): Promise<EnforcerToolResult> {
   try {
+    const { region } = await config.aws();
     const response = await invokeEnforcer(
-      config.region,
+      region,
       // biome-ignore lint/style/noNonNullAssertion: enforcedMode guarantees these are set.
       config.enforcerFunction!,
       // biome-ignore lint/style/noNonNullAssertion: enforcedMode guarantees these are set.

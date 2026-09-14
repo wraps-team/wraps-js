@@ -2,9 +2,32 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WrapsEmail } from '@wraps.dev/email';
 import { z } from 'zod';
 import type { MCPConfig } from '../config.ts';
+import { requireAws } from '../config.ts';
 
 const GetEmailEventLogInputSchema = {
-  messageId: z.string().min(1),
+  messageId: z
+    .string()
+    .min(1)
+    .describe('SES message id, as returned by send_email or list_recent_sends.'),
+};
+
+/**
+ * `found: false` is a success, not an error: no events recorded is a real and
+ * common state for a message sent seconds ago, and the text block explains the
+ * three causes. Callers branch on this rather than on isError.
+ */
+const GetEmailEventLogOutputSchema = {
+  found: z.boolean().describe('False when no events are recorded yet for this messageId.'),
+  messageId: z.string(),
+  status: z.string().optional(),
+  from: z.string().optional(),
+  to: z.array(z.string()).optional(),
+  subject: z.string().optional(),
+  sentAt: z.string().optional().describe('ISO 8601.'),
+  events: z
+    .array(z.object({ type: z.string(), timestamp: z.string().describe('ISO 8601.') }))
+    .optional()
+    .describe('SES events in recorded order: Send, Delivery, Bounce, Complaint, Open, Click.'),
 };
 
 export function registerGetEmailEventLog(server: McpServer, config: MCPConfig): void {
@@ -14,11 +37,17 @@ export function registerGetEmailEventLog(server: McpServer, config: MCPConfig): 
       description:
         'Get the full delivery event log for a specific email by its messageId. Returns all SES events: Send, Delivery, Bounce, Complaint, Open, Click.',
       inputSchema: GetEmailEventLogInputSchema,
-      annotations: { readOnlyHint: true },
+      outputSchema: GetEmailEventLogOutputSchema,
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
     },
     async (input) => {
+      const resolved = await requireAws(config);
+      if (!resolved.ok) {
+        return resolved.error;
+      }
+      const { region } = resolved.aws;
       const email = new WrapsEmail({
-        region: config.region,
+        region,
         historyTableName: config.historyTableName,
       });
       try {
@@ -45,6 +74,7 @@ export function registerGetEmailEventLog(server: McpServer, config: MCPConfig): 
                 ].join('\n'),
               },
             ],
+            structuredContent: { found: false, messageId: input.messageId },
           };
         }
 
@@ -63,7 +93,22 @@ export function registerGetEmailEventLog(server: McpServer, config: MCPConfig): 
           eventsText,
         ].join('\n');
 
-        return { content: [{ type: 'text' as const, text }] };
+        return {
+          content: [{ type: 'text' as const, text }],
+          structuredContent: {
+            found: true,
+            messageId: status.messageId,
+            status: status.status,
+            from: status.from,
+            to: status.to,
+            subject: status.subject,
+            sentAt: new Date(status.sentAt).toISOString(),
+            events: status.events.map((e) => ({
+              type: e.type,
+              timestamp: new Date(e.timestamp).toISOString(),
+            })),
+          },
+        };
       } catch (error) {
         return {
           isError: true,

@@ -1,10 +1,25 @@
 import { GetCallerIdentityCommand, STSClient } from '@aws-sdk/client-sts';
 import { ConfigError } from './errors.ts';
 
-export interface MCPConfig {
+/** The two fields that cannot be known without working AWS credentials. */
+export interface AwsIdentity {
   region: string;
-  historyTableName: string;
   accountId: string;
+}
+
+export interface MCPConfig {
+  /**
+   * Resolves the region and account id, memoized across calls.
+   *
+   * Deliberately lazy. Everything else on this object comes from environment
+   * variables and is known before the process talks to anything; these two need
+   * a live STS call. Resolving them at startup meant a machine without
+   * credentials never got as far as connecting the transport, so clients — and
+   * registry scanners — saw a dead process instead of a server that could list
+   * its tools and say what it needed. See `requireAws`.
+   */
+  aws: () => Promise<AwsIdentity>;
+  historyTableName: string;
   writeEnabled: boolean;
   fromEmail: string | undefined;
   configurationSetName: string | undefined;
@@ -59,9 +74,37 @@ async function resolveRegion(): Promise<string> {
   throw new ConfigError(REGION_NOT_FOUND);
 }
 
-export async function loadConfig(): Promise<MCPConfig> {
+/**
+ * Resolve region + account id, memoized for the life of the process.
+ *
+ * Both steps need credentials, so this is the only part of configuration that
+ * can fail for reasons the user cannot see in their own env file.
+ */
+async function resolveAws(): Promise<AwsIdentity> {
   const region = await resolveRegion();
 
+  let accountId = process.env.WRAPS_ACCOUNT_ID || cachedAccountId;
+  if (!accountId) {
+    const sts = new STSClient({ region });
+    const response = await sts.send(new GetCallerIdentityCommand({}));
+    if (!response.Account) {
+      throw new ConfigError('STS GetCallerIdentity did not return an Account ID.');
+    }
+    accountId = response.Account;
+    cachedAccountId = accountId;
+  }
+
+  return { region, accountId };
+}
+
+/**
+ * Read configuration from the environment.
+ *
+ * Synchronous and network-free on purpose: the server must be able to connect
+ * its transport and list its tools on a machine with no AWS credentials at all.
+ * The credential-dependent half is deferred to `config.aws()`.
+ */
+export function loadConfig(): MCPConfig {
   const historyTableName = process.env.WRAPS_HISTORY_TABLE_NAME || 'wraps-email-history';
   const writeEnabled = process.env.WRAPS_WRITE_ENABLED === 'true';
   const fromEmail = process.env.WRAPS_FROM_EMAIL;
@@ -82,6 +125,8 @@ export async function loadConfig(): Promise<MCPConfig> {
   if (maxRecipientsRaw !== undefined) {
     const parsed = Number(maxRecipientsRaw);
     if (!Number.isInteger(parsed) || parsed <= 0) {
+      // A typo in the user's own config, not a missing credential — and it
+      // cannot fire during a registry scan, which sets no environment at all.
       throw new ConfigError(
         `Invalid WRAPS_MAX_RECIPIENTS: "${maxRecipientsRaw}". Must be a positive integer.`
       );
@@ -95,21 +140,21 @@ export async function loadConfig(): Promise<MCPConfig> {
   const enforcerFunction = process.env.WRAPS_AGENT_ENFORCER_ARN || undefined;
   const enforcedMode = Boolean(agentId && enforcerFunction);
 
-  let accountId = process.env.WRAPS_ACCOUNT_ID || cachedAccountId;
-  if (!accountId) {
-    const sts = new STSClient({ region });
-    const response = await sts.send(new GetCallerIdentityCommand({}));
-    if (!response.Account) {
-      throw new ConfigError('STS GetCallerIdentity did not return an Account ID.');
-    }
-    accountId = response.Account;
-    cachedAccountId = accountId;
-  }
+  let pending: Promise<AwsIdentity> | undefined;
+  const aws = () => {
+    // Memoize the promise, not the value, so concurrent tool calls on a cold
+    // server share one STS round trip. A rejection is not cached: the user can
+    // fix their credentials and retry without restarting the server.
+    pending ??= resolveAws().catch((err: unknown) => {
+      pending = undefined;
+      throw err;
+    });
+    return pending;
+  };
 
   return {
-    region,
+    aws,
     historyTableName,
-    accountId,
     writeEnabled,
     fromEmail,
     configurationSetName,
@@ -121,6 +166,36 @@ export async function loadConfig(): Promise<MCPConfig> {
     enforcerFunction,
     enforcedMode,
   };
+}
+
+/** A tool result shaped like the MCP SDK's error return. */
+type ToolError = {
+  isError: true;
+  content: { type: 'text'; text: string }[];
+};
+
+/**
+ * Gate a tool on AWS credentials.
+ *
+ * Returns the identity, or an MCP error the caller returns verbatim — so a user
+ * without credentials gets the actionable configuration message from the tool
+ * they invoked, instead of the server vanishing at startup.
+ */
+export async function requireAws(
+  config: MCPConfig
+): Promise<{ ok: true; aws: AwsIdentity } | { ok: false; error: ToolError }> {
+  try {
+    return { ok: true, aws: await config.aws() };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return {
+      ok: false,
+      error: {
+        isError: true,
+        content: [{ type: 'text', text: message }],
+      },
+    };
+  }
 }
 
 export function resetAccountIdCache(): void {

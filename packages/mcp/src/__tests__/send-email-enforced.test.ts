@@ -37,9 +37,8 @@ vi.mock('@wraps.dev/email', () => ({
 }));
 
 const enforcedConfig: MCPConfig = {
-  region: 'us-east-1',
+  aws: () => Promise.resolve({ region: 'us-east-1', accountId: '123456789012' }),
   historyTableName: 'wraps-email-history',
-  accountId: '123456789012',
   writeEnabled: false,
   fromEmail: 'agent@example.com',
   configurationSetName: undefined,

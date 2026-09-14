@@ -7,6 +7,7 @@ import { loadConfig, resetAccountIdCache } from '../config.ts';
 import { ConfigError } from '../errors.ts';
 import { registerGetEmailEventLog } from '../tools/get-email-event-log.ts';
 import { registerGetSetupStatus } from '../tools/get-setup-status.ts';
+import { registerAllTools } from '../tools/index.ts';
 import { registerListRecentSends } from '../tools/list-recent-sends.ts';
 import { registerListSuppressions } from '../tools/list-suppressions.ts';
 import { registerSendEmail } from '../tools/send-email.ts';
@@ -78,6 +79,70 @@ vi.mock('@wraps.dev/email', () => ({
   },
 }));
 
+describe('startup without AWS credentials', () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    process.env = { ...originalEnv };
+    for (const k of ['AWS_REGION', 'AWS_DEFAULT_REGION', 'WRAPS_ACCOUNT_ID']) {
+      delete process.env[k];
+    }
+    mockStsRegion.mockReset();
+    mockStsRegion.mockRejectedValue(new Error('Region is missing'));
+    mockStsSend.mockReset();
+    resetAccountIdCache();
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  // The regression this guards: config used to resolve before the transport
+  // connected, so a machine with no credentials produced a dead process. Every
+  // client rendered "server failed to start", and registry scanners recorded a
+  // server with zero tools.
+  it('serves tools/list on a machine with no credentials at all', async () => {
+    const config = loadConfig();
+    const server = new McpServer({ name: 'test', version: '1.0' });
+    registerAllTools(server, config);
+
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await server.connect(serverTransport);
+    const client = new Client({ name: 'test', version: '1.0' });
+    await client.connect(clientTransport);
+
+    const { tools } = await client.listTools();
+    expect(tools.length).toBeGreaterThan(0);
+    expect(tools.map((t) => t.name)).toContain('list_recent_sends');
+
+    // and every tool still advertises what it does, which is what the score reads
+    for (const tool of tools) {
+      expect(tool.description ?? '').not.toBe('');
+    }
+
+    await client.close();
+    await server.close();
+  });
+
+  it('reports the missing region through the tool instead of killing the server', async () => {
+    const config = loadConfig();
+    const server = new McpServer({ name: 'test', version: '1.0' });
+    registerListRecentSends(server, config);
+
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await server.connect(serverTransport);
+    const client = new Client({ name: 'test', version: '1.0' });
+    await client.connect(clientTransport);
+
+    const result = await client.callTool({ name: 'list_recent_sends', arguments: {} });
+    expect(result.isError).toBe(true);
+    expect(getText(result)).toMatch(/region/i);
+
+    await client.close();
+    await server.close();
+  });
+});
+
 describe('loadConfig()', () => {
   const originalEnv = process.env;
 
@@ -107,12 +172,18 @@ describe('loadConfig()', () => {
   });
 
   it('throws ConfigError when no env var, profile, or SDK default supplies a region', async () => {
-    await expect(loadConfig()).rejects.toThrow(ConfigError);
-    await expect(loadConfig()).rejects.toThrow(/region/i);
+    // loadConfig() itself must never fail on a machine without AWS — that is
+    // what lets the transport connect and tools/list answer. The region error
+    // surfaces when a tool actually needs it.
+    expect(() => loadConfig()).not.toThrow();
+    await expect(loadConfig().aws()).rejects.toThrow(ConfigError);
+    await expect(loadConfig().aws()).rejects.toThrow(/region/i);
   });
 
   it('names every way to supply a region without ranking them', async () => {
-    const error = await loadConfig().catch((err: Error) => err);
+    const error = await loadConfig()
+      .aws()
+      .catch((err: Error) => err);
     const message = (error as Error).message;
     expect(message).toContain('AWS_REGION');
     expect(message).toContain('AWS_DEFAULT_REGION');
@@ -123,8 +194,8 @@ describe('loadConfig()', () => {
   it('falls back to the active AWS profile region when no env var is set', async () => {
     mockStsRegion.mockResolvedValue('eu-west-2');
     process.env.WRAPS_ACCOUNT_ID = '123456789012';
-    const config = await loadConfig();
-    expect(config.region).toBe('eu-west-2');
+    const config = loadConfig();
+    expect((await config.aws()).region).toBe('eu-west-2');
     expect(mockStsDestroy).toHaveBeenCalled();
   });
 
@@ -132,19 +203,17 @@ describe('loadConfig()', () => {
     mockStsRegion.mockResolvedValue('eu-west-2');
     process.env.AWS_REGION = 'us-east-1';
     process.env.WRAPS_ACCOUNT_ID = '123456789012';
-    const config = await loadConfig();
-    expect(config.region).toBe('us-east-1');
+    const config = loadConfig();
+    expect((await config.aws()).region).toBe('us-east-1');
     expect(mockStsRegion).not.toHaveBeenCalled();
   });
 
   it('returns full config with default historyTableName when WRAPS_HISTORY_TABLE_NAME not set', async () => {
     process.env.AWS_REGION = 'us-east-1';
     process.env.WRAPS_ACCOUNT_ID = '123456789012';
-    const config = await loadConfig();
-    expect(config).toEqual({
-      region: 'us-east-1',
+    const config = loadConfig();
+    expect(config).toMatchObject({
       historyTableName: 'wraps-email-history',
-      accountId: '123456789012',
       writeEnabled: false,
       fromEmail: undefined,
       allowedRecipients: [],
@@ -153,16 +222,18 @@ describe('loadConfig()', () => {
       allowFromOverride: false,
       enforcedMode: false,
     });
+    await expect(config.aws()).resolves.toEqual({
+      region: 'us-east-1',
+      accountId: '123456789012',
+    });
   });
 
   it('resolves full config via STS GetCallerIdentity when WRAPS_ACCOUNT_ID not set', async () => {
     process.env.AWS_REGION = 'us-east-1';
     mockStsSend.mockResolvedValue({ Account: '999888777666' });
-    const config = await loadConfig();
-    expect(config).toEqual({
-      region: 'us-east-1',
+    const config = loadConfig();
+    expect(config).toMatchObject({
       historyTableName: 'wraps-email-history',
-      accountId: '999888777666',
       writeEnabled: false,
       fromEmail: undefined,
       allowedRecipients: [],
@@ -170,6 +241,10 @@ describe('loadConfig()', () => {
       maxRecipients: 50,
       allowFromOverride: false,
       enforcedMode: false,
+    });
+    await expect(config.aws()).resolves.toEqual({
+      region: 'us-east-1',
+      accountId: '999888777666',
     });
     expect(mockStsSend).toHaveBeenCalledOnce();
   });
@@ -177,11 +252,9 @@ describe('loadConfig()', () => {
   it('uses WRAPS_ACCOUNT_ID directly and skips STS when set', async () => {
     process.env.AWS_REGION = 'us-east-1';
     process.env.WRAPS_ACCOUNT_ID = '111222333444';
-    const config = await loadConfig();
-    expect(config).toEqual({
-      region: 'us-east-1',
+    const config = loadConfig();
+    expect(config).toMatchObject({
       historyTableName: 'wraps-email-history',
-      accountId: '111222333444',
       writeEnabled: false,
       fromEmail: undefined,
       allowedRecipients: [],
@@ -190,22 +263,27 @@ describe('loadConfig()', () => {
       allowFromOverride: false,
       enforcedMode: false,
     });
+    await expect(config.aws()).resolves.toEqual({
+      region: 'us-east-1',
+      accountId: '111222333444',
+    });
+    // STS is skipped entirely when the account id is supplied.
     expect(mockStsSend).not.toHaveBeenCalled();
   });
 
   it('throws ConfigError when STS GetCallerIdentity returns no Account field', async () => {
     process.env.AWS_REGION = 'us-east-1';
     mockStsSend.mockResolvedValue({ Account: undefined });
-    await expect(loadConfig()).rejects.toThrow(ConfigError);
-    await expect(loadConfig()).rejects.toThrow(/Account ID/i);
+    await expect(loadConfig().aws()).rejects.toThrow(ConfigError);
+    await expect(loadConfig().aws()).rejects.toThrow(/Account ID/i);
   });
 
   it('throws ConfigError when WRAPS_MAX_RECIPIENTS contains trailing garbage like "50x"', async () => {
     process.env.AWS_REGION = 'us-east-1';
     process.env.WRAPS_ACCOUNT_ID = '123456789012';
     process.env.WRAPS_MAX_RECIPIENTS = '50x';
-    await expect(loadConfig()).rejects.toThrow(ConfigError);
-    await expect(loadConfig()).rejects.toThrow(/WRAPS_MAX_RECIPIENTS/);
+    expect(() => loadConfig()).toThrow(ConfigError);
+    expect(() => loadConfig()).toThrow(/WRAPS_MAX_RECIPIENTS/);
   });
 
   it('derives enforcedMode: true only when BOTH WRAPS_AGENT_ID and WRAPS_AGENT_ENFORCER_ARN are set (with alias ARN)', async () => {
@@ -214,7 +292,7 @@ describe('loadConfig()', () => {
     process.env.WRAPS_AGENT_ID = 'agent-abc';
     process.env.WRAPS_AGENT_ENFORCER_ARN =
       'arn:aws:lambda:us-east-1:123456789012:function:wraps-agent-enforcer:agent-abc';
-    const config = await loadConfig();
+    const config = loadConfig();
     expect(config.enforcedMode).toBe(true);
     expect(config.agentId).toBe('agent-abc');
     expect(config.enforcerFunction).toBe(
@@ -226,7 +304,7 @@ describe('loadConfig()', () => {
     process.env.AWS_REGION = 'us-east-1';
     process.env.WRAPS_ACCOUNT_ID = '123456789012';
     process.env.WRAPS_AGENT_ID = 'agent-abc';
-    const config = await loadConfig();
+    const config = loadConfig();
     expect(config.enforcedMode).toBe(false);
     expect(config.enforcerFunction).toBeUndefined();
   });
@@ -236,16 +314,15 @@ describe('loadConfig()', () => {
     process.env.WRAPS_ACCOUNT_ID = '123456789012';
     process.env.WRAPS_AGENT_ENFORCER_ARN =
       'arn:aws:lambda:us-east-1:123456789012:function:wraps-agent-enforcer:agent-abc';
-    const config = await loadConfig();
+    const config = loadConfig();
     expect(config.enforcedMode).toBe(false);
     expect(config.agentId).toBeUndefined();
   });
 });
 
 const baseConfig: MCPConfig = {
-  region: 'us-east-1',
+  aws: () => Promise.resolve({ region: 'us-east-1', accountId: '123456789012' }),
   historyTableName: 'wraps-email-history',
-  accountId: '123456789012',
   writeEnabled: true,
   fromEmail: 'noreply@example.com',
   configurationSetName: undefined,
@@ -644,7 +721,7 @@ describe('verify_domain_status tool', () => {
     mockSesv2Send.mockRejectedValueOnce(notFound);
     const { client, cleanup } = await createTestClient(registerVerifyDomainStatus, {
       ...baseConfig,
-      region: 'eu-west-1',
+      aws: () => Promise.resolve({ region: 'eu-west-1', accountId: '123456789012' }),
     });
     const result = await client.callTool({
       name: 'verify_domain_status',

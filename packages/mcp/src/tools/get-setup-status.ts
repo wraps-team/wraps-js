@@ -1,7 +1,20 @@
 import { GetAccountCommand, SESv2Client } from '@aws-sdk/client-sesv2';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 import type { MCPConfig } from '../config.ts';
+import { requireAws } from '../config.ts';
 import { SES_SIMULATOR_SUCCESS } from './send-email.ts';
+
+const GetSetupStatusOutputSchema = {
+  region: z.string(),
+  sandbox: z.boolean().describe('True while the account can only send to verified recipients.'),
+  enforcementStatus: z.string().describe('SES account enforcement state, e.g. HEALTHY.'),
+  maxSend24Hour: z.number().describe('SES daily send quota.'),
+  sentLast24Hours: z.number(),
+  fromEmailConfigured: z.boolean().describe('Whether WRAPS_FROM_EMAIL is set.'),
+  writeEnabled: z.boolean().describe('Whether WRAPS_WRITE_ENABLED permits sending.'),
+  nextAction: z.string().describe('The single next step that unblocks sending.'),
+};
 
 export function registerGetSetupStatus(server: McpServer, config: MCPConfig): void {
   server.registerTool(
@@ -10,10 +23,16 @@ export function registerGetSetupStatus(server: McpServer, config: MCPConfig): vo
       description:
         "Check this AWS SES account's sandbox status and get a recommended next action for getting a first send out. Read-only — makes no changes to your AWS account.",
       inputSchema: {},
-      annotations: { readOnlyHint: true },
+      outputSchema: GetSetupStatusOutputSchema,
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
     },
     async () => {
-      const sesv2 = new SESv2Client({ region: config.region });
+      const resolved = await requireAws(config);
+      if (!resolved.ok) {
+        return resolved.error;
+      }
+      const { region } = resolved.aws;
+      const sesv2 = new SESv2Client({ region });
       try {
         const response = await sesv2.send(new GetAccountCommand({}));
 
@@ -38,7 +57,7 @@ export function registerGetSetupStatus(server: McpServer, config: MCPConfig): vo
         }
 
         const text = [
-          `region: ${config.region}`,
+          `region: ${region}`,
           `sandbox: ${sandbox}`,
           `enforcementStatus: ${enforcementStatus}`,
           `maxSend24Hour: ${maxSend24Hour}`,
@@ -48,7 +67,19 @@ export function registerGetSetupStatus(server: McpServer, config: MCPConfig): vo
           `nextAction: ${nextAction}`,
         ].join('\n');
 
-        return { content: [{ type: 'text' as const, text }] };
+        return {
+          content: [{ type: 'text' as const, text }],
+          structuredContent: {
+            region,
+            sandbox,
+            enforcementStatus,
+            maxSend24Hour,
+            sentLast24Hours,
+            fromEmailConfigured,
+            writeEnabled: config.writeEnabled,
+            nextAction,
+          },
+        };
       } catch (error) {
         const err = error as { name?: string; message?: string; $metadata?: unknown };
         return {

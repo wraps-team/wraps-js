@@ -2,9 +2,9 @@
   "manifest_version": "0.2",
   "name": "wraps-email",
   "display_name": "Wraps Email",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "description": "Query SES send history, delivery events, domains and suppressions, and send from your AWS account.",
-  "long_description": "Operate a deployed Wraps email stack from your agent. Read send history and delivery events, check domain verification and suppressions, and send guarded email — all through your own AWS credentials, read locally and never transmitted to Wraps.",
+  "long_description": "Operate a deployed Wraps email stack from your agent. Read send history and delivery events, check domain verification and suppressions, and send guarded email \u2014 all through your own AWS credentials, read locally and never transmitted to Wraps.",
   "author": {
     "name": "Wraps",
     "url": "https://wraps.dev"
