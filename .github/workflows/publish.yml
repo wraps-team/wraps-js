@@ -3,6 +3,37 @@ name: Publish
 on:
   release:
     types: [created]
+  # Re-fire path for a release whose later steps failed. npm publish is
+  # skipped when the version already exists (or when skip_npm is set), so
+  # re-running just the MCP Registry step for an existing version (the
+  # mcp-v0.8.0 400) no longer hits an npm version conflict. `ref` defaults
+  # to the package's release tag so the tree (and server.json) matches the
+  # version being re-published, not whatever main has moved on to.
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Package to publish (email, sms, client, mcp)
+        required: true
+        type: choice
+        options:
+          - email
+          - sms
+          - client
+          - mcp
+      version:
+        description: Exact semver to publish, e.g. 0.8.0
+        required: true
+        type: string
+      skip_npm:
+        description: Skip npm publish and only run the remaining steps
+        required: false
+        type: boolean
+        default: false
+      ref:
+        description: Ref to check out (defaults to package-v-version)
+        required: false
+        type: string
+        default: ''
 
 jobs:
   publish:
@@ -14,6 +45,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        if: github.event_name != 'workflow_dispatch'
+
+      # Dispatch re-fires check out the release tag so server.json matches
+      # the version being re-published even after main has bumped.
+      - uses: actions/checkout@v4
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          ref: ${{ inputs.ref != '' && inputs.ref || format('{0}-v{1}', inputs.package, inputs.version) }}
 
       - name: Install pnpm
         # Version intentionally omitted: the action reads `packageManager`
@@ -42,26 +81,42 @@ jobs:
       - name: Determine package to publish
         id: package
         run: |
-          TAG="${{ github.event.release.tag_name }}"
-          echo "Release tag: $TAG"
-
-          if [[ "$TAG" == email-v* ]]; then
-            echo "package=email" >> $GITHUB_OUTPUT
-            echo "version=${TAG#email-v}" >> $GITHUB_OUTPUT
-          elif [[ "$TAG" == sms-v* ]]; then
-            echo "package=sms" >> $GITHUB_OUTPUT
-            echo "version=${TAG#sms-v}" >> $GITHUB_OUTPUT
-          elif [[ "$TAG" == client-v* ]]; then
-            echo "package=client" >> $GITHUB_OUTPUT
-            echo "version=${TAG#client-v}" >> $GITHUB_OUTPUT
-          elif [[ "$TAG" == mcp-v* ]]; then
-            echo "package=mcp" >> $GITHUB_OUTPUT
-            echo "version=${TAG#mcp-v}" >> $GITHUB_OUTPUT
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            PACKAGE="${{ inputs.package }}"
+            VERSION="${{ inputs.version }}"
+            SKIP_NPM="${{ inputs.skip_npm }}"
+            if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+              echo "::error::version must be an exact semver like 0.8.0"
+              exit 1
+            fi
           else
-            echo "::error::Unknown release tag format: $TAG"
-            echo "Expected format: email-vX.Y.Z, sms-vX.Y.Z, client-vX.Y.Z, or mcp-vX.Y.Z"
-            exit 1
+            TAG="${{ github.event.release.tag_name }}"
+            echo "Release tag: $TAG"
+            SKIP_NPM="false"
+
+            if [[ "$TAG" == email-v* ]]; then
+              PACKAGE="email"
+              VERSION="${TAG#email-v}"
+            elif [[ "$TAG" == sms-v* ]]; then
+              PACKAGE="sms"
+              VERSION="${TAG#sms-v}"
+            elif [[ "$TAG" == client-v* ]]; then
+              PACKAGE="client"
+              VERSION="${TAG#client-v}"
+            elif [[ "$TAG" == mcp-v* ]]; then
+              PACKAGE="mcp"
+              VERSION="${TAG#mcp-v}"
+            else
+              echo "::error::Unknown release tag format: $TAG"
+              echo "Expected format: email-vX.Y.Z, sms-vX.Y.Z, client-vX.Y.Z, or mcp-vX.Y.Z"
+              exit 1
+            fi
           fi
+
+          echo "package=$PACKAGE" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "skip_npm=$SKIP_NPM" >> $GITHUB_OUTPUT
+          echo "npm_name=@wraps.dev/$PACKAGE" >> $GITHUB_OUTPUT
 
       - name: Verify package version matches tag
         run: |
@@ -101,7 +156,26 @@ jobs:
             console.log("server.json versions match " + tag);
           ' "${{ steps.package.outputs.version }}"
 
+      # A dispatch re-fire can target a version that is already on npm;
+      # publishing it again fails with EPUBLISHCONFLICT. Skip npm when the
+      # version is already served (or when skip_npm is set) and run the
+      # remaining steps against the existing version instead of stranding
+      # the release.
+      - name: Check whether the npm version already exists
+        id: npm-exists
+        env:
+          NPM_NAME: ${{ steps.package.outputs.npm_name }}
+          VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          if npm view "$NPM_NAME@$VERSION" version >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "$NPM_NAME@$VERSION already exists on npm; skipping publish"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish ${{ steps.package.outputs.package }} to npm
+        if: steps.npm-exists.outputs.exists == 'false' && steps.package.outputs.skip_npm != 'true'
         run: |
           cd packages/${{ steps.package.outputs.package }}
           npm publish --access public --provenance
@@ -129,8 +203,9 @@ jobs:
             sleep 10
           done
           echo "::error::npm did not serve $PKG_VERSION within 10 minutes."
-          echo "The npm publish itself succeeded — re-run the MCP Registry step alone"
-          echo "rather than the whole job, which would fail on a version conflict."
+          echo "The npm publish itself may have succeeded. Re-fire the registry"
+          echo "steps only: Run workflow with package=mcp, version=$PKG_VERSION,"
+          echo "and skip_npm=true, instead of re-running the whole job."
           exit 1
 
       # The registry validates that the published npm tarball carries the
