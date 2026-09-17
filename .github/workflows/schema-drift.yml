@@ -1,6 +1,7 @@
 name: Schema Drift
 
 permissions:
+  actions: write
   contents: write
   pull-requests: write
 
@@ -34,14 +35,17 @@ jobs:
       - name: Regenerate client schema
         run: pnpm --filter @wraps.dev/client generate
 
-      # PRs opened with GITHUB_TOKEN do not trigger on: pull_request runs, so
-      # the drift PR would otherwise arrive unverified. Check it here instead.
+      # The drift PR is opened with GITHUB_TOKEN, and PRs opened with
+      # GITHUB_TOKEN do not trigger on: pull_request runs, so it would arrive
+      # with no CI status. Verify the regenerated schema here, then dispatch CI
+      # against the branch below so reviewers see the real checks too.
       - name: Typecheck and build against the regenerated schema
         run: |
           pnpm --filter @wraps.dev/client typecheck
           pnpm --filter @wraps.dev/client build
 
       - name: Open PR if the schema drifted
+        id: drift-pr
         uses: peter-evans/create-pull-request@v8
         with:
           # main requires signed commits. Committing over git with GITHUB_TOKEN
@@ -51,6 +55,10 @@ jobs:
           add-paths: packages/client/src/schema.d.ts
           branch: chore/client-schema-sync
           delete-branch: true
+          # The ruleset requires an approving review and only stewartjarod is an
+          # eligible approver. Requesting them at open time is what makes the
+          # drift PR visible to the one person who can merge it.
+          reviewers: stewartjarod
           commit-message: 'chore(client): sync schema with production API'
           title: 'chore(client): sync schema with production API'
           body: |
@@ -68,6 +76,15 @@ jobs:
 
             ---
 
-            PRs opened by `GITHUB_TOKEN` do not trigger CI, so this one will
-            show no checks. `typecheck` and `build` were run against this
-            schema in the job that opened it — see the linked run.
+            CI does not run automatically on a `GITHUB_TOKEN`-opened PR, so this
+            one dispatches its own run against the branch. `typecheck` and
+            `build` also ran against this schema in the job that opened it —
+            see the linked run.
+
+      # Give the drift PR a real CI status. Without this it shows only CodeQL,
+      # so it looks unverified and nothing signals that it needs attention.
+      - name: Run CI on the drift branch
+        if: steps.drift-pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run ci.yml --ref chore/client-schema-sync
