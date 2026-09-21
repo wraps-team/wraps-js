@@ -16,15 +16,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Install pnpm
         # Version intentionally omitted: the action reads `packageManager`
         # from package.json, keeping CI and local on one pinned pnpm.
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d # v3.0.0
 
       - name: Use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22.x
           cache: 'pnpm'
@@ -46,7 +46,7 @@ jobs:
 
       - name: Open PR if the schema drifted
         id: drift-pr
-        uses: peter-evans/create-pull-request@v8
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
         with:
           # main requires signed commits. Committing over git with GITHUB_TOKEN
           # produces unsigned ones, so the PR can never satisfy the ruleset;

@@ -60,3 +60,14 @@ updates:
       # a permanently red PR each week, as with @types/node and vitest above.
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
+
+  # Every `uses:` in .github/workflows is pinned to a full commit SHA. A pin is
+  # only safe while something bumps it: `actions/checkout@<sha>` keeps working
+  # but stops receiving security fixes the moment nobody moves it, which is the
+  # same exposure the tag pin had. Dependabot opens those bump PRs.
+  - package-ecosystem: "github-actions"
+    # Workflows are discovered from the repository root; a narrower directory
+    # finds no manifest and Dependabot silently reports nothing to update.
+    directory: "/"
+    schedule:
+      interval: "weekly"
