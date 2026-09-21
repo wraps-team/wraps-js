@@ -52,3 +52,11 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "@vitest/*"
         update-types: ["version-update:semver-major"]
+      # A TypeScript major is a toolchain migration, not a routine bump.
+      # 7.0.2 made `pnpm typecheck` fail on both matrix legs -- packages/sms
+      # reports TS2591 "Cannot find name 'process'" with the tsconfig `types`
+      # and the @types/node dev dependency unchanged -- so the PR could never
+      # merge. Decide the move to 7 deliberately; until then, stop re-opening
+      # a permanently red PR each week, as with @types/node and vitest above.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
