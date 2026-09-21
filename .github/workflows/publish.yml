@@ -161,8 +161,16 @@ jobs:
       # version is already served (or when skip_npm is set) and run the
       # remaining steps against the existing version instead of stranding
       # the release.
+      #
+      # Dispatch only. `npm view` lags the registry by minutes after a publish,
+      # so on a real `release: created` it can report a brand-new version as
+      # absent-or-present unreliably. Letting it gate the publish on that path
+      # risks silently skipping a genuine release while the job still goes
+      # green, which is a worse failure than the EPUBLISHCONFLICT it avoids.
+      # A release publishes unconditionally and lets the conflict be loud.
       - name: Check whether the npm version already exists
         id: npm-exists
+        if: github.event_name == 'workflow_dispatch'
         env:
           NPM_NAME: ${{ steps.package.outputs.npm_name }}
           VERSION: ${{ steps.package.outputs.version }}
@@ -175,7 +183,7 @@ jobs:
           fi
 
       - name: Publish ${{ steps.package.outputs.package }} to npm
-        if: steps.npm-exists.outputs.exists == 'false' && steps.package.outputs.skip_npm != 'true'
+        if: steps.npm-exists.outputs.exists != 'true' && steps.package.outputs.skip_npm != 'true'
         run: |
           cd packages/${{ steps.package.outputs.package }}
           npm publish --access public --provenance
