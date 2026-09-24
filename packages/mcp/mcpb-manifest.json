@@ -2,7 +2,7 @@
   "manifest_version": "0.2",
   "name": "wraps-email",
   "display_name": "Wraps Email for Amazon SES",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Send email through your own Amazon SES account, and check domains, suppressions and sandbox status.",
   "long_description": "Works with any Amazon SES account: send email, check domain verification and DKIM, look up the suppression list, and see whether the account is still in the SES sandbox. With a Wraps email stack deployed, it also reads send history and delivery events. Your AWS credentials are read locally and never transmitted to Wraps.",
   "author": {
