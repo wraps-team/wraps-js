@@ -97,6 +97,30 @@ export function isUnverifiedRecipientError(error: unknown): boolean {
   );
 }
 
+function bareAddress(from: string): string {
+  return (from.match(/<([^>]+)>/)?.[1] ?? from).trim().toLowerCase();
+}
+
+/**
+ * True when SES's "not verified" rejection names the sender, not a recipient.
+ * The SES message lists the failing identities after the region, e.g.
+ * "...failed the check in region US-EAST-2: sender@example.com".
+ */
+export function isUnverifiedSenderError(error: unknown, from: string): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  // The SDK's SandboxError appends guidance after the identity list, so stop at
+  // the end of that line.
+  const failed = message.split(/failed the check in region [^:]+:/i)[1]?.split('\n')[0];
+  if (!failed) {
+    return false;
+  }
+  const sender = bareAddress(from);
+  return failed
+    .split(',')
+    .map((identity) => identity.trim().toLowerCase())
+    .includes(sender);
+}
+
 /**
  * Enforced-mode send_email. The customer-side enforcer Lambda is authoritative
  * for every policy decision (kill-switch, allowlist, caps), so local guard
@@ -328,6 +352,24 @@ export function registerSendEmail(server: McpServer, config: MCPConfig): void {
           },
         };
       } catch (error) {
+        if (isUnverifiedSenderError(error, from)) {
+          const sender = bareAddress(from);
+          return {
+            isError: true,
+            content: [
+              {
+                type: 'text' as const,
+                text: [
+                  `Send rejected: the from address ${sender} is not verified in SES in ${awsResolved.aws.region}.`,
+                  '',
+                  'SES identities are per-region. Either the address or its domain was verified in a different region (restart this MCP server with AWS_REGION set to that region), or it has not been verified yet. Call verify_domain_status with the domain to see which.',
+                  '',
+                  `Original SES error: ${error instanceof Error ? error.message : String(error)}`,
+                ].join('\n'),
+              },
+            ],
+          };
+        }
         if (isUnverifiedRecipientError(error)) {
           return {
             isError: true,

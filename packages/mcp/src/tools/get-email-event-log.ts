@@ -3,6 +3,7 @@ import { WrapsEmail } from '@wraps.dev/email';
 import { z } from 'zod';
 import type { MCPConfig } from '../config.ts';
 import { requireAws } from '../config.ts';
+import { missingHistoryTableMessage } from '../errors.ts';
 
 const GetEmailEventLogInputSchema = {
   messageId: z
@@ -110,6 +111,10 @@ export function registerGetEmailEventLog(server: McpServer, config: MCPConfig): 
           },
         };
       } catch (error) {
+        const missingTable = missingHistoryTableMessage(error, config.historyTableName, region);
+        if (missingTable) {
+          return { isError: true, content: [{ type: 'text' as const, text: missingTable }] };
+        }
         return {
           isError: true,
           content: [

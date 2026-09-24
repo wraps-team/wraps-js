@@ -493,6 +493,53 @@ describe('send_email sandbox guidance', () => {
     );
   });
 
+  it('blames the sender, not the recipient, when the from address is the identity that failed the check', async () => {
+    const rejected = Object.assign(
+      new Error(
+        'Email address is not verified. The following identities failed the check in region US-EAST-2: sender@example.com'
+      ),
+      { name: 'MessageRejected' }
+    );
+    mockEmailSend.mockRejectedValueOnce(rejected);
+    const { client, cleanup } = await createTestClient(registerSendEmail, {
+      ...baseConfig,
+      fromEmail: 'Sender <Sender@example.com>',
+    });
+    const result = await client.callTool({
+      name: 'send_email',
+      arguments: { to: 'success@simulator.amazonses.com', subject: 'Hello', text: 'Hi' },
+    });
+    await cleanup();
+    expect(result.isError).toBe(true);
+    const text = getText(result);
+    expect(text).toContain('Send rejected: the from address sender@example.com is not verified');
+    expect(text).toContain('verify_domain_status');
+    expect(text).not.toContain('it is, since this send got as far as SES');
+    expect(text).toContain(
+      'Original SES error: Email address is not verified. The following identities failed the check in region US-EAST-2: sender@example.com'
+    );
+  });
+
+  it('blames the sender when the SDK wraps the SES rejection in a multi-line SandboxError', async () => {
+    const rejected = Object.assign(
+      new Error(
+        'SES rejected this send: Email address is not verified. The following identities failed the check in region US-EAST-2: noreply@example.com\n\nThe identity check ran in region us-east-2. Two unrelated things produce this error, rule them out in this order:'
+      ),
+      { name: 'SandboxError' }
+    );
+    mockEmailSend.mockRejectedValueOnce(rejected);
+    const { client, cleanup } = await createTestClient(registerSendEmail);
+    const result = await client.callTool({
+      name: 'send_email',
+      arguments: { to: 'success@simulator.amazonses.com', subject: 'Hello', text: 'Hi' },
+    });
+    await cleanup();
+    expect(result.isError).toBe(true);
+    expect(getText(result)).toContain(
+      'Send rejected: the from address noreply@example.com is not verified'
+    );
+  });
+
   it('does not mention the simulator for an unrelated failure and keeps the original passthrough wording', async () => {
     mockEmailSend.mockRejectedValueOnce(new Error('Throttled'));
     const { client, cleanup } = await createTestClient(registerSendEmail);
@@ -512,6 +559,22 @@ describe('list_recent_sends tool', () => {
   afterEach(() => {
     vi.clearAllMocks();
     mockEmailEventsNull.value = false;
+  });
+
+  it('explains that the history table comes from a Wraps deploy when it does not exist', async () => {
+    mockEventsList.mockRejectedValueOnce(
+      Object.assign(new Error('Requested resource not found'), {
+        name: 'ResourceNotFoundException',
+      })
+    );
+    const { client, cleanup } = await createTestClient(registerListRecentSends);
+    const result = await client.callTool({ name: 'list_recent_sends', arguments: {} });
+    await cleanup();
+    expect(result.isError).toBe(true);
+    const text = getText(result);
+    expect(text).toContain('No email history table named wraps-email-history in us-east-1');
+    expect(text).toContain('wraps email init');
+    expect(text).toContain('send_email, verify_domain_status, list_suppressions');
   });
 
   it('returns "No recent sends found." when email list is empty', async () => {
@@ -585,6 +648,24 @@ describe('get_email_event_log tool', () => {
   afterEach(() => {
     vi.clearAllMocks();
     mockEmailEventsNull.value = false;
+  });
+
+  it('explains that the history table comes from a Wraps deploy when it does not exist', async () => {
+    mockEventsGet.mockRejectedValueOnce(
+      Object.assign(new Error('Requested resource not found'), {
+        name: 'ResourceNotFoundException',
+      })
+    );
+    const { client, cleanup } = await createTestClient(registerGetEmailEventLog);
+    const result = await client.callTool({
+      name: 'get_email_event_log',
+      arguments: { messageId: 'abc' },
+    });
+    await cleanup();
+    expect(result.isError).toBe(true);
+    const text = getText(result);
+    expect(text).toContain('No email history table named wraps-email-history in us-east-1');
+    expect(text).toContain('wraps email init');
   });
 
   it('returns full formatted event log for a known messageId', async () => {
