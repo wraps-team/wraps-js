@@ -1,25 +1,29 @@
 # @wraps.dev/mcp
 
-MCP server for [Wraps](https://wraps.dev) email infrastructure. Gives AI agents access to your AWS SES sending history, domain status, suppression list, and — optionally — the ability to send email.
+MCP server for Amazon SES. Lets AI agents send email from your own AWS account, check domain verification and DKIM, look up the suppression list, and see whether the account is still in the SES sandbox.
+
+Works with any SES account. [Wraps](https://wraps.dev) adds send history and delivery events on top.
 
 Runs locally via stdio. Your AWS credentials never leave your machine.
 
 ## Prerequisites
 
-- Wraps email stack deployed (`wraps email deploy`)
-- AWS credentials configured in your environment (same profile used for the Wraps CLI)
+- AWS credentials configured in your environment (a profile, SSO, or environment variables)
+- An SES account in the region you point it at
+- For `list_recent_sends` and `get_email_event_log` only: the Wraps event pipeline, deployed with `npx @wraps.dev/cli email init`
 
 ## Tools
 
-| Tool | Description | Write? |
-|------|-------------|--------|
-| `send_email` | Send a transactional email via your SES account | Yes — requires `WRAPS_WRITE_ENABLED=true` |
-| `list_recent_sends` | List recent sends from your email history | No |
-| `get_email_event_log` | Get the full delivery event log for a message (Send, Delivery, Bounce, Complaint, Open, Click) | No |
-| `verify_domain_status` | Check verification and DKIM status of a sending domain | No |
-| `list_suppressions` | List addresses on your SES suppression list (paginated, with an explicit truncation notice), or check one address exactly with `email` | No |
-| `estimate_cost` | Estimate monthly Wraps + AWS cost for a send volume, including which SES pricing plan the account is on. No AWS credentials needed | No |
-| `check_send_status` | Poll the outcome of a `pending_approval` send by `approvalId` (enforced mode only) | No |
+| Tool | Description | Needs Wraps? | Write? |
+|------|-------------|--------------|--------|
+| `send_email` | Send a transactional email via your SES account | No | Yes — requires `WRAPS_WRITE_ENABLED=true` |
+| `verify_domain_status` | Check verification and DKIM status of a sending domain | No | No |
+| `list_suppressions` | List addresses on your SES suppression list (paginated, with an explicit truncation notice), or check one address exactly with `email` | No | No |
+| `get_setup_status` | Check whether the account is in the SES sandbox, and get the next step toward a first send | No | No |
+| `estimate_cost` | Estimate monthly Wraps + AWS cost for a send volume, including which SES pricing plan the account is on. No AWS credentials needed | No | No |
+| `list_recent_sends` | List recent sends from your email history | Yes | No |
+| `get_email_event_log` | Get the full delivery event log for a message (Send, Delivery, Bounce, Complaint, Open, Click) | Yes | No |
+| `check_send_status` | Poll the outcome of a `pending_approval` send by `approvalId` (enforced mode only) | Yes | No |
 
 ## Setup
 

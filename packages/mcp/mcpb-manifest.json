@@ -1,10 +1,10 @@
 {
   "manifest_version": "0.2",
   "name": "wraps-email",
-  "display_name": "Wraps Email",
+  "display_name": "Wraps Email for Amazon SES",
   "version": "0.8.0",
-  "description": "Query SES send history, delivery events, domains and suppressions, and send from your AWS account.",
-  "long_description": "Operate a deployed Wraps email stack from your agent. Read send history and delivery events, check domain verification and suppressions, and send guarded email \u2014 all through your own AWS credentials, read locally and never transmitted to Wraps.",
+  "description": "Send email through your own Amazon SES account, and check domains, suppressions and sandbox status.",
+  "long_description": "Works with any Amazon SES account: send email, check domain verification and DKIM, look up the suppression list, and see whether the account is still in the SES sandbox. With a Wraps email stack deployed, it also reads send history and delivery events. Your AWS credentials are read locally and never transmitted to Wraps.",
   "author": {
     "name": "Wraps",
     "url": "https://wraps.dev"
@@ -17,7 +17,15 @@
     "url": "https://github.com/wraps-team/wraps-js"
   },
   "license": "MIT",
-  "keywords": ["aws", "ses", "email", "deliverability", "wraps"],
+  "keywords": [
+    "aws",
+    "ses",
+    "amazon-ses",
+    "email",
+    "transactional-email",
+    "deliverability",
+    "wraps"
+  ],
   "server": {
     "type": "node",
     "entry_point": "server/index.js",
@@ -48,5 +56,35 @@
     "runtimes": {
       "node": ">=20.0.0"
     }
-  }
+  },
+  "tools": [
+    {
+      "name": "send_email",
+      "description": "Send a transactional email via your AWS SES account."
+    },
+    {
+      "name": "list_recent_sends",
+      "description": "List recently sent emails from your Wraps email history, newest first, at most `limit` messages."
+    },
+    {
+      "name": "get_email_event_log",
+      "description": "Get the full delivery event log for a specific email by its messageId."
+    },
+    {
+      "name": "verify_domain_status",
+      "description": "Check the verification and DKIM status of a sending domain in your AWS SES account."
+    },
+    {
+      "name": "list_suppressions",
+      "description": "List addresses on your AWS SES account-level suppression list, or check a single address with `email`."
+    },
+    {
+      "name": "get_setup_status",
+      "description": "Check this AWS SES account's sandbox status and get a recommended next action for getting a first send out."
+    },
+    {
+      "name": "estimate_cost",
+      "description": "Estimate the monthly cost of sending email with Wraps + AWS: the Wraps platform fee, tracked-event overage, and an itemized AWS bill (SES, EventBridge, SQS, Lambda, DynamoDB, dedicated IP, WAF)."
+    }
+  ]
 }

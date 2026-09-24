@@ -2,7 +2,7 @@
   "name": "@wraps.dev/mcp",
   "version": "0.8.0",
   "mcpName": "dev.wraps/email",
-  "description": "MCP server for Wraps email infrastructure. Query send history, check domain status, manage suppressions, and send emails via your AWS SES account.",
+  "description": "MCP server for Amazon SES. Send email from your own AWS account, check domains, suppressions and sandbox status. Wraps adds send history and delivery events.",
   "type": "module",
   "bin": {
     "wraps-mcp": "./dist/index.js"
@@ -59,6 +59,7 @@
     "transactional-email",
     "ses",
     "aws-ses",
+    "amazon-ses",
     "aws",
     "bounce-handling",
     "suppression-list",
