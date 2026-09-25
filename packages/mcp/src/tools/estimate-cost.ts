@@ -6,13 +6,10 @@ const ESTIMATE_TIMEOUT_MS = 10_000;
 
 const EstimateCostInputSchema = {
   emails: z.number().int().min(0).describe('Emails sent per month'),
-  events: z
-    .number()
-    .int()
-    .min(0)
+  tier: z
+    .enum(['free', 'pro', 'business'])
     .optional()
-    .describe('Wraps tracked events per month (sends, opens, clicks, bounces, custom events)'),
-  tier: z.enum(['free', 'starter', 'growth', 'scale']).optional().describe('Wraps plan'),
+    .describe('Wraps plan. The fee is flat per plan and does not change with volume.'),
   billing: z.enum(['monthly', 'annual']).optional().describe('Wraps billing interval'),
   sesPlan: z
     .enum(['alacarte', 'essentials', 'pro', 'enterprise'])
@@ -40,13 +37,12 @@ export function registerEstimateCost(server: McpServer): void {
     'estimate_cost',
     {
       description:
-        'Estimate the monthly cost of sending email with Wraps + AWS: the Wraps platform fee, tracked-event overage, and an itemized AWS bill (SES, EventBridge, SQS, Lambda, DynamoDB, dedicated IP, WAF). Use this instead of calculating by hand — the cost model has several interacting variables, including which SES pricing plan the AWS account is on. Requires no AWS credentials.',
+        'Estimate the monthly cost of sending email with Wraps + AWS: the flat Wraps plan fee and an itemized AWS bill (SES, EventBridge, SQS, Lambda, DynamoDB, dedicated IP, WAF). Use this instead of calculating by hand — the cost model has several interacting variables, including which SES pricing plan the AWS account is on. Requires no AWS credentials.',
       inputSchema: EstimateCostInputSchema,
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async (input) => {
       const params = new URLSearchParams({ emails: String(input.emails) });
-      if (input.events !== undefined) params.set('events', String(input.events));
       if (input.tier !== undefined) params.set('tier', input.tier);
       if (input.billing !== undefined) params.set('billing', input.billing);
       if (input.sesPlan !== undefined) params.set('sesPlan', input.sesPlan);

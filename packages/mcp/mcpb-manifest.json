@@ -84,7 +84,7 @@
     },
     {
       "name": "estimate_cost",
-      "description": "Estimate the monthly cost of sending email with Wraps + AWS: the Wraps platform fee, tracked-event overage, and an itemized AWS bill (SES, EventBridge, SQS, Lambda, DynamoDB, dedicated IP, WAF)."
+      "description": "Estimate the monthly cost of sending email with Wraps + AWS: the flat Wraps plan fee and an itemized AWS bill (SES, EventBridge, SQS, Lambda, DynamoDB, dedicated IP, WAF)."
     }
   ]
 }

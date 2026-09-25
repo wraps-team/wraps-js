@@ -208,7 +208,7 @@ export function registerSendEmail(server: McpServer, config: MCPConfig): void {
     'send_email',
     {
       description:
-        'Send a transactional email via your AWS SES account. Requires WRAPS_WRITE_ENABLED=true. The `from` address must be a verified Wraps domain. The `to` field accepts a single address or an array of addresses.',
+        'Send a transactional email via your AWS SES account. Requires WRAPS_WRITE_ENABLED=true. The `from` address must be a verified SES identity (an address or domain) in this account and region. The `to` field accepts a single address or an array of addresses.',
       inputSchema: SendEmailInputSchema,
       outputSchema: SendEmailResultSchema,
       // send_email is the only tool here with a real-world side effect, and email

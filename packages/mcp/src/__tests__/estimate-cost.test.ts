@@ -46,18 +46,28 @@ describe('estimate_cost', () => {
     expect(Object.keys(tool?.inputSchema.properties ?? {})).toContain('sesPlan');
   });
 
+  it('offers only the current Wraps plans and no longer takes an events count', async () => {
+    const client = await connectClient();
+    const { tools } = await client.listTools();
+    const tool = tools.find((t) => t.name === 'estimate_cost');
+    const properties = (tool?.inputSchema.properties ?? {}) as Record<string, { enum?: string[] }>;
+
+    expect(properties.tier?.enum).toEqual(['free', 'pro', 'business']);
+    expect(properties).not.toHaveProperty('events');
+    expect(tool?.description).not.toContain('overage');
+  });
+
   it('requests markdown from the public estimator and returns it verbatim', async () => {
     const client = await connectClient();
     const result = await client.callTool({
       name: 'estimate_cost',
-      arguments: { emails: 500_000, events: 250_000, tier: 'growth', sesPlan: 'alacarte' },
+      arguments: { emails: 500_000, tier: 'business', sesPlan: 'alacarte' },
     });
 
     const [url, init] = mockFetch.mock.calls[0];
     expect(url).toContain('https://wraps.dev/api/pricing/estimate?');
     expect(url).toContain('emails=500000');
-    expect(url).toContain('events=250000');
-    expect(url).toContain('tier=growth');
+    expect(url).toContain('tier=business');
     expect(url).toContain('sesPlan=alacarte');
     expect(init.headers.Accept).toBe('text/markdown');
 
