@@ -44,6 +44,7 @@ import {
   type RegionProvider,
   resolveRegion,
 } from './utils/credentials';
+import { validateCustomHeaders } from './utils/headers';
 import { htmlToPlainText } from './utils/html-to-text';
 import { buildRawEmailMessage } from './utils/mime';
 import {
@@ -212,7 +213,7 @@ export class WrapsEmail {
    * Exactly one primary body is required — `html`, `react`, or `text` — and the
    * type rejects both "no body" and `html` + `react` together at compile time.
    * A plain-text part is auto-generated from `html` when `text` is omitted.
-   * Passing `attachments` switches to `SendRawEmail` transparently.
+   * Passing `attachments` or `headers` switches to `SendRawEmail` transparently.
    *
    * @param params - Sender, recipients, subject, and body. See {@link SendEmailParams}.
    * @returns The SES `messageId` and `requestId`, plus `conversationId` /
@@ -255,6 +256,10 @@ export class WrapsEmail {
     // Validate parameters
     validateEmailParams(params);
 
+    // Validate custom headers before any network call; passing them switches
+    // this send to the raw-MIME path below.
+    const customHeaders = params.headers ? validateCustomHeaders(params.headers) : undefined;
+
     // Resolve reply-to (signed token when conversationId is set)
     const replyToResolved = await this.resolveReplyTo({
       from: params.from,
@@ -282,9 +287,13 @@ export class WrapsEmail {
       text = htmlToPlainText(html);
     }
 
-    // Handle attachments (requires SES v2 SendRawEmail)
-    if (params.attachments && params.attachments.length > 0) {
-      return this.sendWithAttachments(params, replyToResolved);
+    // Attachments or custom headers require the raw-MIME path (SendRawEmail);
+    // SendEmail has no header field. An empty `headers: {}` is treated as
+    // absent, so it doesn't force a send down the raw path for nothing.
+    const hasAttachments = params.attachments && params.attachments.length > 0;
+    const hasCustomHeaders = customHeaders && customHeaders.length > 0;
+    if (hasAttachments || hasCustomHeaders) {
+      return this.sendRaw(params, replyToResolved);
     }
 
     // Build SES SendEmail command
@@ -347,7 +356,7 @@ export class WrapsEmail {
     }
   }
 
-  private async sendWithAttachments(
+  private async sendRaw(
     params: SendEmailParams,
     preResolvedReplyTo?: {
       replyToAddresses?: string[];
@@ -355,13 +364,8 @@ export class WrapsEmail {
       sendId?: string;
     }
   ): Promise<SendEmailResult> {
-    // Validate that we have attachments
-    if (!params.attachments || params.attachments.length === 0) {
-      throw new ValidationError('sendWithAttachments called without attachments');
-    }
-
     // Validate attachment count (AWS limit: 10MB total message size, max 500 MIME parts)
-    if (params.attachments.length > 100) {
+    if (params.attachments && params.attachments.length > 100) {
       throw new ValidationError('Maximum 100 attachments allowed per email');
     }
 
@@ -404,7 +408,12 @@ export class WrapsEmail {
       subject: params.subject,
       html,
       text,
-      attachments: params.attachments,
+      attachments: params.attachments ?? [],
+      // An empty `headers: {}` is treated as absent — matches the raw-path
+      // trigger in send(), and keeps buildRawEmailMessage from doing a no-op
+      // pass over an empty object.
+      customHeaders:
+        params.headers && Object.keys(params.headers).length > 0 ? params.headers : undefined,
     });
 
     // Convert to Uint8Array for SES

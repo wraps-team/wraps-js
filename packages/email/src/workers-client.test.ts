@@ -101,6 +101,73 @@ describe('WrapsEmail (workers)', () => {
     expect(body.ConfigurationSetName).toBe('my-config-set');
   });
 
+  it('4a. includes Content.Simple.Headers, in order, when headers is set', async () => {
+    const email = new WrapsEmail(BASE);
+    await email.send({
+      from: 'sender@example.com',
+      to: 'recipient@example.com',
+      subject: 'Test',
+      html: '<p>Hello</p>',
+      headers: {
+        'List-Unsubscribe': '<https://example.com/unsubscribe>',
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      },
+    });
+
+    const req: Request = fetchMock.mock.calls[0][0];
+    const body = JSON.parse(await req.text());
+
+    expect(body.Content.Simple.Headers).toEqual([
+      { Name: 'List-Unsubscribe', Value: '<https://example.com/unsubscribe>' },
+      { Name: 'List-Unsubscribe-Post', Value: 'List-Unsubscribe=One-Click' },
+    ]);
+  });
+
+  it('4b. has no Headers key on Content.Simple when headers is not set', async () => {
+    const email = new WrapsEmail(BASE);
+    await email.send({
+      from: 'sender@example.com',
+      to: 'recipient@example.com',
+      subject: 'Test',
+      html: '<p>Hello</p>',
+    });
+
+    const req: Request = fetchMock.mock.calls[0][0];
+    const body = JSON.parse(await req.text());
+
+    expect(body.Content.Simple).not.toHaveProperty('Headers');
+  });
+
+  it('4b-empty. has no Headers key on Content.Simple when headers is an empty object', async () => {
+    const email = new WrapsEmail(BASE);
+    await email.send({
+      from: 'sender@example.com',
+      to: 'recipient@example.com',
+      subject: 'Test',
+      html: '<p>Hello</p>',
+      headers: {},
+    });
+
+    const req: Request = fetchMock.mock.calls[0][0];
+    const body = JSON.parse(await req.text());
+
+    expect(body.Content.Simple).not.toHaveProperty('Headers');
+  });
+
+  it('4c. rejects a reserved header before any fetch', async () => {
+    const email = new WrapsEmail(BASE);
+    await expect(
+      email.send({
+        from: 'sender@example.com',
+        to: 'recipient@example.com',
+        subject: 'Test',
+        html: '<p>Hello</p>',
+        headers: { Subject: 'Hijacked' },
+      })
+    ).rejects.toThrow(ValidationError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('5. signs the request with AWS4-HMAC-SHA256', async () => {
     const email = new WrapsEmail(BASE);
     await email.send({

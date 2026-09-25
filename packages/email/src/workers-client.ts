@@ -1,6 +1,7 @@
 import { AwsClient } from 'aws4fetch';
 import { SESError, ValidationError } from './errors';
 import type { EmailAddress, SendEmailParams, SendEmailResult } from './types';
+import { validateCustomHeaders } from './utils/headers';
 import { htmlToPlainText } from './utils/html-to-text';
 import {
   normalizeEmailAddress,
@@ -136,6 +137,9 @@ export class WrapsEmail {
     if (p.attachments && p.attachments.length > 0) {
       throw new ValidationError('attachments are not supported at the edge', 'attachments');
     }
+    if (p.headers) {
+      validateCustomHeaders(p.headers);
+    }
 
     validateEmailParams(p);
 
@@ -185,6 +189,12 @@ export class WrapsEmail {
         Simple: {
           Subject: { Data: params.subject, Charset: 'UTF-8' },
           Body: body,
+          // Already validated in send() before any fetch; order matches
+          // validateCustomHeaders (both walk Object.entries in insertion order).
+          // An empty `headers: {}` is treated as absent.
+          ...(params.headers && Object.keys(params.headers).length > 0
+            ? { Headers: Object.entries(params.headers).map(([Name, Value]) => ({ Name, Value })) }
+            : {}),
         },
       },
       ...(params.tags

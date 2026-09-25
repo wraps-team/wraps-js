@@ -88,7 +88,7 @@ wrangler secret put AWS_SECRET_ACCESS_KEY
 ### Supported fields
 
 `from`, `to`, `cc`, `bcc`, `replyTo`, `subject`, `html`, `text`, `tags`,
-`configurationSetName`.
+`configurationSetName`, `headers`.
 
 When `html` is provided without `text`, plain text is auto-generated (same as the
 Node entry).
@@ -310,6 +310,58 @@ await email.send({
 - Maximum message size: 10 MB (AWS SES limit)
 - Works with both HTML and plain text emails
 - Compatible with React.email components
+
+### Custom headers
+
+Pass raw message headers on `send()` — most commonly one-click unsubscribe
+(RFC 8058), which Gmail and Yahoo's bulk-sender rules expect:
+
+```typescript
+// Node
+import { WrapsEmail } from '@wraps.dev/email';
+
+await email.send({
+  from: 'you@company.com',
+  to: 'user@example.com',
+  subject: 'Weekly digest',
+  html: '<p>...</p>',
+  headers: {
+    'List-Unsubscribe': '<https://you.com/unsubscribe?u=123>',
+    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+  },
+});
+
+// Cloudflare Workers / edge
+import { WrapsEmail } from '@wraps.dev/email/workers';
+
+await email.send({
+  from: 'you@company.com',
+  to: 'user@example.com',
+  subject: 'Weekly digest',
+  html: '<p>...</p>',
+  headers: {
+    'List-Unsubscribe': '<https://you.com/unsubscribe?u=123>',
+    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+  },
+});
+```
+
+The `List-Unsubscribe` URL must accept an HTTPS POST whose body is
+`List-Unsubscribe=One-Click` and unsubscribe with no confirmation page — mail
+clients POST to it; link scanners and previews only GET it, so a GET must not
+unsubscribe anyone.
+
+Headers are validated before any network call. Reserved headers that SES or
+the SDK already set — `From`, `To`, `Cc`, `Bcc`, `Reply-To`, `Subject`,
+`Date`, `Message-Id`, `MIME-Version`, `Content-Type`,
+`Content-Transfer-Encoding`, `Return-Path`, `Sender` — are rejected (checked
+case-insensitively), along with names or values outside the printable-ASCII
+and length limits SESv2 enforces.
+
+On the Node client, passing `headers` (with or without `attachments`)
+transparently switches the send to `SendRawEmail` — the same MIME path
+attachments use — since the plain `SendEmail` API has no header field. The
+edge client sends headers natively via SESv2 `Content.Simple.Headers`.
 
 ### Send with tags (for SES tracking)
 

@@ -161,6 +161,133 @@ describe('WrapsEmail', () => {
       expect(command).toHaveProperty('RawMessage');
     });
 
+    it('should send with headers (no attachments) using SendRawEmail, with the headers in the raw MIME', async () => {
+      mockSend.mockResolvedValue({
+        MessageId: 'headers-message-id',
+        $metadata: { requestId: 'headers-request-id' },
+      });
+
+      const result = await email.send({
+        from: 'sender@example.com',
+        to: 'recipient@example.com',
+        subject: 'One-click unsubscribe',
+        html: '<p>Test</p>',
+        headers: {
+          'List-Unsubscribe': '<https://example.com/u>',
+          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+        },
+      });
+
+      expect(result).toEqual({
+        messageId: 'headers-message-id',
+        requestId: 'headers-request-id',
+      });
+
+      const command = mockSend.mock.calls[0][0];
+      expect(command).toHaveProperty('RawMessage');
+      const rawMime = new TextDecoder().decode(command.RawMessage.Data as Uint8Array);
+      expect(rawMime).toContain('List-Unsubscribe: <https://example.com/u>');
+      expect(rawMime).toContain('List-Unsubscribe-Post: List-Unsubscribe=One-Click');
+    });
+
+    it('should send with headers together with attachments — both present in the raw MIME', async () => {
+      mockSend.mockResolvedValue({
+        MessageId: 'headers-attach-id',
+        $metadata: { requestId: 'headers-attach-request-id' },
+      });
+
+      await email.send({
+        from: 'sender@example.com',
+        to: 'recipient@example.com',
+        subject: 'Test',
+        html: '<p>Test</p>',
+        headers: { 'List-Unsubscribe': '<https://example.com/u>' },
+        attachments: [
+          {
+            filename: 'doc.pdf',
+            content: Buffer.from('test'),
+          },
+        ],
+      });
+
+      const command = mockSend.mock.calls[0][0];
+      expect(command).toHaveProperty('RawMessage');
+      const rawMime = new TextDecoder().decode(command.RawMessage.Data as Uint8Array);
+      expect(rawMime).toContain('List-Unsubscribe: <https://example.com/u>');
+      expect(rawMime).toContain('filename="doc.pdf"');
+    });
+
+    it('should use SendEmailCommand (not RawMessage) when neither headers nor attachments are set', async () => {
+      mockSend.mockResolvedValue({
+        MessageId: 'plain-id',
+        $metadata: { requestId: 'plain-request-id' },
+      });
+
+      await email.send({
+        from: 'sender@example.com',
+        to: 'recipient@example.com',
+        subject: 'Plain',
+        html: '<p>Test</p>',
+      });
+
+      const command = mockSend.mock.calls[0][0];
+      expect(command).not.toHaveProperty('RawMessage');
+    });
+
+    it('should use SendEmailCommand (not RawMessage) when headers is an empty object', async () => {
+      mockSend.mockResolvedValue({
+        MessageId: 'empty-headers-id',
+        $metadata: { requestId: 'empty-headers-request-id' },
+      });
+
+      await email.send({
+        from: 'sender@example.com',
+        to: 'recipient@example.com',
+        subject: 'Plain',
+        html: '<p>Test</p>',
+        headers: {},
+      });
+
+      const command = mockSend.mock.calls[0][0];
+      expect(command).not.toHaveProperty('RawMessage');
+    });
+
+    it('should include tags and configuration set on the raw command when headers is set', async () => {
+      mockSend.mockResolvedValue({
+        MessageId: 'headers-tagged-id',
+        $metadata: { requestId: 'headers-tagged-request-id' },
+      });
+
+      await email.send({
+        from: 'sender@example.com',
+        to: 'recipient@example.com',
+        subject: 'Test',
+        html: '<p>Test</p>',
+        headers: { 'List-Unsubscribe': '<https://example.com/u>' },
+        tags: { campaign: 'x' },
+        configurationSetName: 'my-config-set',
+      });
+
+      const command = mockSend.mock.calls[0][0];
+      expect(command).toHaveProperty('RawMessage');
+      expect(command.Tags).toContainEqual({ Name: 'campaign', Value: 'x' });
+      expect(command.ConfigurationSetName).toBe('my-config-set');
+    });
+
+    it('should reject a reserved header before any send', async () => {
+      await expect(
+        email.send({
+          from: 'sender@example.com',
+          to: 'recipient@example.com',
+          subject: 'Test',
+          html: '<p>Test</p>',
+          headers: { Subject: 'Hijacked' },
+        })
+      ).rejects.toThrow(ValidationError);
+
+      expect(mockSend).not.toHaveBeenCalled();
+    });
+
     it('should send email with multiple attachments', async () => {
       mockSend.mockResolvedValue({
         MessageId: 'multi-attach-id',
@@ -742,7 +869,7 @@ describe('WrapsEmail reply threading', () => {
     expect(result.sendId).toBeDefined();
   });
 
-  it('sendWithAttachments signs reply-to via raw MIME Reply-To header when conversationId is passed', async () => {
+  it('sendRaw signs reply-to via raw MIME Reply-To header when conversationId is passed', async () => {
     mockSsmSend.mockResolvedValue({ Parameter: { Value: ssmValue(0x88) } });
     mockSend.mockResolvedValue({
       MessageId: 'am-1',

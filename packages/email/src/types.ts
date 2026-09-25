@@ -199,6 +199,13 @@ export interface SendEmailParamsBase {
   tags?: Record<string, string>;
 
   /**
+   * Custom message headers (optional), e.g. one-click unsubscribe:
+   * `{ 'List-Unsubscribe': '<https://…>', 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' }`.
+   * Validated before any network call; reserved headers (From, To, Subject, …) are rejected.
+   */
+  headers?: Record<string, string>;
+
+  /**
    * Configuration set name (for tracking opens, clicks, bounces)
    */
   configurationSetName?: string;
