@@ -7,13 +7,13 @@
     "source": "github",
     "subfolder": "packages/mcp"
   },
-  "version": "0.8.1",
+  "version": "0.8.2",
   "websiteUrl": "https://wraps.dev",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@wraps.dev/mcp",
-      "version": "0.8.1",
+      "version": "0.8.2",
       "transport": {
         "type": "stdio"
       },
