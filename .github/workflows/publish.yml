@@ -44,12 +44,12 @@ jobs:
       id-token: write # Required for npm OIDC Trusted Publishing
 
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
         if: github.event_name != 'workflow_dispatch'
 
       # Dispatch re-fires check out the release tag so server.json matches
       # the version being re-published even after main has bumped.
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
         if: github.event_name == 'workflow_dispatch'
         with:
           ref: ${{ inputs.ref != '' && inputs.ref || format('{0}-v{1}', inputs.package, inputs.version) }}
