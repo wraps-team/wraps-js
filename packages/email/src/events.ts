@@ -1,7 +1,13 @@
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
-import { QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { DynamoDBError, ValidationError } from './errors';
-import type { EmailEvent, EmailListOptions, EmailListResult, EmailStatus } from './types';
+import type {
+  EmailEvent,
+  EmailListOptions,
+  EmailListResult,
+  EmailStatus,
+  SuppressionHistoryEntry,
+} from './types';
 
 const EVENT_TYPE_MAP: Record<string, EmailStatus['status']> = {
   send: 'sent',
@@ -76,6 +82,55 @@ export class WrapsEmailEvents {
 
     try {
       return await this.fetchMessage(messageId);
+    } catch (error) {
+      throw this.handleDynamoDBError(error);
+    }
+  }
+
+  /**
+   * Get a recipient's suppression history from the `wraps-email-history` table.
+   *
+   * Written by the Wraps event-processor Lambda on hard bounces, complaints and
+   * validation suppressions, going forward from the stack version that ships it.
+   * A `null` result does NOT mean the address is safe to send to: the entry may
+   * predate the ledger, or the stack may not write it. For current state use
+   * `email.suppression.get()`.
+   *
+   * @param email - Recipient address (case and surrounding whitespace ignored)
+   * @returns The history entry, or null if none is recorded
+   * @throws {ValidationError} If email is empty
+   * @throws {DynamoDBError} If the DynamoDB read fails
+   *
+   * @example
+   * const history = await email.events?.getSuppressionHistory('user@example.com');
+   * if (history) console.log(history.reason, history.firstSuppressedAt);
+   */
+  async getSuppressionHistory(email: string): Promise<SuppressionHistoryEntry | null> {
+    const normalized = email?.toLowerCase().trim();
+    if (!normalized) {
+      throw new ValidationError('email is required', 'email');
+    }
+
+    try {
+      const response = await this.client.send(
+        new GetCommand({
+          TableName: this.tableName,
+          Key: { messageId: `SUPPRESSION#${normalized}`, sentAt: 0 },
+        })
+      );
+      const item = response.Item;
+      if (!item) {
+        return null;
+      }
+      return {
+        email: item.email as string,
+        reason: item.reason as SuppressionHistoryEntry['reason'],
+        source: (item.source as string | undefined) ?? 'unknown',
+        suppressedAt: new Date(Number(item.suppressedAt)),
+        firstSuppressedAt: new Date(Number(item.firstSuppressedAt ?? item.suppressedAt)),
+        detail: item.detail as string | undefined,
+        feedbackId: item.feedbackId as string | undefined,
+      };
     } catch (error) {
       throw this.handleDynamoDBError(error);
     }

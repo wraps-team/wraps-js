@@ -7,6 +7,9 @@ vi.mock('@aws-sdk/lib-dynamodb', () => ({
   QueryCommand: vi.fn(function (this: any, input: any) {
     Object.assign(this, input);
   }),
+  GetCommand: vi.fn(function (this: any, input: any) {
+    Object.assign(this, input);
+  }),
 }));
 
 describe('WrapsEmailEvents', () => {
@@ -19,6 +22,65 @@ describe('WrapsEmailEvents', () => {
     // Pass a mock client directly — no need to mock DynamoDBDocumentClient construction
     const mockClient = { send: mockSend, destroy: vi.fn() } as any;
     events = new WrapsEmailEvents(mockClient, 'wraps-email-history');
+  });
+
+  describe('getSuppressionHistory', () => {
+    it('should return the history entry for a normalised address', async () => {
+      mockSend.mockResolvedValue({
+        Item: {
+          email: 'a@b.com',
+          reason: 'bounce',
+          source: 'ses_event',
+          suppressedAt: 2000,
+          firstSuppressedAt: 1000,
+          detail: 'General',
+        },
+      });
+
+      const result = await events.getSuppressionHistory(' A@B.com ');
+
+      expect(result).toEqual({
+        email: 'a@b.com',
+        reason: 'bounce',
+        source: 'ses_event',
+        suppressedAt: new Date(2000),
+        firstSuppressedAt: new Date(1000),
+        detail: 'General',
+        feedbackId: undefined,
+      });
+      expect(mockSend.mock.calls[0][0]).toMatchObject({
+        TableName: 'wraps-email-history',
+        Key: { messageId: 'SUPPRESSION#a@b.com', sentAt: 0 },
+      });
+    });
+
+    it('should fall back to suppressedAt when firstSuppressedAt is missing', async () => {
+      mockSend.mockResolvedValue({
+        Item: { email: 'a@b.com', reason: 'complaint', source: 'ses_event', suppressedAt: 2000 },
+      });
+
+      const result = await events.getSuppressionHistory('a@b.com');
+
+      expect(result?.firstSuppressedAt).toEqual(new Date(2000));
+    });
+
+    it('should return null when no history exists', async () => {
+      mockSend.mockResolvedValue({ Item: undefined });
+
+      expect(await events.getSuppressionHistory('a@b.com')).toBeNull();
+    });
+
+    it('should reject empty or whitespace-only email without calling DynamoDB', async () => {
+      await expect(events.getSuppressionHistory('')).rejects.toThrow(ValidationError);
+      await expect(events.getSuppressionHistory('  ')).rejects.toThrow(ValidationError);
+      expect(mockSend).not.toHaveBeenCalled();
+    });
+
+    it('should wrap DynamoDB errors', async () => {
+      mockSend.mockRejectedValue({ $metadata: { requestId: 'r' }, name: 'X', message: 'm' });
+
+      await expect(events.getSuppressionHistory('a@b.com')).rejects.toThrow(DynamoDBError);
+    });
   });
 
   describe('get', () => {

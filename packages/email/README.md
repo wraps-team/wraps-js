@@ -619,6 +619,20 @@ await email.suppression.remove('user@example.com');
 const { entries, nextToken } = await email.suppression.list();
 ```
 
+### Suppression history
+
+With `historyTableName` configured, `email.events.getSuppressionHistory(address)`
+reads the history the Wraps event processor records in your own
+`wraps-email-history` table: why the address said no (`bounce`, `complaint`,
+`validation`), the SES subtype, and when it first and last happened. It keeps
+the record even after the address is removed from the SES list. It is not
+current state, and `null` does not mean safe to send, so use
+`email.suppression.get()` for that.
+
+```typescript
+const history = await email.events?.getSuppressionHistory('user@example.com');
+```
+
 Full reference: https://wraps.dev/docs/sdk-reference#suppression
 
 ## Inbox

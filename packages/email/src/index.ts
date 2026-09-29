@@ -50,6 +50,7 @@ export type {
   SendEmailResult,
   SendTemplateParams,
   SuppressionEntry,
+  SuppressionHistoryEntry,
   SuppressionListOptions,
   SuppressionListResult,
   SuppressionReason,

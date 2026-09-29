@@ -772,3 +772,22 @@ export interface SuppressionListResult {
   entries: SuppressionEntry[];
   nextToken?: string;
 }
+
+/**
+ * A recipient's suppression history, read from the user's own
+ * `wraps-email-history` table. Records that the address has said no at some
+ * point. It is not current SES suppression state; use `suppression.get()` for that.
+ */
+export interface SuppressionHistoryEntry {
+  email: string;
+  /** Cause of the most recent event. */
+  reason: 'bounce' | 'complaint' | 'validation';
+  source: string;
+  /** Most recent suppression event. */
+  suppressedAt: Date;
+  /** First suppression event seen for this address. */
+  firstSuppressedAt: Date;
+  /** Bounce subtype or complaint feedback type. */
+  detail?: string;
+  feedbackId?: string;
+}
