@@ -99,7 +99,7 @@ importers:
         version: 19.2.0
       zod:
         specifier: ^4.6.2
-        version: 4.6.2
+        version: 4.6.5
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.3.5
@@ -139,13 +139,13 @@ importers:
         version: 3.1130.0
       '@modelcontextprotocol/sdk':
         specifier: ^1.30.0
-        version: 1.30.0(zod@4.6.2)
+        version: 1.30.0(zod@4.6.5)
       '@wraps.dev/email':
         specifier: ^0.13.0
         version: 0.13.0(@react-email/components@1.0.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)
       zod:
         specifier: ^4.6.2
-        version: 4.6.2
+        version: 4.6.5
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.3.5
@@ -176,7 +176,7 @@ importers:
         version: 3.1130.0
       zod:
         specifier: ^4.6.2
-        version: 4.6.2
+        version: 4.6.5
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.3.5
@@ -2048,8 +2048,8 @@ packages:
     resolution: {integrity: sha512-RRuzqDtt5Y9h3quz5hWhK+TPnsmVs6WwSU6LkJMeY4HstUEDuYTG8UJSdawMRzmzAtV+KEoG8N3Qg2qLy5vM/A==}
     engines: {node: ^10 || ^12 || >=14}
 
-  prettier@3.9.6:
-    resolution: {integrity: sha512-OpN0zzVdiaiAhxpuuj5efpIS4sY9j7bY6uR5mnj5yPzGkdkjNKSJeUThPb60Jw29QuAZgA4o+/iB49kFiaBX6g==}
+  prettier@3.9.7:
+    resolution: {integrity: sha512-T3mF5P7HFzZVLDQuCUNtJj6WK1pcpLMweMNUVwGb01bLNkH9AkKxtZvmInw8K6bnn2O3d6/5RHl6zSHiBAD0Og==}
     engines: {node: '>=14'}
     hasBin: true
 
@@ -2409,8 +2409,8 @@ packages:
   zod@4.1.11:
     resolution: {integrity: sha512-WPsqwxITS2tzx1bzhIKsEs19ABD5vmCVa4xBo2tq/SrV4RNZtfws1EnCWQXM6yh8bD08a1idvkB5MZSBiZsjwg==}
 
-  zod@4.6.2:
-    resolution: {integrity: sha512-lh5RCAGFa1Cm2hjtNwLQhSs/AsqdWnTQaBER9fEwN/88pSh7KOtJavtBx/0VlkN/uFd61SwYmljLMDAsHlvzBQ==}
+  zod@4.6.5:
+    resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
 
 snapshots:
 
@@ -2962,7 +2962,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@modelcontextprotocol/sdk@1.30.0(zod@4.6.2)':
+  '@modelcontextprotocol/sdk@1.30.0(zod@4.6.5)':
     dependencies:
       '@hono/node-server': 2.0.12(hono@4.13.7)
       ajv: 8.20.0
@@ -2979,8 +2979,8 @@ snapshots:
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
       raw-body: 3.0.2
-      zod: 4.6.2
-      zod-to-json-schema: 3.25.2(zod@4.6.2)
+      zod: 4.6.5
+      zod-to-json-schema: 3.25.2(zod@4.6.5)
     transitivePeerDependencies:
       - supports-color
 
@@ -3078,7 +3078,7 @@ snapshots:
   '@react-email/render@2.0.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
     dependencies:
       html-to-text: 9.0.5
-      prettier: 3.9.6
+      prettier: 3.9.7
       react: 19.2.0
       react-dom: 19.2.0(react@19.2.0)
 
@@ -3441,7 +3441,7 @@ snapshots:
       '@aws-sdk/lib-dynamodb': 3.1130.0(@aws-sdk/client-dynamodb@3.1130.0)
       '@aws-sdk/s3-request-presigner': 3.1130.0
       aws4fetch: 1.0.20
-      zod: 4.6.2
+      zod: 4.6.5
     optionalDependencies:
       '@react-email/components': 1.0.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       react: 19.2.0
@@ -4121,7 +4121,7 @@ snapshots:
       source-map-js: 1.2.1
     optional: true
 
-  prettier@3.9.6: {}
+  prettier@3.9.7: {}
 
   prismjs@1.30.0: {}
 
@@ -4479,10 +4479,10 @@ snapshots:
 
   yargs-parser@21.1.1: {}
 
-  zod-to-json-schema@3.25.2(zod@4.6.2):
+  zod-to-json-schema@3.25.2(zod@4.6.5):
     dependencies:
-      zod: 4.6.2
+      zod: 4.6.5
 
   zod@4.1.11: {}
 
-  zod@4.6.2: {}
+  zod@4.6.5: {}
