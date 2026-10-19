@@ -237,7 +237,7 @@ export interface paths {
         };
         /**
          * Get aggregate email metrics
-         * @description Returns aggregate email metrics for the organization, optionally grouped by period/domain/broadcast/template/source/account/region. `opened` excludes user agents matching a known-bot list; `openedRaw` reports the same count with no bot filter applied; `clicked` is currently unfiltered (see plan 107 for this asymmetry).
+         * @description Returns aggregate email metrics for the organization, optionally grouped by period/domain/broadcast/template/source/account/region. `opened` excludes user agents matching a known-bot list; `openedRaw` reports the same count with no bot filter applied; `clicked` is currently unfiltered (see plan 107 for this asymmetry). `costUsd` is an estimate from published AWS SES rates, not a billed amount. It covers outbound sending only (billable means non-failed sends), tiered by UTC calendar month at each account's current SES pricing plan and spread as the account's average per-email cost for that month. `null` means the cost is unknown (no recorded plan or no account). Figures for the current month can shift as month-to-date volume grows.
          */
         get: operations["getV1EmailMetrics"];
         put?: never;
