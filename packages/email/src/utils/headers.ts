@@ -16,6 +16,50 @@ export function sanitizeHeaderValue(value: string, field: string): string {
   return value;
 }
 
+// RFC 2047: an encoded-word is at most 75 characters. `=?UTF-8?B?` and `?=` leave 63 for
+// base64, which is 60 characters, which encode 45 bytes.
+const MAX_ENCODED_WORD_BYTES = 45;
+
+/** True when `text` has a character outside ASCII. */
+export function hasNonAscii(text: string): boolean {
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) > 0x7f) return true;
+  }
+  return false;
+}
+
+/**
+ * Make `text` safe for the value of an unstructured header such as `Subject`, or for the display
+ * name of an address. Header lines are ASCII (RFC 5322), so non-ASCII text becomes RFC 2047
+ * encoded-words (`=?UTF-8?B?...?=`), each at most 75 characters and split between code points,
+ * joined by a folding line break. ASCII text is returned as is.
+ *
+ * Call {@link assertNoHeaderInjection} on `text` first: the folding breaks this adds are the only
+ * CRLF the result contains.
+ */
+export function encodeHeaderText(text: string): string {
+  if (!hasNonAscii(text)) return text;
+
+  const words: string[] = [];
+  let chunk: Buffer[] = [];
+  let chunkBytes = 0;
+  const flush = () => {
+    if (chunk.length === 0) return;
+    words.push(`=?UTF-8?B?${Buffer.concat(chunk).toString('base64')}?=`);
+    chunk = [];
+    chunkBytes = 0;
+  };
+  // split between code points, so no character is cut across two words
+  for (const char of text) {
+    const bytes = Buffer.from(char, 'utf8');
+    if (chunkBytes + bytes.length > MAX_ENCODED_WORD_BYTES) flush();
+    chunk.push(bytes);
+    chunkBytes += bytes.length;
+  }
+  flush();
+  return words.join('\r\n ');
+}
+
 // SESv2's MessageHeader limits (Node's raw-MIME path applies the same limits by
 // convention, so custom headers behave identically on both send paths).
 const MAX_HEADER_NAME_LENGTH = 126;

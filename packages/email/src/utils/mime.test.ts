@@ -357,6 +357,90 @@ describe('MIME Message Builder', () => {
     });
   });
 
+  describe('non-ASCII headers', () => {
+    const base = { to: 'recipient@example.com', html: '<p>hi</p>' };
+    // top-level header lines, unfolded
+    const headerBlock = (message: string) =>
+      message.slice(0, message.indexOf('\r\n\r\n')).replace(/\r\n[ \t]+/g, ' ');
+
+    it('encodes a non-ASCII subject as RFC 2047 encoded-words', () => {
+      const message = buildRawEmailMessage({
+        ...base,
+        from: 'sender@example.com',
+        subject: 'Re: Ünïcode — café',
+        customHeaders: { 'In-Reply-To': '<a1@example.com>' },
+      });
+
+      const encoded = Buffer.from('Re: Ünïcode — café').toString('base64');
+      expect(message).toContain(`\r\nSubject: =?UTF-8?B?${encoded}?=\r\n`);
+      // every byte of the top-level headers is ASCII
+      expect(Buffer.from(headerBlock(message), 'utf8').every((b) => b < 0x80)).toBe(true);
+    });
+
+    it('leaves an ASCII subject alone', () => {
+      const message = buildRawEmailMessage({
+        ...base,
+        from: 'sender@example.com',
+        subject: '[#12] Re: Card declined',
+      });
+      expect(message).toContain('\r\nSubject: [#12] Re: Card declined\r\n');
+    });
+
+    it('folds a long non-ASCII subject so each encoded-word fits in 75 characters', () => {
+      const subject = 'Ünï '.repeat(60);
+      const message = buildRawEmailMessage({ ...base, from: 'sender@example.com', subject });
+
+      const lines = message
+        .slice(message.indexOf('Subject: '), message.indexOf('\r\nMIME-Version'))
+        .split('\r\n');
+      expect(lines.length).toBeGreaterThan(1);
+      for (const line of lines.slice(1)) {
+        expect(line).toMatch(/^ =\?UTF-8\?B\?[A-Za-z0-9+/=]+\?=$/);
+      }
+      const decoded = lines
+        .map((line) => line.replace(/^Subject: /, '').trim())
+        .map((word) => Buffer.from(word.slice('=?UTF-8?B?'.length, -2), 'base64').toString('utf8'))
+        .join('');
+      expect(decoded).toBe(subject);
+    });
+
+    it('encodes a non-ASCII display name, and quotes an ASCII one as before', () => {
+      const message = buildRawEmailMessage({
+        ...base,
+        from: { name: 'Zoë Müller', email: 'zoe@example.com' },
+        to: [
+          { name: 'Ana, "A" Díaz', email: 'ana@example.com' },
+          { name: 'Plain, Name', email: 'plain@example.com' },
+        ],
+        subject: 'Hi',
+      });
+
+      const zoe = Buffer.from('Zoë Müller').toString('base64');
+      const ana = Buffer.from('Ana, "A" Díaz').toString('base64');
+      expect(message.startsWith(`From: =?UTF-8?B?${zoe}?= <zoe@example.com>\r\n`)).toBe(true);
+      expect(message).toContain(
+        `\r\nTo: =?UTF-8?B?${ana}?= <ana@example.com>, "Plain, Name" <plain@example.com>\r\n`
+      );
+    });
+
+    it('still rejects a line break in a non-ASCII subject or display name', () => {
+      expect(() =>
+        buildRawEmailMessage({
+          ...base,
+          from: 'sender@example.com',
+          subject: 'Hé\r\nBcc: victim@example.com',
+        })
+      ).toThrow('Illegal newline in header field: subject');
+      expect(() =>
+        buildRawEmailMessage({
+          ...base,
+          from: { name: 'Zoë\r\nBcc: victim@example.com', email: 'zoe@example.com' },
+          subject: 'Hi',
+        })
+      ).toThrow('Illegal newline in header field: address');
+    });
+  });
+
   describe('header injection', () => {
     it('should throw when subject contains CRLF', () => {
       expect(() =>
