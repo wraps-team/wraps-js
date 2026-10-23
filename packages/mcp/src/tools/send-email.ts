@@ -3,6 +3,7 @@ import { WrapsEmail } from '@wraps.dev/email';
 import { z } from 'zod';
 import type { MCPConfig } from '../config.ts';
 import { requireAws } from '../config.ts';
+import { askForFrom, canElicit, confirmSimulatorRetry } from '../elicit.ts';
 import { invokeEnforcerForTool } from '../enforcer-client.ts';
 import type { EnforcerResponse } from '../enforcer-contract.ts';
 
@@ -28,7 +29,7 @@ const SendEmailInputSchema = {
     .describe('Plain-text body. Provide `html`, `text`, or both; at least one is required.'),
 };
 
-const EnforcedSendEmailInputSchema = {
+export const EnforcedSendEmailInputSchema = {
   ...SendEmailInputSchema,
   to: z
     .union([z.string().email(), z.array(z.string().email()).length(1)])
@@ -101,6 +102,20 @@ function bareAddress(from: string): string {
   return (from.match(/<([^>]+)>/)?.[1] ?? from).trim().toLowerCase();
 }
 
+/** True when an allowlist is configured and any recipient is outside it. */
+function isDeniedByAllowlist(config: MCPConfig, recipients: string[]): boolean {
+  if (config.allowedRecipients.length === 0 && config.allowedRecipientDomains.length === 0) {
+    return false;
+  }
+  return recipients.some((addr) => {
+    const lower = addr.toLowerCase();
+    const domain = lower.split('@')[1] ?? '';
+    return (
+      !config.allowedRecipients.includes(lower) && !config.allowedRecipientDomains.includes(domain)
+    );
+  });
+}
+
 /**
  * True when SES's "not verified" rejection names the sender, not a recipient.
  * The SES message lists the failing identities after the region, e.g.
@@ -162,17 +177,7 @@ function registerEnforcedSendEmail(server: McpServer, config: MCPConfig): void {
           'Enforced mode supports a single recipient per send. Send one email per recipient.'
         );
       }
-      const to = recipients[0];
-      const payload = {
-        from,
-        to,
-        subject: input.subject,
-        html: input.html ?? '',
-        text: input.text ?? '',
-        ...(input.replyTo ? { replyTo: input.replyTo } : {}),
-        ...(input.inReplyTo ? { inReplyTo: input.inReplyTo } : {}),
-        ...(input.references ? { references: input.references } : {}),
-      };
+      const payload = buildEnforcedPayload(input, from);
 
       const result = await invokeEnforcerForTool(config, { action: 'send', payload });
       if (!result.ok) {
@@ -184,6 +189,27 @@ function registerEnforcedSendEmail(server: McpServer, config: MCPConfig): void {
       };
     }
   );
+}
+
+/**
+ * Payload for the enforcer's `send` action. The caller has already enforced the
+ * single-recipient rule, so the first (only) recipient is taken here.
+ */
+export function buildEnforcedPayload(
+  input: z.infer<z.ZodObject<typeof EnforcedSendEmailInputSchema>>,
+  from: string
+) {
+  const to = Array.isArray(input.to) ? input.to[0] : input.to;
+  return {
+    from,
+    to,
+    subject: input.subject,
+    html: input.html ?? '',
+    text: input.text ?? '',
+    ...(input.replyTo ? { replyTo: input.replyTo } : {}),
+    ...(input.inReplyTo ? { inReplyTo: input.inReplyTo } : {}),
+    ...(input.references ? { references: input.references } : {}),
+  };
 }
 
 function describeDisposition(verdict: EnforcerResponse): string {
@@ -249,26 +275,16 @@ export function registerSendEmail(server: McpServer, config: MCPConfig): void {
         };
       }
 
-      if (config.allowedRecipients.length > 0 || config.allowedRecipientDomains.length > 0) {
-        const denied = recipients.some((addr) => {
-          const lower = addr.toLowerCase();
-          const domain = lower.split('@')[1] ?? '';
-          return (
-            !config.allowedRecipients.includes(lower) &&
-            !config.allowedRecipientDomains.includes(domain)
-          );
-        });
-        if (denied) {
-          return {
-            isError: true,
-            content: [
-              {
-                type: 'text' as const,
-                text: 'One or more recipients are not in the configured allowlist.',
-              },
-            ],
-          };
-        }
+      if (isDeniedByAllowlist(config, recipients)) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: 'text' as const,
+              text: 'One or more recipients are not in the configured allowlist.',
+            },
+          ],
+        };
       }
 
       let from: string | undefined;
@@ -290,6 +306,14 @@ export function registerSendEmail(server: McpServer, config: MCPConfig): void {
             },
           ],
         };
+      }
+      if (!from && (input.html !== undefined || input.text !== undefined) && canElicit(server)) {
+        // Reached only when neither `from` nor WRAPS_FROM_EMAIL is set, and only
+        // after the write, recipient and allowlist guards above. With no configured
+        // from, the override check is a no-op, so the elicited value is treated
+        // exactly like an input.from. Skipped when there is no body: the caller
+        // should hear about that, not be asked for a sender first.
+        from = await askForFrom(server);
       }
       if (!from) {
         return {
@@ -371,6 +395,47 @@ export function registerSendEmail(server: McpServer, config: MCPConfig): void {
           };
         }
         if (isUnverifiedRecipientError(error)) {
+          // The simulator is a new recipient, so it must pass the same allowlist as
+          // the original one. Only then is the prompt offered. One retry, no loop.
+          if (
+            canElicit(server) &&
+            !isDeniedByAllowlist(config, [SES_SIMULATOR_SUCCESS]) &&
+            (await confirmSimulatorRetry(server, SES_SIMULATOR_SUCCESS))
+          ) {
+            try {
+              const retried = await email.send({
+                to: SES_SIMULATOR_SUCCESS,
+                from,
+                subject: input.subject,
+                ...body,
+                configurationSetName: config.configurationSetName,
+              });
+              const original = Array.isArray(input.to) ? input.to.join(', ') : input.to;
+              return {
+                content: [
+                  {
+                    type: 'text' as const,
+                    text: `Email sent to the AWS SES mailbox simulator (${SES_SIMULATOR_SUCCESS}), not to ${original}. The simulator only verifies that sending works; ${original} did not receive this message. messageId: ${retried.messageId}`,
+                  },
+                ],
+                structuredContent: {
+                  messageId: retried.messageId,
+                  to: [SES_SIMULATOR_SUCCESS],
+                  from,
+                },
+              };
+            } catch (retryError) {
+              return {
+                isError: true,
+                content: [
+                  {
+                    type: 'text' as const,
+                    text: `Failed to send email to the SES simulator: ${retryError instanceof Error ? retryError.message : String(retryError)}`,
+                  },
+                ],
+              };
+            }
+          }
           return {
             isError: true,
             content: [
