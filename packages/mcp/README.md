@@ -111,6 +111,15 @@ When write mode is enabled, the `send_email` tool can reach any SES-verified add
 
 > **Note:** Running with `WRAPS_WRITE_ENABLED=true` and no allowlist gives the agent unrestricted send capability to any address in your SES account.
 
+## Asking for missing input (elicitation)
+
+If your MCP client supports elicitation, `send_email` asks you for input it is missing instead of failing. It never asks you to confirm an ordinary send, and it asks only after the write, recipient-count and allowlist checks above have passed.
+
+- **No sender.** If the call has no `from` and `WRAPS_FROM_EMAIL` is not set, the client prompts for the sender address.
+- **SES sandbox.** If SES rejects the recipient because the account is in the sandbox, the client offers to send the message to the AWS mailbox simulator (`success@simulator.amazonses.com`) instead, to prove sending works. This happens once, and the simulator address must pass your recipient allowlist. The result says the message went to the simulator and not to the original recipient.
+
+If you decline or cancel, or the client does not support elicitation, you get the same error as before. No setting is needed. Enforced mode does not use elicitation; its approvals stay with the operator.
+
 ## Enforced mode (agent enforcer)
 
 For agents provisioned via `wraps email agent create`, the MCP server runs in **enforced mode**. The agent's AWS credential can only invoke a customer-side enforcer Lambda — never SES directly. All policy (kill-switch, recipient allowlist, hourly/daily caps) is decided by that Lambda, so the local guardrails above are skipped.
