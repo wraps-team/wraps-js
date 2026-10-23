@@ -1,5 +1,10 @@
 import type { Attachment, EmailAddress } from '../types';
-import { assertNoHeaderInjection, sanitizeHeaderValue } from './headers';
+import {
+  assertNoHeaderInjection,
+  encodeHeaderText,
+  hasNonAscii,
+  sanitizeHeaderValue,
+} from './headers';
 
 /**
  * Generate a random boundary string for MIME multipart messages
@@ -12,18 +17,20 @@ function generateBoundary(prefix = 'boundary'): string {
  * Encode email address with optional name
  */
 function formatEmailAddress(address: string | EmailAddress): string {
-  let out: string;
   if (typeof address === 'string') {
-    out = address;
-  } else if (address.name) {
-    // Properly quote and escape name if it contains special characters
-    const name = address.name.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-    out = `"${name}" <${address.email}>`;
-  } else {
-    out = address.email;
+    return sanitizeHeaderValue(address, 'address');
   }
-  assertNoHeaderInjection(out, 'address');
-  return out;
+  const email = sanitizeHeaderValue(address.email, 'address');
+  if (!address.name) {
+    return email;
+  }
+  const name = sanitizeHeaderValue(address.name, 'address');
+  // A name with non-ASCII characters becomes RFC 2047 encoded-words, which can't sit inside
+  // quotes. Otherwise quote and escape it in case it has special characters.
+  if (hasNonAscii(name)) {
+    return `${encodeHeaderText(name)} <${email}>`;
+  }
+  return `"${name.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}" <${email}>`;
 }
 
 /**
@@ -115,7 +122,7 @@ export function buildRawEmailMessage(params: BuildRawEmailParams): string {
     lines.push(`Reply-To: ${formatEmailAddresses(params.replyTo)}`);
   }
 
-  lines.push(`Subject: ${sanitizeHeaderValue(params.subject, 'subject')}`);
+  lines.push(`Subject: ${encodeHeaderText(sanitizeHeaderValue(params.subject, 'subject'))}`);
 
   // Add custom headers (e.g., In-Reply-To, References for threading)
   if (params.customHeaders) {
