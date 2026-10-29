@@ -304,6 +304,66 @@ export interface paths {
         patch: operations["patchV1ContactsById"];
         trace?: never;
     };
+    "/v1/contacts/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export contacts
+         * @description Exports the org's contacts that match the filters, newest first, capped at 50000 rows. Filters come only from the URL query (search, emailStatus, topicId), the same values the contacts list is filtered by. format=json (default) returns { contacts, total, truncated }; format=csv returns the dashboard's CSV. Response headers x-export-total and x-export-truncated report the real match count and whether the cap cut the file short. Requires contacts:export.
+         */
+        get: operations["getV1ContactsExport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contacts/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import contacts
+         * @description Imports up to 10000 contacts in one synchronous call and returns the counts (created, updated, skipped, invalid) plus per-row errors and duplicates. Rows match existing contacts by email or phone hash; duplicateStrategy decides whether a match is skipped or updated (update fills blank fields and merges properties, never overwrites consent). Optional sesValidation runs SES Email Address Insights and drops LOW-confidence addresses. Requires contacts:import. Returns 402 when the plan's contact limit is reached.
+         */
+        post: operations["postV1ContactsImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contacts/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate email addresses
+         * @description Checks up to 100 addresses with SES Email Address Insights through an org AWS account whose SES plan is PRO or ENTERPRISE. Reads only that AWS account row (org-scoped); reads no contacts and writes nothing. Requires contacts:import, the permission the import uses for the same validation.
+         */
+        post: operations["postV1ContactsValidate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/contacts/{id}/topics": {
         parameters: {
             query?: never;
@@ -369,7 +429,11 @@ export interface paths {
         delete: operations["deleteV1BatchById"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Update draft broadcast
+         * @description Updates a DRAFT broadcast. Only fields present in the body change; send null to clear a nullable field. Returns 409 with the current status if the broadcast is not a draft (use the send/resume routes for live broadcasts). Setting audienceType or scheduledFor applies the same plan entitlements as creating a broadcast. Requires the broadcasts write permission.
+         */
+        patch: operations["patchV1BatchById"];
         trace?: never;
     };
     "/v1/batch/{id}/recipients": {
@@ -452,6 +516,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/batch/{id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Duplicate broadcast
+         * @description Creates a new draft copy of a broadcast (any status) with ' (copy)' appended to its name. The copy keeps the content, audience and sender, but not the schedule. Requires the broadcasts write permission. Returns the new draft's ID.
+         */
+        post: operations["postV1BatchByIdDuplicate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/segments/": {
         parameters: {
             query?: never;
@@ -524,7 +608,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/events/": {
+    "/v1/api-keys/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List API keys
+         * @description Lists the organization's API keys. Returns metadata only: the secret and its hash are never returned. Requires a dashboard or device-login session; API keys cannot call this route.
+         */
+        get: operations["getV1Api-keys"];
+        put?: never;
+        /**
+         * Create an API key
+         * @description Creates an API key for the organization and returns the full secret once, in secretKey. Only the hash is stored. Requires a dashboard or device-login session; API keys cannot call this route.
+         */
+        post: operations["postV1Api-keys"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/api-keys/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -532,6 +640,142 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke an API key
+         * @description Permanently revokes an API key. Requests that use it fail immediately. Requires confirm=true. Requires a dashboard or device-login session; API keys cannot call this route.
+         */
+        delete: operations["deleteV1Api-keysById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/suppressions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List suppressed addresses
+         * @description Lists the SES account-level suppression list. Without awsAccountId it reads every AWS account connected to the org; with it, only that account (404 if the account is not in this org). Pass the nextCursor from a previous page unchanged to continue. Entries carry the AWS account they came from. Accounts that denied access or could not be reached are listed in deniedAccountIds and unreachableAccountIds. Requires awsAccounts:read.
+         */
+        get: operations["getV1Suppressions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/suppressions/{email}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a suppressed address
+         * @description Removes one address from the SES suppression list of the given AWS account. Destructive: pass confirm=true, or the request is refused with 400 before anything changes. Addresses suppressed for a spam complaint also need acknowledgedComplaint=true (409 otherwise). Percent-encode the email in the path. Requires awsAccounts:write.
+         */
+        delete: operations["deleteV1SuppressionsByEmail"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/topics/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List topics
+         * @description Lists the organization's topics with subscriber, sendable and pending counts. Requires a Pro plan or higher.
+         */
+        get: operations["getV1Topics"];
+        put?: never;
+        /**
+         * Create a topic
+         * @description Creates a topic. The slug is generated from the name unless one is passed; slugs are unique per organization.
+         */
+        post: operations["postV1Topics"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/topics/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a topic
+         * @description Returns a single topic with its audience counts.
+         */
+        get: operations["getV1TopicsById"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a topic
+         * @description Deletes a topic and every subscription to it. Destructive: requires `confirm=true` in the query string or the request is refused with 400.
+         */
+        delete: operations["deleteV1TopicsById"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a topic
+         * @description Partially updates a topic. Only the fields passed are changed.
+         */
+        patch: operations["patchV1TopicsById"];
+        trace?: never;
+    };
+    "/v1/topics/{id}/subscribers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List topic subscribers
+         * @description Paginated subscribers of a topic, filterable by status. `pending` covers double opt-in contacts who have not confirmed yet.
+         */
+        get: operations["getV1TopicsByIdSubscribers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/events/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List events
+         * @description Paginated contact events for the organization, newest first. Requires contacts:read.
+         */
+        get: operations["getV1Events"];
         put?: never;
         /**
          * Ingest event
@@ -558,6 +802,66 @@ export interface paths {
          * @description Process multiple events in a single request
          */
         post: operations["postV1EventsBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/events/analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Event analytics
+         * @description Totals, period count, active contacts, a zero-filled daily series and top event names for the last 7 or 30 days. Requires contacts:read.
+         */
+        get: operations["getV1EventsAnalytics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/events/names": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List event names
+         * @description Distinct event names recorded for the organization, sorted. Requires contacts:read.
+         */
+        get: operations["getV1EventsNames"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/events/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get an event
+         * @description One contact event by id. Returns 404 when the event does not exist in this organization. Requires contacts:read.
+         */
+        get: operations["getV1EventsById"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -916,6 +1220,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workflows/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List workflows
+         * @description Paginated workflows for the org, newest first. Optional `search` matches the name (case-insensitive) and `status` filters by status. Requires the `workflows` read permission.
+         */
+        get: operations["getV1Workflows"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workflows/{workflowId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a workflow
+         * @description One workflow by id, scoped to the org. 404 if it does not exist or belongs to another org. Requires the `workflows` read permission.
+         */
+        get: operations["getV1WorkflowsByWorkflowId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workflows/{workflowId}/executions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List workflow executions
+         * @description Paginated executions of one workflow, newest first, each with its contact. 404 if the workflow is not in the org. Requires the `workflows` read permission.
+         */
+        get: operations["getV1WorkflowsByWorkflowIdExecutions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workflows/executions/{executionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a workflow execution
+         * @description One execution with its step trace, contact, workflow name and per-step engagement. 404 if it does not exist or belongs to another org. Requires the `workflows` read permission.
+         */
+        get: operations["getV1WorkflowsExecutionsByExecutionId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tools/email-check": {
         parameters: {
             query?: never;
@@ -1135,6 +1519,46 @@ export interface paths {
         put?: never;
         /** Reject a pending send */
         post: operations["postV1AgentsApprovalsByIdReject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/audit-logs/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List audit log entries
+         * @description Newest first, keyset-paginated (limit 1-100, default 50; pass nextCursor back unchanged as cursor). Filter with action, actorId, dateFrom and dateTo. Only rows inside the plan's history window are returned; retentionDays states that window and canExtend says whether a higher plan lengthens it. Requires the orgSettings read permission and the owner or admin role.
+         */
+        get: operations["getV1Audit-logs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/audit-logs/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export audit log entries
+         * @description Same filters and plan window as the list. format=json (default) returns { logs, total, truncated }; format=csv returns text/csv with the dashboard's columns and X-Total-Count / X-Truncated headers. Up to 50,000 rows are returned; truncated is true when more matched. Requires the orgSettings read permission, the owner or admin role, and the Business plan (or a licence). Each export writes one audit_log.exported row.
+         */
+        get: operations["getV1Audit-logsExport"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2077,7 +2501,7 @@ export interface operations {
                 /** @description Number of items per page (max 100) */
                 pageSize?: string;
                 /** @description Filter by email status */
-                emailStatus?: "active" | "unsubscribed" | "bounced" | "complained" | "suppressed";
+                emailStatus?: "active" | "unsubscribed" | "bounced" | "soft_bounced" | "complained" | "suppressed";
                 /** @description Filter by SMS status */
                 smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
                 /** @description Search by email or phone */
@@ -2306,7 +2730,7 @@ export interface operations {
                     /** @description Job title */
                     jobTitle?: string;
                     /** @description Email subscription status */
-                    emailStatus?: "active" | "unsubscribed" | "bounced" | "complained" | "suppressed";
+                    emailStatus?: "active" | "unsubscribed" | "bounced" | "soft_bounced" | "complained" | "suppressed";
                     /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
                     /** @description Preferred communication channel */
@@ -2339,7 +2763,7 @@ export interface operations {
                     /** @description Job title */
                     jobTitle?: string;
                     /** @description Email subscription status */
-                    emailStatus?: "active" | "unsubscribed" | "bounced" | "complained" | "suppressed";
+                    emailStatus?: "active" | "unsubscribed" | "bounced" | "soft_bounced" | "complained" | "suppressed";
                     /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
                     /** @description Preferred communication channel */
@@ -2372,7 +2796,7 @@ export interface operations {
                     /** @description Job title */
                     jobTitle?: string;
                     /** @description Email subscription status */
-                    emailStatus?: "active" | "unsubscribed" | "bounced" | "complained" | "suppressed";
+                    emailStatus?: "active" | "unsubscribed" | "bounced" | "soft_bounced" | "complained" | "suppressed";
                     /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
                     /** @description Preferred communication channel */
@@ -2953,7 +3377,7 @@ export interface operations {
                     /** @description Job title */
                     jobTitle?: string | null;
                     /** @description Email subscription status */
-                    emailStatus?: "active" | "unsubscribed" | "bounced" | "complained" | "suppressed";
+                    emailStatus?: "active" | "unsubscribed" | "bounced" | "soft_bounced" | "complained" | "suppressed";
                     /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
                     /** @description Preferred communication channel (null to clear) */
@@ -2986,7 +3410,7 @@ export interface operations {
                     /** @description Job title */
                     jobTitle?: string | null;
                     /** @description Email subscription status */
-                    emailStatus?: "active" | "unsubscribed" | "bounced" | "complained" | "suppressed";
+                    emailStatus?: "active" | "unsubscribed" | "bounced" | "soft_bounced" | "complained" | "suppressed";
                     /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
                     /** @description Preferred communication channel (null to clear) */
@@ -3019,7 +3443,7 @@ export interface operations {
                     /** @description Job title */
                     jobTitle?: string | null;
                     /** @description Email subscription status */
-                    emailStatus?: "active" | "unsubscribed" | "bounced" | "complained" | "suppressed";
+                    emailStatus?: "active" | "unsubscribed" | "bounced" | "soft_bounced" | "complained" | "suppressed";
                     /** @description SMS consent status */
                     smsStatus?: "pending_consent" | "opted_in" | "opted_out" | "invalid";
                     /** @description Preferred communication channel (null to clear) */
@@ -3227,6 +3651,523 @@ export interface operations {
                     };
                     "text/plain": {
                         /** @description Error message */
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1ContactsExport: {
+        parameters: {
+            query?: {
+                search?: string;
+                emailStatus?: "active" | "unsubscribed" | "bounced" | "soft_bounced" | "complained" | "suppressed";
+                topicId?: string;
+                format?: "json" | "csv";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        contacts: ({
+                            id: string;
+                            email: (string | null) | null;
+                            phone: (string | null) | null;
+                            firstName: (string | null) | null;
+                            lastName: (string | null) | null;
+                            company: (string | null) | null;
+                            jobTitle: (string | null) | null;
+                            emailStatus: (string | null) | null;
+                            /** @description ISO timestamp or null */
+                            emailLastSoftBouncedAt: unknown;
+                            emailSoftBounceCount: number;
+                            smsStatus: (string | null) | null;
+                            properties: {
+                                [key: string]: unknown;
+                            };
+                            /** @description ISO timestamp */
+                            createdAt: unknown;
+                            /** @description ISO timestamp */
+                            updatedAt: unknown;
+                            topics: {
+                                topicId: string;
+                                topicName: string;
+                                status: string;
+                                subscribedAt: unknown;
+                            }[];
+                        } & {
+                            [key: string]: unknown;
+                        })[];
+                        total: number;
+                        truncated: boolean;
+                    } | string;
+                    "multipart/form-data": {
+                        contacts: ({
+                            id: string;
+                            email: (string | null) | null;
+                            phone: (string | null) | null;
+                            firstName: (string | null) | null;
+                            lastName: (string | null) | null;
+                            company: (string | null) | null;
+                            jobTitle: (string | null) | null;
+                            emailStatus: (string | null) | null;
+                            /** @description ISO timestamp or null */
+                            emailLastSoftBouncedAt: unknown;
+                            emailSoftBounceCount: number;
+                            smsStatus: (string | null) | null;
+                            properties: {
+                                [key: string]: unknown;
+                            };
+                            /** @description ISO timestamp */
+                            createdAt: unknown;
+                            /** @description ISO timestamp */
+                            updatedAt: unknown;
+                            topics: {
+                                topicId: string;
+                                topicName: string;
+                                status: string;
+                                subscribedAt: unknown;
+                            }[];
+                        } & {
+                            [key: string]: unknown;
+                        })[];
+                        total: number;
+                        truncated: boolean;
+                    } | string;
+                    "text/plain": {
+                        contacts: ({
+                            id: string;
+                            email: (string | null) | null;
+                            phone: (string | null) | null;
+                            firstName: (string | null) | null;
+                            lastName: (string | null) | null;
+                            company: (string | null) | null;
+                            jobTitle: (string | null) | null;
+                            emailStatus: (string | null) | null;
+                            /** @description ISO timestamp or null */
+                            emailLastSoftBouncedAt: unknown;
+                            emailSoftBounceCount: number;
+                            smsStatus: (string | null) | null;
+                            properties: {
+                                [key: string]: unknown;
+                            };
+                            /** @description ISO timestamp */
+                            createdAt: unknown;
+                            /** @description ISO timestamp */
+                            updatedAt: unknown;
+                            topics: {
+                                topicId: string;
+                                topicName: string;
+                                status: string;
+                                subscribedAt: unknown;
+                            }[];
+                        } & {
+                            [key: string]: unknown;
+                        })[];
+                        total: number;
+                        truncated: boolean;
+                    } | string;
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    postV1ContactsImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Rows to import. At most 10000 per request. */
+                    contacts: {
+                        email?: string;
+                        phone?: string;
+                        firstName?: string;
+                        lastName?: string;
+                        company?: string;
+                        jobTitle?: string;
+                        /** @description Any date string the row carries as its creation time */
+                        createdAt?: string;
+                        /** @description pending_consent | opted_in | opted_out | invalid */
+                        smsStatus?: string;
+                        /** @description Date consent was given; only used with smsStatus opted_in */
+                        smsConsentedAt?: string;
+                        properties?: {
+                            [key: string]: string;
+                        };
+                    }[];
+                    topicIds?: string[];
+                    /** @description What to do with a row that matches an existing contact. Default skip. */
+                    duplicateStrategy?: "skip" | "update";
+                    sesValidation?: {
+                        /** @description An org AWS account whose SES plan is PRO or ENTERPRISE */
+                        awsAccountId: string;
+                    };
+                };
+                "multipart/form-data": {
+                    /** @description Rows to import. At most 10000 per request. */
+                    contacts: {
+                        email?: string;
+                        phone?: string;
+                        firstName?: string;
+                        lastName?: string;
+                        company?: string;
+                        jobTitle?: string;
+                        /** @description Any date string the row carries as its creation time */
+                        createdAt?: string;
+                        /** @description pending_consent | opted_in | opted_out | invalid */
+                        smsStatus?: string;
+                        /** @description Date consent was given; only used with smsStatus opted_in */
+                        smsConsentedAt?: string;
+                        properties?: {
+                            [key: string]: string;
+                        };
+                    }[];
+                    topicIds?: string[];
+                    /** @description What to do with a row that matches an existing contact. Default skip. */
+                    duplicateStrategy?: "skip" | "update";
+                    sesValidation?: {
+                        /** @description An org AWS account whose SES plan is PRO or ENTERPRISE */
+                        awsAccountId: string;
+                    };
+                };
+                "text/plain": {
+                    /** @description Rows to import. At most 10000 per request. */
+                    contacts: {
+                        email?: string;
+                        phone?: string;
+                        firstName?: string;
+                        lastName?: string;
+                        company?: string;
+                        jobTitle?: string;
+                        /** @description Any date string the row carries as its creation time */
+                        createdAt?: string;
+                        /** @description pending_consent | opted_in | opted_out | invalid */
+                        smsStatus?: string;
+                        /** @description Date consent was given; only used with smsStatus opted_in */
+                        smsConsentedAt?: string;
+                        properties?: {
+                            [key: string]: string;
+                        };
+                    }[];
+                    topicIds?: string[];
+                    /** @description What to do with a row that matches an existing contact. Default skip. */
+                    duplicateStrategy?: "skip" | "update";
+                    sesValidation?: {
+                        /** @description An org AWS account whose SES plan is PRO or ENTERPRISE */
+                        awsAccountId: string;
+                    };
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        created: number;
+                        updated: number;
+                        skipped: number;
+                        /** @description Number of rows listed in errors */
+                        invalid: number;
+                        errors: {
+                            row: number;
+                            error: string;
+                        }[];
+                        duplicates: {
+                            row: number;
+                            firstRow: number;
+                            field: "email" | "phone";
+                            value: string;
+                        }[];
+                    };
+                    "multipart/form-data": {
+                        created: number;
+                        updated: number;
+                        skipped: number;
+                        /** @description Number of rows listed in errors */
+                        invalid: number;
+                        errors: {
+                            row: number;
+                            error: string;
+                        }[];
+                        duplicates: {
+                            row: number;
+                            firstRow: number;
+                            field: "email" | "phone";
+                            value: string;
+                        }[];
+                    };
+                    "text/plain": {
+                        created: number;
+                        updated: number;
+                        skipped: number;
+                        /** @description Number of rows listed in errors */
+                        invalid: number;
+                        errors: {
+                            row: number;
+                            error: string;
+                        }[];
+                        duplicates: {
+                            row: number;
+                            firstRow: number;
+                            field: "email" | "phone";
+                            value: string;
+                        }[];
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    postV1ContactsValidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description An org AWS account whose SES plan is PRO or ENTERPRISE */
+                    awsAccountId: string;
+                    /** @description Addresses to check, at most 100 per request. */
+                    emails: string[];
+                };
+                "multipart/form-data": {
+                    /** @description An org AWS account whose SES plan is PRO or ENTERPRISE */
+                    awsAccountId: string;
+                    /** @description Addresses to check, at most 100 per request. */
+                    emails: string[];
+                };
+                "text/plain": {
+                    /** @description An org AWS account whose SES plan is PRO or ENTERPRISE */
+                    awsAccountId: string;
+                    /** @description Addresses to check, at most 100 per request. */
+                    emails: string[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description SES confidence verdict per syntactically valid, de-duplicated address */
+                        verdicts: {
+                            [key: string]: "LOW" | "MEDIUM" | "HIGH" | "UNKNOWN";
+                        };
+                        validatedCount: number;
+                        /** @description True when SES throttled the run; verdicts cover only what was checked */
+                        stoppedEarly: boolean;
+                        invalid: string[];
+                    };
+                    "multipart/form-data": {
+                        /** @description SES confidence verdict per syntactically valid, de-duplicated address */
+                        verdicts: {
+                            [key: string]: "LOW" | "MEDIUM" | "HIGH" | "UNKNOWN";
+                        };
+                        validatedCount: number;
+                        /** @description True when SES throttled the run; verdicts cover only what was checked */
+                        stoppedEarly: boolean;
+                        invalid: string[];
+                    };
+                    "text/plain": {
+                        /** @description SES confidence verdict per syntactically valid, de-duplicated address */
+                        verdicts: {
+                            [key: string]: "LOW" | "MEDIUM" | "HIGH" | "UNKNOWN";
+                        };
+                        validatedCount: number;
+                        /** @description True when SES throttled the run; verdicts cover only what was checked */
+                        stoppedEarly: boolean;
+                        invalid: string[];
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
                         error: string;
                     };
                 };
@@ -3704,7 +4645,22 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
             500: components["responses"]["InternalError"];
@@ -3833,6 +4789,233 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    patchV1BatchById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Draft broadcast ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    channel?: "email" | "sms";
+                    name?: string | null;
+                    /** @description Audience type. Setting it replaces topicId and segmentId with the values sent (or null). */
+                    audienceType?: "all" | "topic" | "segment";
+                    topicId?: string | null;
+                    segmentId?: string | null;
+                    subject?: string | null;
+                    previewText?: string | null;
+                    from?: string | null;
+                    fromName?: string | null;
+                    replyTo?: string | null;
+                    templateId?: string | null;
+                    htmlContent?: string | null;
+                    variableMappings?: {
+                        variableName: string;
+                        source: {
+                            /** @constant */
+                            type: "static";
+                            value: string;
+                        } | {
+                            /** @constant */
+                            type: "contact";
+                            field: string;
+                        };
+                    }[] | null;
+                    body?: string | null;
+                    senderId?: string | null;
+                    /** @description Schedule for the draft. null clears it. */
+                    scheduledFor?: string | null;
+                    awsAccountId?: string | null;
+                };
+                "multipart/form-data": {
+                    channel?: "email" | "sms";
+                    name?: string | null;
+                    /** @description Audience type. Setting it replaces topicId and segmentId with the values sent (or null). */
+                    audienceType?: "all" | "topic" | "segment";
+                    topicId?: string | null;
+                    segmentId?: string | null;
+                    subject?: string | null;
+                    previewText?: string | null;
+                    from?: string | null;
+                    fromName?: string | null;
+                    replyTo?: string | null;
+                    templateId?: string | null;
+                    htmlContent?: string | null;
+                    variableMappings?: {
+                        variableName: string;
+                        source: {
+                            /** @constant */
+                            type: "static";
+                            value: string;
+                        } | {
+                            /** @constant */
+                            type: "contact";
+                            field: string;
+                        };
+                    }[] | null;
+                    body?: string | null;
+                    senderId?: string | null;
+                    /** @description Schedule for the draft. null clears it. */
+                    scheduledFor?: string | null;
+                    awsAccountId?: string | null;
+                };
+                "text/plain": {
+                    channel?: "email" | "sms";
+                    name?: string | null;
+                    /** @description Audience type. Setting it replaces topicId and segmentId with the values sent (or null). */
+                    audienceType?: "all" | "topic" | "segment";
+                    topicId?: string | null;
+                    segmentId?: string | null;
+                    subject?: string | null;
+                    previewText?: string | null;
+                    from?: string | null;
+                    fromName?: string | null;
+                    replyTo?: string | null;
+                    templateId?: string | null;
+                    htmlContent?: string | null;
+                    variableMappings?: {
+                        variableName: string;
+                        source: {
+                            /** @constant */
+                            type: "static";
+                            value: string;
+                        } | {
+                            /** @constant */
+                            type: "contact";
+                            field: string;
+                        };
+                    }[] | null;
+                    body?: string | null;
+                    senderId?: string | null;
+                    /** @description Schedule for the draft. null clears it. */
+                    scheduledFor?: string | null;
+                    awsAccountId?: string | null;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        status: string;
+                        name: string | null;
+                        channel: string;
+                        subject: string | null;
+                        audienceType: string | null;
+                        topicId: string | null;
+                        segmentId: string | null;
+                        awsAccountId: string | null;
+                        /** @description ISO 8601 schedule for the draft, or null */
+                        scheduledFor: string | null;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        status: string;
+                        name: string | null;
+                        channel: string;
+                        subject: string | null;
+                        audienceType: string | null;
+                        topicId: string | null;
+                        segmentId: string | null;
+                        awsAccountId: string | null;
+                        /** @description ISO 8601 schedule for the draft, or null */
+                        scheduledFor: string | null;
+                    };
+                    "text/plain": {
+                        id: string;
+                        status: string;
+                        name: string | null;
+                        channel: string;
+                        subject: string | null;
+                        audienceType: string | null;
+                        topicId: string | null;
+                        segmentId: string | null;
+                        awsAccountId: string | null;
+                        /** @description ISO 8601 schedule for the draft, or null */
+                        scheduledFor: string | null;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
             500: components["responses"]["InternalError"];
@@ -4152,6 +5335,103 @@ export interface operations {
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
             500: components["responses"]["InternalError"];
+        };
+    };
+    postV1BatchByIdDuplicate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Broadcast ID to copy */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description ID of the new draft */
+                        id: string;
+                        /** @description Status of the new draft (always draft) */
+                        status: string;
+                        /** @description Name of the new draft, with a ' (copy)' suffix */
+                        name: string | null;
+                    };
+                    "multipart/form-data": {
+                        /** @description ID of the new draft */
+                        id: string;
+                        /** @description Status of the new draft (always draft) */
+                        status: string;
+                        /** @description Name of the new draft, with a ' (copy)' suffix */
+                        name: string | null;
+                    };
+                    "text/plain": {
+                        /** @description ID of the new draft */
+                        id: string;
+                        /** @description Status of the new draft (always draft) */
+                        status: string;
+                        /** @description Name of the new draft, with a ' (copy)' suffix */
+                        name: string | null;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
         };
     };
     getV1Segments: {
@@ -4663,6 +5943,1467 @@ export interface operations {
             500: components["responses"]["InternalError"];
         };
     };
+    "getV1Api-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        apiKeys: {
+                            id: string;
+                            name: string;
+                            /** @description Display prefix only, for example wraps_live_abcdefgh... The full key is never shown again after creation. */
+                            prefix: string;
+                            permissions: string[];
+                            lastUsedAt: string | null;
+                            expiresAt: string | null;
+                            createdAt: string;
+                            createdBy: {
+                                id: string;
+                                name: string;
+                                email: string;
+                            } | null;
+                        }[];
+                    };
+                    "multipart/form-data": {
+                        apiKeys: {
+                            id: string;
+                            name: string;
+                            /** @description Display prefix only, for example wraps_live_abcdefgh... The full key is never shown again after creation. */
+                            prefix: string;
+                            permissions: string[];
+                            lastUsedAt: string | null;
+                            expiresAt: string | null;
+                            createdAt: string;
+                            createdBy: {
+                                id: string;
+                                name: string;
+                                email: string;
+                            } | null;
+                        }[];
+                    };
+                    "text/plain": {
+                        apiKeys: {
+                            id: string;
+                            name: string;
+                            /** @description Display prefix only, for example wraps_live_abcdefgh... The full key is never shown again after creation. */
+                            prefix: string;
+                            permissions: string[];
+                            lastUsedAt: string | null;
+                            expiresAt: string | null;
+                            createdAt: string;
+                            createdBy: {
+                                id: string;
+                                name: string;
+                                email: string;
+                            } | null;
+                        }[];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    "postV1Api-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    type?: "live" | "test" | "restricted";
+                    permissions?: ("contacts:read" | "contacts:write" | "topics:read" | "topics:write" | "segments:read" | "segments:write" | "campaigns:read" | "campaigns:write" | "workflows:read" | "workflows:write" | "analytics:read" | "send:email")[] | "full" | "readonly";
+                    expiresInDays?: string | number;
+                };
+                "multipart/form-data": {
+                    name: string;
+                    type?: "live" | "test" | "restricted";
+                    permissions?: ("contacts:read" | "contacts:write" | "topics:read" | "topics:write" | "segments:read" | "segments:write" | "campaigns:read" | "campaigns:write" | "workflows:read" | "workflows:write" | "analytics:read" | "send:email")[] | "full" | "readonly";
+                    expiresInDays?: string | number;
+                };
+                "text/plain": {
+                    name: string;
+                    type?: "live" | "test" | "restricted";
+                    permissions?: ("contacts:read" | "contacts:write" | "topics:read" | "topics:write" | "segments:read" | "segments:write" | "campaigns:read" | "campaigns:write" | "workflows:read" | "workflows:write" | "analytics:read" | "send:email")[] | "full" | "readonly";
+                    expiresInDays?: string | number;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        apiKey: {
+                            id: string;
+                            name: string;
+                            /** @description Display prefix only, for example wraps_live_abcdefgh... The full key is never shown again after creation. */
+                            prefix: string;
+                            permissions: string[];
+                            lastUsedAt: string | null;
+                            expiresAt: string | null;
+                            createdAt: string;
+                            createdBy: {
+                                id: string;
+                                name: string;
+                                email: string;
+                            } | null;
+                        };
+                        /** @description The full API key. It is returned only in this response and cannot be retrieved again. Store it now. */
+                        secretKey: string;
+                    };
+                    "multipart/form-data": {
+                        apiKey: {
+                            id: string;
+                            name: string;
+                            /** @description Display prefix only, for example wraps_live_abcdefgh... The full key is never shown again after creation. */
+                            prefix: string;
+                            permissions: string[];
+                            lastUsedAt: string | null;
+                            expiresAt: string | null;
+                            createdAt: string;
+                            createdBy: {
+                                id: string;
+                                name: string;
+                                email: string;
+                            } | null;
+                        };
+                        /** @description The full API key. It is returned only in this response and cannot be retrieved again. Store it now. */
+                        secretKey: string;
+                    };
+                    "text/plain": {
+                        apiKey: {
+                            id: string;
+                            name: string;
+                            /** @description Display prefix only, for example wraps_live_abcdefgh... The full key is never shown again after creation. */
+                            prefix: string;
+                            permissions: string[];
+                            lastUsedAt: string | null;
+                            expiresAt: string | null;
+                            createdAt: string;
+                            createdBy: {
+                                id: string;
+                                name: string;
+                                email: string;
+                            } | null;
+                        };
+                        /** @description The full API key. It is returned only in this response and cannot be retrieved again. Store it now. */
+                        secretKey: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    "deleteV1Api-keysById": {
+        parameters: {
+            query?: {
+                /** @description Must be true. Revoking a key cannot be undone and breaks every integration that uses it. */
+                confirm?: boolean;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1Suppressions: {
+        parameters: {
+            query?: {
+                awsAccountId?: string;
+                reason?: "BOUNCE" | "COMPLAINT";
+                limit?: string | number;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        entries: {
+                            email: string;
+                            reason: "BOUNCE" | "COMPLAINT";
+                            lastUpdated: string;
+                            awsAccountId: string;
+                            region: string;
+                        }[];
+                        nextCursor?: string;
+                        hasMore: boolean;
+                        deniedAccountIds: string[];
+                        unreachableAccountIds: string[];
+                    };
+                    "multipart/form-data": {
+                        entries: {
+                            email: string;
+                            reason: "BOUNCE" | "COMPLAINT";
+                            lastUpdated: string;
+                            awsAccountId: string;
+                            region: string;
+                        }[];
+                        nextCursor?: string;
+                        hasMore: boolean;
+                        deniedAccountIds: string[];
+                        unreachableAccountIds: string[];
+                    };
+                    "text/plain": {
+                        entries: {
+                            email: string;
+                            reason: "BOUNCE" | "COMPLAINT";
+                            lastUpdated: string;
+                            awsAccountId: string;
+                            region: string;
+                        }[];
+                        nextCursor?: string;
+                        hasMore: boolean;
+                        deniedAccountIds: string[];
+                        unreachableAccountIds: string[];
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
+    deleteV1SuppressionsByEmail: {
+        parameters: {
+            query: {
+                awsAccountId: string;
+                confirm?: string;
+                acknowledgedComplaint?: string;
+            };
+            header?: never;
+            path: {
+                email: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        email: string;
+                        wasPresent: boolean;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        email: string;
+                        wasPresent: boolean;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        email: string;
+                        wasPresent: boolean;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
+    getV1Topics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        topics: {
+                            id: string;
+                            name: string;
+                            slug: string;
+                            description: string | null;
+                            /** @description Visible on the preference center. */
+                            public: boolean;
+                            doubleOptIn: boolean;
+                            /** @description Opted-in contacts, including ones a broadcast would not reach. */
+                            subscriberCount: number;
+                            /** @description Subscribed contacts a broadcast to this topic would actually reach right now. */
+                            sendableCount: number;
+                            /** @description Waiting on a double opt-in confirmation. Broadcasts skip these. */
+                            pendingCount: number;
+                            createdAt: string;
+                            updatedAt: string;
+                            createdBy: {
+                                id: string;
+                                name: string;
+                                email: string;
+                            } | null;
+                        }[];
+                    };
+                    "multipart/form-data": {
+                        topics: {
+                            id: string;
+                            name: string;
+                            slug: string;
+                            description: string | null;
+                            /** @description Visible on the preference center. */
+                            public: boolean;
+                            doubleOptIn: boolean;
+                            /** @description Opted-in contacts, including ones a broadcast would not reach. */
+                            subscriberCount: number;
+                            /** @description Subscribed contacts a broadcast to this topic would actually reach right now. */
+                            sendableCount: number;
+                            /** @description Waiting on a double opt-in confirmation. Broadcasts skip these. */
+                            pendingCount: number;
+                            createdAt: string;
+                            updatedAt: string;
+                            createdBy: {
+                                id: string;
+                                name: string;
+                                email: string;
+                            } | null;
+                        }[];
+                    };
+                    "text/plain": {
+                        topics: {
+                            id: string;
+                            name: string;
+                            slug: string;
+                            description: string | null;
+                            /** @description Visible on the preference center. */
+                            public: boolean;
+                            doubleOptIn: boolean;
+                            /** @description Opted-in contacts, including ones a broadcast would not reach. */
+                            subscriberCount: number;
+                            /** @description Subscribed contacts a broadcast to this topic would actually reach right now. */
+                            sendableCount: number;
+                            /** @description Waiting on a double opt-in confirmation. Broadcasts skip these. */
+                            pendingCount: number;
+                            createdAt: string;
+                            updatedAt: string;
+                            createdBy: {
+                                id: string;
+                                name: string;
+                                email: string;
+                            } | null;
+                        }[];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    postV1Topics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    slug?: string;
+                    description?: string;
+                    public?: boolean;
+                    doubleOptIn?: boolean;
+                };
+                "multipart/form-data": {
+                    name: string;
+                    slug?: string;
+                    description?: string;
+                    public?: boolean;
+                    doubleOptIn?: boolean;
+                };
+                "text/plain": {
+                    name: string;
+                    slug?: string;
+                    description?: string;
+                    public?: boolean;
+                    doubleOptIn?: boolean;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        slug: string;
+                        description: string | null;
+                        /** @description Visible on the preference center. */
+                        public: boolean;
+                        doubleOptIn: boolean;
+                        /** @description Opted-in contacts, including ones a broadcast would not reach. */
+                        subscriberCount: number;
+                        /** @description Subscribed contacts a broadcast to this topic would actually reach right now. */
+                        sendableCount: number;
+                        /** @description Waiting on a double opt-in confirmation. Broadcasts skip these. */
+                        pendingCount: number;
+                        createdAt: string;
+                        updatedAt: string;
+                        createdBy: {
+                            id: string;
+                            name: string;
+                            email: string;
+                        } | null;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        name: string;
+                        slug: string;
+                        description: string | null;
+                        /** @description Visible on the preference center. */
+                        public: boolean;
+                        doubleOptIn: boolean;
+                        /** @description Opted-in contacts, including ones a broadcast would not reach. */
+                        subscriberCount: number;
+                        /** @description Subscribed contacts a broadcast to this topic would actually reach right now. */
+                        sendableCount: number;
+                        /** @description Waiting on a double opt-in confirmation. Broadcasts skip these. */
+                        pendingCount: number;
+                        createdAt: string;
+                        updatedAt: string;
+                        createdBy: {
+                            id: string;
+                            name: string;
+                            email: string;
+                        } | null;
+                    };
+                    "text/plain": {
+                        id: string;
+                        name: string;
+                        slug: string;
+                        description: string | null;
+                        /** @description Visible on the preference center. */
+                        public: boolean;
+                        doubleOptIn: boolean;
+                        /** @description Opted-in contacts, including ones a broadcast would not reach. */
+                        subscriberCount: number;
+                        /** @description Subscribed contacts a broadcast to this topic would actually reach right now. */
+                        sendableCount: number;
+                        /** @description Waiting on a double opt-in confirmation. Broadcasts skip these. */
+                        pendingCount: number;
+                        createdAt: string;
+                        updatedAt: string;
+                        createdBy: {
+                            id: string;
+                            name: string;
+                            email: string;
+                        } | null;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: components["responses"]["NotFound"];
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1TopicsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        slug: string;
+                        description: string | null;
+                        /** @description Visible on the preference center. */
+                        public: boolean;
+                        doubleOptIn: boolean;
+                        /** @description Opted-in contacts, including ones a broadcast would not reach. */
+                        subscriberCount: number;
+                        /** @description Subscribed contacts a broadcast to this topic would actually reach right now. */
+                        sendableCount: number;
+                        /** @description Waiting on a double opt-in confirmation. Broadcasts skip these. */
+                        pendingCount: number;
+                        createdAt: string;
+                        updatedAt: string;
+                        createdBy: {
+                            id: string;
+                            name: string;
+                            email: string;
+                        } | null;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        name: string;
+                        slug: string;
+                        description: string | null;
+                        /** @description Visible on the preference center. */
+                        public: boolean;
+                        doubleOptIn: boolean;
+                        /** @description Opted-in contacts, including ones a broadcast would not reach. */
+                        subscriberCount: number;
+                        /** @description Subscribed contacts a broadcast to this topic would actually reach right now. */
+                        sendableCount: number;
+                        /** @description Waiting on a double opt-in confirmation. Broadcasts skip these. */
+                        pendingCount: number;
+                        createdAt: string;
+                        updatedAt: string;
+                        createdBy: {
+                            id: string;
+                            name: string;
+                            email: string;
+                        } | null;
+                    };
+                    "text/plain": {
+                        id: string;
+                        name: string;
+                        slug: string;
+                        description: string | null;
+                        /** @description Visible on the preference center. */
+                        public: boolean;
+                        doubleOptIn: boolean;
+                        /** @description Opted-in contacts, including ones a broadcast would not reach. */
+                        subscriberCount: number;
+                        /** @description Subscribed contacts a broadcast to this topic would actually reach right now. */
+                        sendableCount: number;
+                        /** @description Waiting on a double opt-in confirmation. Broadcasts skip these. */
+                        pendingCount: number;
+                        createdAt: string;
+                        updatedAt: string;
+                        createdBy: {
+                            id: string;
+                            name: string;
+                            email: string;
+                        } | null;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    deleteV1TopicsById: {
+        parameters: {
+            query?: {
+                /** @description Must be the string `true` to delete. Required. */
+                confirm?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                    "multipart/form-data": {
+                        success: boolean;
+                    };
+                    "text/plain": {
+                        success: boolean;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    patchV1TopicsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    slug?: string;
+                    description?: string | null;
+                    public?: boolean;
+                    doubleOptIn?: boolean;
+                };
+                "multipart/form-data": {
+                    name?: string;
+                    slug?: string;
+                    description?: string | null;
+                    public?: boolean;
+                    doubleOptIn?: boolean;
+                };
+                "text/plain": {
+                    name?: string;
+                    slug?: string;
+                    description?: string | null;
+                    public?: boolean;
+                    doubleOptIn?: boolean;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        slug: string;
+                        description: string | null;
+                        /** @description Visible on the preference center. */
+                        public: boolean;
+                        doubleOptIn: boolean;
+                        /** @description Opted-in contacts, including ones a broadcast would not reach. */
+                        subscriberCount: number;
+                        /** @description Subscribed contacts a broadcast to this topic would actually reach right now. */
+                        sendableCount: number;
+                        /** @description Waiting on a double opt-in confirmation. Broadcasts skip these. */
+                        pendingCount: number;
+                        createdAt: string;
+                        updatedAt: string;
+                        createdBy: {
+                            id: string;
+                            name: string;
+                            email: string;
+                        } | null;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        name: string;
+                        slug: string;
+                        description: string | null;
+                        /** @description Visible on the preference center. */
+                        public: boolean;
+                        doubleOptIn: boolean;
+                        /** @description Opted-in contacts, including ones a broadcast would not reach. */
+                        subscriberCount: number;
+                        /** @description Subscribed contacts a broadcast to this topic would actually reach right now. */
+                        sendableCount: number;
+                        /** @description Waiting on a double opt-in confirmation. Broadcasts skip these. */
+                        pendingCount: number;
+                        createdAt: string;
+                        updatedAt: string;
+                        createdBy: {
+                            id: string;
+                            name: string;
+                            email: string;
+                        } | null;
+                    };
+                    "text/plain": {
+                        id: string;
+                        name: string;
+                        slug: string;
+                        description: string | null;
+                        /** @description Visible on the preference center. */
+                        public: boolean;
+                        doubleOptIn: boolean;
+                        /** @description Opted-in contacts, including ones a broadcast would not reach. */
+                        subscriberCount: number;
+                        /** @description Subscribed contacts a broadcast to this topic would actually reach right now. */
+                        sendableCount: number;
+                        /** @description Waiting on a double opt-in confirmation. Broadcasts skip these. */
+                        pendingCount: number;
+                        createdAt: string;
+                        updatedAt: string;
+                        createdBy: {
+                            id: string;
+                            name: string;
+                            email: string;
+                        } | null;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1TopicsByIdSubscribers: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                status?: "subscribed" | "pending" | "unsubscribed";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        subscribers: {
+                            contactId: string;
+                            email: string;
+                            status: string;
+                            subscribedAt: string | null;
+                            unsubscribedAt: string | null;
+                        }[];
+                        total: number;
+                        page: number;
+                        pageSize: number;
+                    };
+                    "multipart/form-data": {
+                        subscribers: {
+                            contactId: string;
+                            email: string;
+                            status: string;
+                            subscribedAt: string | null;
+                            unsubscribedAt: string | null;
+                        }[];
+                        total: number;
+                        page: number;
+                        pageSize: number;
+                    };
+                    "text/plain": {
+                        subscribers: {
+                            contactId: string;
+                            email: string;
+                            status: string;
+                            subscribedAt: string | null;
+                            unsubscribedAt: string | null;
+                        }[];
+                        total: number;
+                        page: number;
+                        pageSize: number;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1Events: {
+        parameters: {
+            query?: {
+                /** @description Page number (1-indexed) */
+                page?: string;
+                /** @description Items per page (1-100, default 50) */
+                pageSize?: string;
+                /** @description Exact event name */
+                eventName?: string;
+                /** @description Case-insensitive match on event name, event data, or contact name/email (max 255) */
+                search?: string;
+                /** @description Case-insensitive contact email match */
+                contactEmail?: string;
+                /** @description ISO 8601 lower bound on createdAt */
+                dateFrom?: string;
+                /** @description ISO 8601 upper bound on createdAt */
+                dateTo?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        events: {
+                            id: string;
+                            eventName: string;
+                            eventData: ({
+                                [key: string]: unknown;
+                            } | null) | null;
+                            /** @description ISO 8601 timestamp */
+                            createdAt: string;
+                            contactId: string;
+                            contactEmail: (string | null) | null;
+                            contactFirstName: (string | null) | null;
+                            contactLastName: (string | null) | null;
+                        }[];
+                        total: number;
+                        page: number;
+                        pageSize: number;
+                    };
+                    "multipart/form-data": {
+                        events: {
+                            id: string;
+                            eventName: string;
+                            eventData: ({
+                                [key: string]: unknown;
+                            } | null) | null;
+                            /** @description ISO 8601 timestamp */
+                            createdAt: string;
+                            contactId: string;
+                            contactEmail: (string | null) | null;
+                            contactFirstName: (string | null) | null;
+                            contactLastName: (string | null) | null;
+                        }[];
+                        total: number;
+                        page: number;
+                        pageSize: number;
+                    };
+                    "text/plain": {
+                        events: {
+                            id: string;
+                            eventName: string;
+                            eventData: ({
+                                [key: string]: unknown;
+                            } | null) | null;
+                            /** @description ISO 8601 timestamp */
+                            createdAt: string;
+                            contactId: string;
+                            contactEmail: (string | null) | null;
+                            contactFirstName: (string | null) | null;
+                            contactLastName: (string | null) | null;
+                        }[];
+                        total: number;
+                        page: number;
+                        pageSize: number;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
     postV1Events: {
         parameters: {
             query?: never;
@@ -4903,6 +7644,253 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1EventsAnalytics: {
+        parameters: {
+            query?: {
+                /** @description Window in days: 7 or 30 (default 30) */
+                days?: string;
+                /** @description IANA timezone for day boundaries (default UTC; invalid values fall back to UTC) */
+                timezone?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        totalEvents: number;
+                        eventsThisPeriod: number;
+                        activeContacts: number;
+                        avgEventsPerContact: number;
+                        dailyEvents: {
+                            date: string;
+                            count: number;
+                        }[];
+                        topEventNames: {
+                            name: string;
+                            count: number;
+                        }[];
+                    };
+                    "multipart/form-data": {
+                        totalEvents: number;
+                        eventsThisPeriod: number;
+                        activeContacts: number;
+                        avgEventsPerContact: number;
+                        dailyEvents: {
+                            date: string;
+                            count: number;
+                        }[];
+                        topEventNames: {
+                            name: string;
+                            count: number;
+                        }[];
+                    };
+                    "text/plain": {
+                        totalEvents: number;
+                        eventsThisPeriod: number;
+                        activeContacts: number;
+                        avgEventsPerContact: number;
+                        dailyEvents: {
+                            date: string;
+                            count: number;
+                        }[];
+                        topEventNames: {
+                            name: string;
+                            count: number;
+                        }[];
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1EventsNames: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        eventNames: string[];
+                    };
+                    "multipart/form-data": {
+                        eventNames: string[];
+                    };
+                    "text/plain": {
+                        eventNames: string[];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1EventsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        eventName: string;
+                        eventData: ({
+                            [key: string]: unknown;
+                        } | null) | null;
+                        /** @description ISO 8601 timestamp */
+                        createdAt: string;
+                        contactId: string;
+                        contactEmail: (string | null) | null;
+                        contactFirstName: (string | null) | null;
+                        contactLastName: (string | null) | null;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        eventName: string;
+                        eventData: ({
+                            [key: string]: unknown;
+                        } | null) | null;
+                        /** @description ISO 8601 timestamp */
+                        createdAt: string;
+                        contactId: string;
+                        contactEmail: (string | null) | null;
+                        contactFirstName: (string | null) | null;
+                        contactLastName: (string | null) | null;
+                    };
+                    "text/plain": {
+                        id: string;
+                        eventName: string;
+                        eventData: ({
+                            [key: string]: unknown;
+                        } | null) | null;
+                        /** @description ISO 8601 timestamp */
+                        createdAt: string;
+                        contactId: string;
+                        contactEmail: (string | null) | null;
+                        contactFirstName: (string | null) | null;
+                        contactLastName: (string | null) | null;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
             500: components["responses"]["InternalError"];
@@ -6738,6 +9726,569 @@ export interface operations {
             500: components["responses"]["InternalError"];
         };
     };
+    getV1Workflows: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                search?: string;
+                status?: "draft" | "enabled" | "paused" | "archived";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        workflows: ({
+                            id: string;
+                            organizationId: string;
+                            name: string;
+                            description: string | null;
+                            status: string;
+                            triggerType: string | null;
+                            triggerConfig?: unknown;
+                            steps?: unknown;
+                            transitions?: unknown;
+                            version: number;
+                            totalExecutions: number;
+                            activeExecutions: number;
+                            completedExecutions: number;
+                            failedExecutions: number;
+                            createdBy: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            createdByUser?: {
+                                id: string;
+                                name: string | null;
+                                email: string;
+                            } | null;
+                        } & {
+                            [key: string]: unknown;
+                        })[];
+                        total: number;
+                        page: number;
+                        pageSize: number;
+                    };
+                    "multipart/form-data": {
+                        workflows: ({
+                            id: string;
+                            organizationId: string;
+                            name: string;
+                            description: string | null;
+                            status: string;
+                            triggerType: string | null;
+                            triggerConfig?: unknown;
+                            steps?: unknown;
+                            transitions?: unknown;
+                            version: number;
+                            totalExecutions: number;
+                            activeExecutions: number;
+                            completedExecutions: number;
+                            failedExecutions: number;
+                            createdBy: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            createdByUser?: {
+                                id: string;
+                                name: string | null;
+                                email: string;
+                            } | null;
+                        } & {
+                            [key: string]: unknown;
+                        })[];
+                        total: number;
+                        page: number;
+                        pageSize: number;
+                    };
+                    "text/plain": {
+                        workflows: ({
+                            id: string;
+                            organizationId: string;
+                            name: string;
+                            description: string | null;
+                            status: string;
+                            triggerType: string | null;
+                            triggerConfig?: unknown;
+                            steps?: unknown;
+                            transitions?: unknown;
+                            version: number;
+                            totalExecutions: number;
+                            activeExecutions: number;
+                            completedExecutions: number;
+                            failedExecutions: number;
+                            createdBy: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            createdByUser?: {
+                                id: string;
+                                name: string | null;
+                                email: string;
+                            } | null;
+                        } & {
+                            [key: string]: unknown;
+                        })[];
+                        total: number;
+                        page: number;
+                        pageSize: number;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1WorkflowsByWorkflowId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflowId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Workflow row. Extra columns are passed through. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        description: string | null;
+                        status: string;
+                        triggerType: string | null;
+                        triggerConfig?: unknown;
+                        steps?: unknown;
+                        transitions?: unknown;
+                        version: number;
+                        totalExecutions: number;
+                        activeExecutions: number;
+                        completedExecutions: number;
+                        failedExecutions: number;
+                        createdBy: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                        createdByUser?: {
+                            id: string;
+                            name: string | null;
+                            email: string;
+                        } | null;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        description: string | null;
+                        status: string;
+                        triggerType: string | null;
+                        triggerConfig?: unknown;
+                        steps?: unknown;
+                        transitions?: unknown;
+                        version: number;
+                        totalExecutions: number;
+                        activeExecutions: number;
+                        completedExecutions: number;
+                        failedExecutions: number;
+                        createdBy: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                        createdByUser?: {
+                            id: string;
+                            name: string | null;
+                            email: string;
+                        } | null;
+                    };
+                    "text/plain": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        description: string | null;
+                        status: string;
+                        triggerType: string | null;
+                        triggerConfig?: unknown;
+                        steps?: unknown;
+                        transitions?: unknown;
+                        version: number;
+                        totalExecutions: number;
+                        activeExecutions: number;
+                        completedExecutions: number;
+                        failedExecutions: number;
+                        createdBy: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                        createdByUser?: {
+                            id: string;
+                            name: string | null;
+                            email: string;
+                        } | null;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1WorkflowsByWorkflowIdExecutions: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                status?: "pending" | "active" | "paused" | "waiting" | "completed" | "failed" | "cancelled";
+            };
+            header?: never;
+            path: {
+                workflowId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        executions: ({
+                            id: string;
+                            workflowId: string;
+                            contactId: string;
+                            organizationId: string;
+                            status: string;
+                            currentStepId: string | null;
+                            startedAt: string | null;
+                            completedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            contact: {
+                                id: string;
+                                email: string | null;
+                                firstName: string | null;
+                                lastName: string | null;
+                            } | null;
+                        } & {
+                            [key: string]: unknown;
+                        })[];
+                        total: number;
+                        page: number;
+                        pageSize: number;
+                    };
+                    "multipart/form-data": {
+                        executions: ({
+                            id: string;
+                            workflowId: string;
+                            contactId: string;
+                            organizationId: string;
+                            status: string;
+                            currentStepId: string | null;
+                            startedAt: string | null;
+                            completedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            contact: {
+                                id: string;
+                                email: string | null;
+                                firstName: string | null;
+                                lastName: string | null;
+                            } | null;
+                        } & {
+                            [key: string]: unknown;
+                        })[];
+                        total: number;
+                        page: number;
+                        pageSize: number;
+                    };
+                    "text/plain": {
+                        executions: ({
+                            id: string;
+                            workflowId: string;
+                            contactId: string;
+                            organizationId: string;
+                            status: string;
+                            currentStepId: string | null;
+                            startedAt: string | null;
+                            completedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            contact: {
+                                id: string;
+                                email: string | null;
+                                firstName: string | null;
+                                lastName: string | null;
+                            } | null;
+                        } & {
+                            [key: string]: unknown;
+                        })[];
+                        total: number;
+                        page: number;
+                        pageSize: number;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1WorkflowsExecutionsByExecutionId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                executionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        workflowId: string;
+                        contactId: string;
+                        organizationId: string;
+                        status: string;
+                        currentStepId: string | null;
+                        startedAt: string | null;
+                        completedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                        contact: {
+                            id: string;
+                            email: string | null;
+                            firstName: string | null;
+                            lastName: string | null;
+                        } | null;
+                        workflow: {
+                            name: string;
+                        } | null;
+                        stepExecutions: ({
+                            id: string;
+                            executionId: string;
+                            stepId: string;
+                            stepType: string;
+                            status: string;
+                            createdAt: string;
+                        } & {
+                            [key: string]: unknown;
+                        })[];
+                        stepEngagement?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        workflowId: string;
+                        contactId: string;
+                        organizationId: string;
+                        status: string;
+                        currentStepId: string | null;
+                        startedAt: string | null;
+                        completedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                        contact: {
+                            id: string;
+                            email: string | null;
+                            firstName: string | null;
+                            lastName: string | null;
+                        } | null;
+                        workflow: {
+                            name: string;
+                        } | null;
+                        stepExecutions: ({
+                            id: string;
+                            executionId: string;
+                            stepId: string;
+                            stepType: string;
+                            status: string;
+                            createdAt: string;
+                        } & {
+                            [key: string]: unknown;
+                        })[];
+                        stepEngagement?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                    "text/plain": {
+                        id: string;
+                        workflowId: string;
+                        contactId: string;
+                        organizationId: string;
+                        status: string;
+                        currentStepId: string | null;
+                        startedAt: string | null;
+                        completedAt: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                        contact: {
+                            id: string;
+                            email: string | null;
+                            firstName: string | null;
+                            lastName: string | null;
+                        } | null;
+                        workflow: {
+                            name: string;
+                        } | null;
+                        stepExecutions: ({
+                            id: string;
+                            executionId: string;
+                            stepId: string;
+                            stepType: string;
+                            status: string;
+                            createdAt: string;
+                        } & {
+                            [key: string]: unknown;
+                        })[];
+                        stepEngagement?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
     "postToolsEmail-check": {
         parameters: {
             query?: never;
@@ -6750,8 +10301,10 @@ export interface operations {
                 "application/json": {
                     /** @description Domain to check */
                     domain: string;
-                    /** @description Quick mode (skip blacklist checks) */
+                    /** @description Quick mode: fewer DKIM selectors and the 10-list blacklist set. Skips blacklists unless skipBlacklists is false. */
                     quick?: boolean;
+                    /** @description Skip blacklist checks. Defaults to the value of quick. Send false with quick to check the domain against 5 lists and its IPv4 mail servers against 10. */
+                    skipBlacklists?: boolean;
                     /** @description Single DKIM selector to check */
                     dkimSelector?: string;
                     /** @description Multiple DKIM selectors to check */
@@ -6760,8 +10313,10 @@ export interface operations {
                 "multipart/form-data": {
                     /** @description Domain to check */
                     domain: string;
-                    /** @description Quick mode (skip blacklist checks) */
+                    /** @description Quick mode: fewer DKIM selectors and the 10-list blacklist set. Skips blacklists unless skipBlacklists is false. */
                     quick?: boolean;
+                    /** @description Skip blacklist checks. Defaults to the value of quick. Send false with quick to check the domain against 5 lists and its IPv4 mail servers against 10. */
+                    skipBlacklists?: boolean;
                     /** @description Single DKIM selector to check */
                     dkimSelector?: string;
                     /** @description Multiple DKIM selectors to check */
@@ -6770,8 +10325,10 @@ export interface operations {
                 "text/plain": {
                     /** @description Domain to check */
                     domain: string;
-                    /** @description Quick mode (skip blacklist checks) */
+                    /** @description Quick mode: fewer DKIM selectors and the 10-list blacklist set. Skips blacklists unless skipBlacklists is false. */
                     quick?: boolean;
+                    /** @description Skip blacklist checks. Defaults to the value of quick. Send false with quick to check the domain against 5 lists and its IPv4 mail servers against 10. */
+                    skipBlacklists?: boolean;
                     /** @description Single DKIM selector to check */
                     dkimSelector?: string;
                     /** @description Multiple DKIM selectors to check */
@@ -6868,6 +10425,20 @@ export interface operations {
                         blacklist?: {
                             checked: boolean;
                             overallClean: boolean;
+                            quickMode?: boolean;
+                            summary?: {
+                                state: string;
+                                headline: string;
+                                detail: string | null;
+                                lists: number | null;
+                                lookups: number;
+                                unanswered: number;
+                                unansweredLists: string[];
+                                unansweredDetails: {
+                                    list: string;
+                                    reason: string;
+                                }[];
+                            };
                             domainListings: {
                                 blacklist: string;
                                 priority: string;
@@ -6976,6 +10547,20 @@ export interface operations {
                         blacklist?: {
                             checked: boolean;
                             overallClean: boolean;
+                            quickMode?: boolean;
+                            summary?: {
+                                state: string;
+                                headline: string;
+                                detail: string | null;
+                                lists: number | null;
+                                lookups: number;
+                                unanswered: number;
+                                unansweredLists: string[];
+                                unansweredDetails: {
+                                    list: string;
+                                    reason: string;
+                                }[];
+                            };
                             domainListings: {
                                 blacklist: string;
                                 priority: string;
@@ -7084,6 +10669,20 @@ export interface operations {
                         blacklist?: {
                             checked: boolean;
                             overallClean: boolean;
+                            quickMode?: boolean;
+                            summary?: {
+                                state: string;
+                                headline: string;
+                                detail: string | null;
+                                lists: number | null;
+                                lookups: number;
+                                unanswered: number;
+                                unansweredLists: string[];
+                                unansweredDetails: {
+                                    list: string;
+                                    reason: string;
+                                }[];
+                            };
                             domainListings: {
                                 blacklist: string;
                                 priority: string;
@@ -7220,6 +10819,20 @@ export interface operations {
                         blacklist?: {
                             checked: boolean;
                             overallClean: boolean;
+                            quickMode?: boolean;
+                            summary?: {
+                                state: string;
+                                headline: string;
+                                detail: string | null;
+                                lists: number | null;
+                                lookups: number;
+                                unanswered: number;
+                                unansweredLists: string[];
+                                unansweredDetails: {
+                                    list: string;
+                                    reason: string;
+                                }[];
+                            };
                             domainListings: {
                                 blacklist: string;
                                 priority: string;
@@ -7328,6 +10941,20 @@ export interface operations {
                         blacklist?: {
                             checked: boolean;
                             overallClean: boolean;
+                            quickMode?: boolean;
+                            summary?: {
+                                state: string;
+                                headline: string;
+                                detail: string | null;
+                                lists: number | null;
+                                lookups: number;
+                                unanswered: number;
+                                unansweredLists: string[];
+                                unansweredDetails: {
+                                    list: string;
+                                    reason: string;
+                                }[];
+                            };
                             domainListings: {
                                 blacklist: string;
                                 priority: string;
@@ -7436,6 +11063,20 @@ export interface operations {
                         blacklist?: {
                             checked: boolean;
                             overallClean: boolean;
+                            quickMode?: boolean;
+                            summary?: {
+                                state: string;
+                                headline: string;
+                                detail: string | null;
+                                lists: number | null;
+                                lookups: number;
+                                unanswered: number;
+                                unansweredLists: string[];
+                                unansweredDetails: {
+                                    list: string;
+                                    reason: string;
+                                }[];
+                            };
                             domainListings: {
                                 blacklist: string;
                                 priority: string;
@@ -8985,6 +12626,248 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    "getV1Audit-logs": {
+        parameters: {
+            query?: {
+                limit?: string;
+                cursor?: string;
+                action?: string;
+                actorId?: string;
+                dateFrom?: string;
+                dateTo?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            id: string;
+                            organizationId: string;
+                            userId: (string | null) | null;
+                            actorEmail: (string | null) | null;
+                            action: string;
+                            resource: string;
+                            resourceId: (string | null) | null;
+                            metadata: ({
+                                [key: string]: unknown;
+                            } | null) | null;
+                            ipAddress: (string | null) | null;
+                            userAgent: (string | null) | null;
+                            createdAt: string;
+                        }[];
+                        nextCursor: (string | null) | null;
+                        retentionDays: number;
+                        canExtend: boolean;
+                    };
+                    "multipart/form-data": {
+                        data: {
+                            id: string;
+                            organizationId: string;
+                            userId: (string | null) | null;
+                            actorEmail: (string | null) | null;
+                            action: string;
+                            resource: string;
+                            resourceId: (string | null) | null;
+                            metadata: ({
+                                [key: string]: unknown;
+                            } | null) | null;
+                            ipAddress: (string | null) | null;
+                            userAgent: (string | null) | null;
+                            createdAt: string;
+                        }[];
+                        nextCursor: (string | null) | null;
+                        retentionDays: number;
+                        canExtend: boolean;
+                    };
+                    "text/plain": {
+                        data: {
+                            id: string;
+                            organizationId: string;
+                            userId: (string | null) | null;
+                            actorEmail: (string | null) | null;
+                            action: string;
+                            resource: string;
+                            resourceId: (string | null) | null;
+                            metadata: ({
+                                [key: string]: unknown;
+                            } | null) | null;
+                            ipAddress: (string | null) | null;
+                            userAgent: (string | null) | null;
+                            createdAt: string;
+                        }[];
+                        nextCursor: (string | null) | null;
+                        retentionDays: number;
+                        canExtend: boolean;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    "getV1Audit-logsExport": {
+        parameters: {
+            query?: {
+                limit?: string;
+                cursor?: string;
+                action?: string;
+                actorId?: string;
+                dateFrom?: string;
+                dateTo?: string;
+                format?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        logs: {
+                            id: string;
+                            organizationId: string;
+                            userId: (string | null) | null;
+                            actorEmail: (string | null) | null;
+                            action: string;
+                            resource: string;
+                            resourceId: (string | null) | null;
+                            metadata: ({
+                                [key: string]: unknown;
+                            } | null) | null;
+                            ipAddress: (string | null) | null;
+                            userAgent: (string | null) | null;
+                            createdAt: string;
+                        }[];
+                        total: number;
+                        truncated: boolean;
+                    } | string;
+                    "multipart/form-data": {
+                        logs: {
+                            id: string;
+                            organizationId: string;
+                            userId: (string | null) | null;
+                            actorEmail: (string | null) | null;
+                            action: string;
+                            resource: string;
+                            resourceId: (string | null) | null;
+                            metadata: ({
+                                [key: string]: unknown;
+                            } | null) | null;
+                            ipAddress: (string | null) | null;
+                            userAgent: (string | null) | null;
+                            createdAt: string;
+                        }[];
+                        total: number;
+                        truncated: boolean;
+                    } | string;
+                    "text/plain": {
+                        logs: {
+                            id: string;
+                            organizationId: string;
+                            userId: (string | null) | null;
+                            actorEmail: (string | null) | null;
+                            action: string;
+                            resource: string;
+                            resourceId: (string | null) | null;
+                            metadata: ({
+                                [key: string]: unknown;
+                            } | null) | null;
+                            ipAddress: (string | null) | null;
+                            userAgent: (string | null) | null;
+                            createdAt: string;
+                        }[];
+                        total: number;
+                        truncated: boolean;
+                    } | string;
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
             500: components["responses"]["InternalError"];
