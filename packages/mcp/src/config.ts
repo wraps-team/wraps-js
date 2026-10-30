@@ -1,5 +1,12 @@
+import { homedir } from 'node:os';
 import { GetCallerIdentityCommand, STSClient } from '@aws-sdk/client-sts';
 import { ConfigError } from './errors.ts';
+import {
+  isWrapsApiProblem,
+  resolveWrapsApi,
+  type WrapsApiProblem,
+  type WrapsApiTarget,
+} from './wraps-auth.ts';
 
 /** The two fields that cannot be known without working AWS credentials. */
 export interface AwsIdentity {
@@ -8,6 +15,14 @@ export interface AwsIdentity {
 }
 
 export interface MCPConfig {
+  /**
+   * Wraps API credentials, read once at startup by `loadConfig` (see `wraps-auth.ts`).
+   * Absent when there is neither `WRAPS_API_KEY` nor an unexpired CLI session. It is
+   * `{ problem }` when a stored session cannot be used as-is. The `if (config.api)` gate in
+   * `tools/index.ts` therefore still registers the API tools, and they then report the fix.
+   * Tools must read this only through `requireApi`.
+   */
+  api?: WrapsApiTarget | WrapsApiProblem;
   /**
    * Resolves the region and account id, memoized across calls.
    *
@@ -140,6 +155,9 @@ export function loadConfig(): MCPConfig {
   const enforcerFunction = process.env.WRAPS_AGENT_ENFORCER_ARN || undefined;
   const enforcedMode = Boolean(agentId && enforcerFunction);
 
+  // Reads ~/.wraps/config.json and the environment only. It never touches the network.
+  const api = resolveWrapsApi(process.env, homedir());
+
   let pending: Promise<AwsIdentity> | undefined;
   const aws = () => {
     // Memoize the promise, not the value, so concurrent tool calls on a cold
@@ -153,6 +171,7 @@ export function loadConfig(): MCPConfig {
   };
 
   return {
+    ...(api ? { api } : {}),
     aws,
     historyTableName,
     writeEnabled,
@@ -169,7 +188,7 @@ export function loadConfig(): MCPConfig {
 }
 
 /** A tool result shaped like the MCP SDK's error return. */
-type ToolError = {
+export type ToolError = {
   isError: true;
   content: { type: 'text'; text: string }[];
 };
@@ -196,6 +215,36 @@ export async function requireAws(
       },
     };
   }
+}
+
+const API_CREDENTIAL_MISSING = `Wraps API credentials are not set, so this tool cannot reach the Wraps API. Either:
+
+  Set WRAPS_API_KEY in the "env" block of the wraps entry in your MCP config file (create a key in the Wraps dashboard), or
+  run \`wraps auth login\` in a terminal on this machine.
+
+Then restart the MCP server. Credentials are read once, at startup.`;
+
+/**
+ * Gate a tool on a Wraps API credential. Mirrors `requireAws`: the result is either the
+ * target or a tool error that names the fix. Synchronous, so there is no `await` needed.
+ *
+ * A stored credential that cannot be used (a self-hosted session with no API URL) comes
+ * back as `{ problem }`, and its message is returned verbatim.
+ */
+export function requireApi(
+  config: MCPConfig
+): { ok: true; api: WrapsApiTarget } | { ok: false; error: ToolError } {
+  const api = config.api;
+  if (!api) {
+    return {
+      ok: false,
+      error: { isError: true, content: [{ type: 'text', text: API_CREDENTIAL_MISSING }] },
+    };
+  }
+  if (isWrapsApiProblem(api)) {
+    return { ok: false, error: { isError: true, content: [{ type: 'text', text: api.problem }] } };
+  }
+  return { ok: true, api };
 }
 
 export function resetAccountIdCache(): void {

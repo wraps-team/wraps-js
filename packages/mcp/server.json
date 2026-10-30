@@ -66,6 +66,27 @@
           "isRequired": false,
           "isSecret": false,
           "format": "string"
+        },
+        {
+          "name": "WRAPS_API_KEY",
+          "description": "Wraps API key (wraps_...) for the contacts, segments, topics, templates, broadcasts, events, workflows, approvals, metrics, inbound and brand-kit tools. Without it the server falls back to the session from `wraps auth login`; with neither, only the AWS tools are registered.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "WRAPS_API_URL",
+          "description": "Wraps API base URL. Defaults to https://api.wraps.dev; set it for a self-hosted control plane.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "WRAPS_ORG_ID",
+          "description": "Organization id to act in when using a `wraps auth login` session that belongs to several organizations.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
         }
       ]
     }
