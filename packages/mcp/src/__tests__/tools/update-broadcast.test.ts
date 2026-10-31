@@ -78,15 +78,23 @@ describe('update_broadcast', () => {
     expect(api.calls[0].body).toEqual({ scheduledFor: '2099-02-01T10:00:00.000Z' });
   });
 
-  it('maps a 400 (not a scheduled broadcast, e.g. a draft) to an error that names the status and the rule', async () => {
+  it('edits a draft and says it is still a draft and nothing was sent', async () => {
     const api = mockApi([
       {
         method: 'PATCH',
         path: '/v1/batch/bcs_draft',
-        status: 400,
+        status: 200,
         body: {
-          error:
-            "Cannot edit batch in 'draft' status. Only scheduled batches can be edited; edit a draft from the dashboard.",
+          id: 'bcs_draft',
+          status: 'draft',
+          name: 'Renamed',
+          channel: 'email',
+          subject: null,
+          audienceType: null,
+          topicId: null,
+          segmentId: null,
+          awsAccountId: null,
+          scheduledFor: null,
         },
       },
     ]);
@@ -97,9 +105,36 @@ describe('update_broadcast', () => {
       arguments: { id: 'bcs_draft', name: 'Renamed' },
     })) as ToolResult;
 
+    expect(result.isError).toBeFalsy();
+    expect(result.content[0].text).toContain('Updated draft broadcast bcs_draft');
+    expect(result.content[0].text).toContain('Nothing was sent');
+    expect(result.structuredContent).toEqual({
+      id: 'bcs_draft',
+      status: 'draft',
+      scheduledFor: null,
+    });
+    expect(api.calls).toHaveLength(1);
+    expect(api.calls[0].body).toEqual({ name: 'Renamed' });
+  });
+
+  it('maps a 409 for a status that cannot be edited (e.g. queued) to an error that names the status', async () => {
+    const api = mockApi([
+      {
+        method: 'PATCH',
+        path: '/v1/batch/bcs_queued',
+        status: 409,
+        body: { error: 'Cannot edit: broadcast is already queued' },
+      },
+    ]);
+    client = await connectTool(registerUpdateBroadcast, makeApiConfig({ writeEnabled: true }));
+
+    const result = (await client.callTool({
+      name: 'update_broadcast',
+      arguments: { id: 'bcs_queued', name: 'Renamed' },
+    })) as ToolResult;
+
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain("Cannot edit batch in 'draft' status");
-    expect(result.content[0].text).toContain('Only scheduled batches can be edited');
+    expect(result.content[0].text).toContain('Cannot edit: broadcast is already queued');
     expect(api.calls).toHaveLength(1);
   });
 

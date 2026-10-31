@@ -136,7 +136,7 @@ function describeFailure(
     return `Your Wraps session is missing, expired, or was revoked${tag}. Run \`${login}\`, then restart the MCP server.`;
   }
   if (status === 403) {
-    return `Permission denied${tag}${messagePart}. Your role or plan does not allow this action. Ask an organization admin to check your role, or check your plan.`;
+    return `Permission denied${tag}${messagePart}. Your role (for a wraps auth login session), your API key's scopes (for WRAPS_API_KEY) or your plan does not allow this action. Ask an organization admin to check your role or to create a key with the scope this action needs, or check your plan.`;
   }
   if (status === 404) {
     return `Not found in this organization${tag}${messagePart}. Check the id with the matching list tool. The record may belong to another organization or may have been deleted.`;

@@ -55,7 +55,7 @@ Runs locally via stdio. Your AWS credentials never leave your machine.
 | `list_broadcast_recipients` | List the per-recipient outcome of one broadcast: who was sent to, and whether each send was delivered, bounced, suppressed or failed, with the error reason. | Yes (API key or `wraps auth login`) | No |
 | `get_broadcast_clicks` | Get the link-click breakdown for ONE broadcast: which URLs were clicked and how often, plus the unsubscribe click count. | Yes (API key or `wraps auth login`) | No |
 | `create_broadcast` | Create a NEW broadcast as a draft. | Yes (API key or `wraps auth login`) | Yes — requires `WRAPS_WRITE_ENABLED=true` |
-| `update_broadcast` | Edit a SCHEDULED broadcast before it sends: its content, sender, audience, template, AWS account or send time. | Yes (API key or `wraps auth login`) | Yes — requires `WRAPS_WRITE_ENABLED=true` |
+| `update_broadcast` | Edit a DRAFT or a SCHEDULED broadcast: its content, sender, audience, template, AWS account or send time. | Yes (API key or `wraps auth login`) | Yes — requires `WRAPS_WRITE_ENABLED=true` |
 | `duplicate_broadcast` | Copy an existing broadcast into a NEW draft, whatever the status of the original. | Yes (API key or `wraps auth login`) | Yes — requires `WRAPS_WRITE_ENABLED=true` |
 | `send_broadcast` | Send a DRAFT broadcast to its audience, now or at scheduledFor. | Yes (API key or `wraps auth login`) | Yes — requires `WRAPS_WRITE_ENABLED=true` and `confirm: true` |
 | `resume_broadcast` | Resume an email broadcast that stopped part-way, from the last chunk it finished, so recipients who were not yet sent to get the message. | Yes (API key or `wraps auth login`) | Yes — requires `WRAPS_WRITE_ENABLED=true` and `confirm: true` |

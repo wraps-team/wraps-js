@@ -178,7 +178,7 @@ describe('apiRequest(): error mapping', () => {
     const result = await apiRequest(KEY_API, { method: 'POST', path: '/v1/contacts', body: {} });
     expect(text(result)).toContain('Admin role required');
     expect(text(result)).toContain('(code: FORBIDDEN)');
-    expect(text(result)).toMatch(/role or plan/);
+    expect(text(result)).toMatch(/role .*API key's scopes.* or your plan/);
   });
 
   it('maps 404 to not found in this organization and includes the API message', async () => {

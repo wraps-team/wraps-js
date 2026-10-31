@@ -77,7 +77,7 @@ describe('validate_contact_emails', () => {
     await client.close();
   });
 
-  it('maps a 403 to a tool error that names the role or plan fix', async () => {
+  it('maps a 403 to a tool error that names the role, key scope or plan fix', async () => {
     const api = mockApi([
       {
         method: 'POST',
@@ -96,7 +96,7 @@ describe('validate_contact_emails', () => {
     expect(result.isError).toBe(true);
     expect(text(result)).toContain('Permission denied');
     expect(text(result)).toContain('Missing permission contacts:import');
-    expect(text(result)).toContain('role or plan');
+    expect(text(result)).toContain("API key's scopes");
     expect(api.calls).toHaveLength(1);
     await client.close();
   });

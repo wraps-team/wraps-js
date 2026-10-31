@@ -219,7 +219,7 @@
     },
     {
       "name": "update_broadcast",
-      "description": "Edit a DRAFT broadcast: its name, audience, subject, content, sender, template or schedule."
+      "description": "Edit a DRAFT or a SCHEDULED broadcast: its content, sender, audience, template, AWS account or send time."
     },
     {
       "name": "duplicate_broadcast",
