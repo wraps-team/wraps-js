@@ -12,17 +12,25 @@ overrides:
   'brace-expansion': '>=2.1.4'
   'picomatch': '^4.0.4'
   'minimatch': '^5.1.8'
-  'fast-uri': '>=4.1.3'
+  'fast-uri': '>=4.2.3'
   'vitest': '>=4.1.11 <5'
   'postcss': '>=8.5.23'
   'esbuild': '^0.28.1'
   'js-yaml': '>=4.3.2 <5'
   'hono': '>=4.13.5'
   '@hono/node-server': '>=2.0.5'
-  'body-parser': '>=2.3.0'
-  'qs': '>=6.16.0'
+  'body-parser': '>=2.4.0'
+  'qs': '>=6.16.1'
   'ip-address': '>=10.3.1'
   'nanoid': '>=3.3.18'
+
+# Advisories with no patched release, so no floor can fix them. Revisit when
+# one ships.
+# - GHSA-gcqx-w48m-w2h4 (low): deepmerge <=4.3.1 prototype poisoning, reached
+#   only through @react-email/render > html-to-text.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-gcqx-w48m-w2h4
 
 # pnpm 10 blocks dependency lifecycle scripts by default. esbuild currently
 # falls back to its optional platform package, but allowing the postinstall
