@@ -26,6 +26,12 @@ export interface ApiRequest {
   query?: Record<string, QueryValue>;
   /** JSON-serialized when present. `undefined` sends no body. */
   body?: unknown;
+  /**
+   * Set to `false` for a public route. Then no `Authorization` and no `x-organization-id` header
+   * is sent, so the request carries nothing that identifies the caller. Omit it for every
+   * authenticated route.
+   */
+  auth?: false;
 }
 
 export type ApiResult<T> = { ok: true; status: number; data: T } | { ok: false; error: ToolError };
@@ -181,11 +187,13 @@ export async function apiRequest<T = unknown>(
 
   const headers: Record<string, string> = {
     accept: 'application/json',
-    authorization: `Bearer ${api.token}`,
     'user-agent': `wraps-mcp/${packageVersion()}`,
   };
-  if (api.orgId) {
-    headers['x-organization-id'] = api.orgId;
+  if (req.auth !== false) {
+    headers.authorization = `Bearer ${api.token}`;
+    if (api.orgId) {
+      headers['x-organization-id'] = api.orgId;
+    }
   }
   let body: string | undefined;
   if (req.body !== undefined) {
