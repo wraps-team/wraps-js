@@ -228,6 +228,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/email/inbound": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List inbound emails
+         * @description Lists parsed inbound emails from the S3 inbound bucket in each connected AWS account. Emails are read live from the customer's account; nothing is stored in Wraps. Results come in S3 key order (by the email's storage key), not received time, so the newest email is not necessarily first. A page can span several accounts, and each entry carries its awsAccountId. limit defaults to 20 and is capped at 100. A page can hold fewer entries than limit, including none while nextCursor is set, because non-email objects are skipped. To get the next page, pass nextCursor back unchanged as cursor; it is null on the last page. Without awsAccountId every account with an inbound bucket is read; with it, only that account (404 if it is not in this org). Accounts that deny access are listed in deniedAccountIds and skipped; accounts that cannot be read are listed in unreachableAccountIds. Attachments are not downloadable through the API: the list carries only hasAttachments and attachmentCount. Requires authentication only.
+         */
+        get: operations["getV1EmailInbound"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/email/inbound/{emailId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get an inbound email
+         * @description Returns one parsed inbound email by emailId, as listed by GET /v1/email/inbound. Without awsAccountId every account with an inbound bucket is tried in account id order and the first match is returned; with it, only that account. Returns 404 when the email is not in any account read, or when awsAccountId is not in this org. Accounts that deny access or cannot be read are skipped, so a 404 can also mean the email sits in an account this key could not read. htmlTruncated: true means the HTML body was longer than the 200 KB cap (204,800 characters, counted as JavaScript string length) when the email was received and was cut to that prefix, so html may be incomplete markup. html is null when the email had no HTML part. The response carries the message headers, text body and attachment metadata. Attachments are metadata only: each has an s3Key, but there is no endpoint that downloads attachment contents. Requires authentication only.
+         */
+        get: operations["getV1EmailInboundByEmailId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/email/metrics/": {
         parameters: {
             query?: never;
@@ -384,6 +424,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/batch/drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create broadcast draft
+         * @description Creates a draft; nothing is sent. Send it with POST /v1/batch/{id}/send. Requires the broadcasts write permission. Every referenced ID (templateId, segmentId, topicId, awsAccountId) must belong to the organization. Returns the new draft.
+         */
+        post: operations["postV1BatchDrafts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/batch/": {
         parameters: {
             query?: never;
@@ -430,8 +490,14 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Update draft broadcast
-         * @description Updates a DRAFT broadcast. Only fields present in the body change; send null to clear a nullable field. Returns 409 with the current status if the broadcast is not a draft (use the send/resume routes for live broadcasts). Setting audienceType or scheduledFor applies the same plan entitlements as creating a broadcast. Requires the broadcasts write permission.
+         * Update draft or scheduled broadcast
+         * @description Updates a draft or a scheduled broadcast. Requires the broadcasts write permission.
+         *
+         *     Draft: only fields present in the body change; send null to clear a nullable field. Setting audienceType or scheduledFor applies the same plan entitlements as creating a broadcast.
+         *
+         *     Scheduled: Edits a scheduled batch send that has not started. Omitted fields keep their stored value; `null` clears a field. The broadcast stays scheduled: `scheduledFor` must be in the future, and changing it, the AWS account or the channel moves the EventBridge schedule. Rejected with 409 within 60 seconds of the send time or once sending has started. scheduledFor and awsAccountId cannot be null.
+         *
+         *     Any other status returns 409 with the current status (use the send/resume routes for live broadcasts).
          */
         patch: operations["patchV1BatchById"];
         trace?: never;
@@ -758,6 +824,78 @@ export interface paths {
         get: operations["getV1TopicsByIdSubscribers"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/brand-kits/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List brand kits
+         * @description Lists every brand kit in the organization in one response. Unpaginated: there is no limit or cursor, and `count` equals the number of kits returned. The default kit comes first, then the most recently updated.
+         */
+        get: operations["getV1Brand-kits"];
+        put?: never;
+        /**
+         * Create a brand kit
+         * @description Creates a brand kit. A blank name becomes 'Untitled Brand Kit'. The first kit in the organization is the default; later kits become the default only when `isDefault` is true, which clears the previous default.
+         */
+        post: operations["postV1Brand-kits"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/brand-kits/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a brand kit
+         * @description Returns a single brand kit in the organization.
+         */
+        get: operations["getV1Brand-kitsById"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a brand kit
+         * @description Deletes a brand kit. Destructive: requires `confirm=true` in the query string or the request is refused with 400. Deleting the default promotes another kit; templates that used the kit lose the link.
+         */
+        delete: operations["deleteV1Brand-kitsById"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a brand kit
+         * @description Partially updates a brand kit. Only the fields passed are changed. A blank name is refused with 400. To change the default, use POST /:id/default.
+         */
+        patch: operations["patchV1Brand-kitsById"];
+        trace?: never;
+    };
+    "/v1/brand-kits/{id}/default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set the default brand kit
+         * @description Makes this brand kit the organization's only default. The previous default is cleared in the same transaction.
+         */
+        post: operations["postV1Brand-kitsByIdDefault"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1851,7 +1989,22 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
@@ -2168,15 +2321,24 @@ export interface operations {
             };
         };
         responses: {
-            200: {
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
             };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
@@ -2195,15 +2357,24 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            200: {
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
             };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
@@ -2446,6 +2617,292 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1EmailInbound: {
+        parameters: {
+            query?: {
+                awsAccountId?: string;
+                limit?: string | number;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            awsAccountId: string;
+                            emailId: string;
+                            from: {
+                                address: string;
+                                name: string;
+                            };
+                            to: {
+                                address: string;
+                                name: string;
+                            }[];
+                            subject: string;
+                            receivedAt: string;
+                            hasAttachments: boolean;
+                            attachmentCount: number;
+                            spamVerdict: string | null;
+                            virusVerdict: string | null;
+                        }[];
+                        nextCursor: string | null;
+                        deniedAccountIds: string[];
+                        unreachableAccountIds: string[];
+                    };
+                    "multipart/form-data": {
+                        data: {
+                            awsAccountId: string;
+                            emailId: string;
+                            from: {
+                                address: string;
+                                name: string;
+                            };
+                            to: {
+                                address: string;
+                                name: string;
+                            }[];
+                            subject: string;
+                            receivedAt: string;
+                            hasAttachments: boolean;
+                            attachmentCount: number;
+                            spamVerdict: string | null;
+                            virusVerdict: string | null;
+                        }[];
+                        nextCursor: string | null;
+                        deniedAccountIds: string[];
+                        unreachableAccountIds: string[];
+                    };
+                    "text/plain": {
+                        data: {
+                            awsAccountId: string;
+                            emailId: string;
+                            from: {
+                                address: string;
+                                name: string;
+                            };
+                            to: {
+                                address: string;
+                                name: string;
+                            }[];
+                            subject: string;
+                            receivedAt: string;
+                            hasAttachments: boolean;
+                            attachmentCount: number;
+                            spamVerdict: string | null;
+                            virusVerdict: string | null;
+                        }[];
+                        nextCursor: string | null;
+                        deniedAccountIds: string[];
+                        unreachableAccountIds: string[];
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getV1EmailInboundByEmailId: {
+        parameters: {
+            query?: {
+                awsAccountId?: string;
+            };
+            header?: never;
+            path: {
+                emailId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        awsAccountId: string;
+                        emailId: string;
+                        messageId: string;
+                        from: {
+                            address: string;
+                            name: string;
+                        };
+                        to: {
+                            address: string;
+                            name: string;
+                        }[];
+                        cc: {
+                            address: string;
+                            name: string;
+                        }[];
+                        subject: string;
+                        date: string;
+                        html: string | null;
+                        htmlTruncated: boolean;
+                        text: string | null;
+                        headers: {
+                            [key: string]: unknown;
+                        };
+                        attachments: {
+                            id: string;
+                            filename: string;
+                            contentType: string;
+                            size: number;
+                            s3Key: string;
+                            contentDisposition: string | null;
+                            cid: string | null;
+                        }[];
+                        spamVerdict: string | null;
+                        virusVerdict: string | null;
+                        rawS3Key: string;
+                        receivedAt: string;
+                    };
+                    "multipart/form-data": {
+                        awsAccountId: string;
+                        emailId: string;
+                        messageId: string;
+                        from: {
+                            address: string;
+                            name: string;
+                        };
+                        to: {
+                            address: string;
+                            name: string;
+                        }[];
+                        cc: {
+                            address: string;
+                            name: string;
+                        }[];
+                        subject: string;
+                        date: string;
+                        html: string | null;
+                        htmlTruncated: boolean;
+                        text: string | null;
+                        headers: {
+                            [key: string]: unknown;
+                        };
+                        attachments: {
+                            id: string;
+                            filename: string;
+                            contentType: string;
+                            size: number;
+                            s3Key: string;
+                            contentDisposition: string | null;
+                            cid: string | null;
+                        }[];
+                        spamVerdict: string | null;
+                        virusVerdict: string | null;
+                        rawS3Key: string;
+                        receivedAt: string;
+                    };
+                    "text/plain": {
+                        awsAccountId: string;
+                        emailId: string;
+                        messageId: string;
+                        from: {
+                            address: string;
+                            name: string;
+                        };
+                        to: {
+                            address: string;
+                            name: string;
+                        }[];
+                        cc: {
+                            address: string;
+                            name: string;
+                        }[];
+                        subject: string;
+                        date: string;
+                        html: string | null;
+                        htmlTruncated: boolean;
+                        text: string | null;
+                        headers: {
+                            [key: string]: unknown;
+                        };
+                        attachments: {
+                            id: string;
+                            filename: string;
+                            contentType: string;
+                            size: number;
+                            s3Key: string;
+                            contentDisposition: string | null;
+                            cid: string | null;
+                        }[];
+                        spamVerdict: string | null;
+                        virusVerdict: string | null;
+                        rawS3Key: string;
+                        receivedAt: string;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
             500: components["responses"]["InternalError"];
@@ -2987,7 +3444,25 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
+            };
             404: components["responses"]["NotFound"];
             409: {
                 headers: {
@@ -3079,7 +3554,25 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
+            };
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
@@ -3321,7 +3814,25 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
+            };
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3616,7 +4127,25 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
+            };
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -4246,7 +4775,25 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @description Error message */
+                        error: string;
+                    };
+                };
+            };
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -4262,6 +4809,256 @@ export interface operations {
                     };
                     "text/plain": {
                         /** @description Error message */
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    postV1BatchDrafts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Channel the draft will send through */
+                    channel?: "email" | "sms";
+                    name?: string;
+                    subject?: string;
+                    previewText?: string;
+                    from?: string;
+                    fromName?: string;
+                    replyTo?: string;
+                    /** @description Email template ID */
+                    templateId?: string;
+                    htmlContent?: string;
+                    variableMappings?: {
+                        variableName: string;
+                        source: {
+                            /** @constant */
+                            type: "static";
+                            value: string;
+                        } | {
+                            /** @constant */
+                            type: "contact";
+                            field: string;
+                        };
+                    }[];
+                    /** @description SMS body */
+                    body?: string;
+                    /** @description SMS origination identity (phone number or alphanumeric ID) */
+                    senderId?: string;
+                    recipientFilter?: {
+                        audienceType?: "all" | "topic" | "segment";
+                        topicId?: string;
+                        segmentId?: string;
+                    };
+                    /** @description AWS account ID to send from. Optional on drafts. */
+                    awsAccountId?: string;
+                    /** @description ISO 8601 schedule stored on the draft. Not sent until the draft is sent. */
+                    scheduledFor?: string;
+                };
+                "multipart/form-data": {
+                    /** @description Channel the draft will send through */
+                    channel?: "email" | "sms";
+                    name?: string;
+                    subject?: string;
+                    previewText?: string;
+                    from?: string;
+                    fromName?: string;
+                    replyTo?: string;
+                    /** @description Email template ID */
+                    templateId?: string;
+                    htmlContent?: string;
+                    variableMappings?: {
+                        variableName: string;
+                        source: {
+                            /** @constant */
+                            type: "static";
+                            value: string;
+                        } | {
+                            /** @constant */
+                            type: "contact";
+                            field: string;
+                        };
+                    }[];
+                    /** @description SMS body */
+                    body?: string;
+                    /** @description SMS origination identity (phone number or alphanumeric ID) */
+                    senderId?: string;
+                    recipientFilter?: {
+                        audienceType?: "all" | "topic" | "segment";
+                        topicId?: string;
+                        segmentId?: string;
+                    };
+                    /** @description AWS account ID to send from. Optional on drafts. */
+                    awsAccountId?: string;
+                    /** @description ISO 8601 schedule stored on the draft. Not sent until the draft is sent. */
+                    scheduledFor?: string;
+                };
+                "text/plain": {
+                    /** @description Channel the draft will send through */
+                    channel?: "email" | "sms";
+                    name?: string;
+                    subject?: string;
+                    previewText?: string;
+                    from?: string;
+                    fromName?: string;
+                    replyTo?: string;
+                    /** @description Email template ID */
+                    templateId?: string;
+                    htmlContent?: string;
+                    variableMappings?: {
+                        variableName: string;
+                        source: {
+                            /** @constant */
+                            type: "static";
+                            value: string;
+                        } | {
+                            /** @constant */
+                            type: "contact";
+                            field: string;
+                        };
+                    }[];
+                    /** @description SMS body */
+                    body?: string;
+                    /** @description SMS origination identity (phone number or alphanumeric ID) */
+                    senderId?: string;
+                    recipientFilter?: {
+                        audienceType?: "all" | "topic" | "segment";
+                        topicId?: string;
+                        segmentId?: string;
+                    };
+                    /** @description AWS account ID to send from. Optional on drafts. */
+                    awsAccountId?: string;
+                    /** @description ISO 8601 schedule stored on the draft. Not sent until the draft is sent. */
+                    scheduledFor?: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Batch ID */
+                        id: string;
+                        /** @description Always draft */
+                        status: string;
+                        name: string | null;
+                        channel: string;
+                        totalRecipients: number;
+                        processedRecipients: number;
+                        sent: number;
+                        delivered: number;
+                        failed: number;
+                        opened: number;
+                        clicked: number;
+                        bounced: number;
+                        complained: number;
+                        suppressed: number;
+                        startedAt: string | null;
+                        completedAt: string | null;
+                        createdAt: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Batch ID */
+                        id: string;
+                        /** @description Always draft */
+                        status: string;
+                        name: string | null;
+                        channel: string;
+                        totalRecipients: number;
+                        processedRecipients: number;
+                        sent: number;
+                        delivered: number;
+                        failed: number;
+                        opened: number;
+                        clicked: number;
+                        bounced: number;
+                        complained: number;
+                        suppressed: number;
+                        startedAt: string | null;
+                        completedAt: string | null;
+                        createdAt: string;
+                    };
+                    "text/plain": {
+                        /** @description Batch ID */
+                        id: string;
+                        /** @description Always draft */
+                        status: string;
+                        name: string | null;
+                        channel: string;
+                        totalRecipients: number;
+                        processedRecipients: number;
+                        sent: number;
+                        delivered: number;
+                        failed: number;
+                        opened: number;
+                        clicked: number;
+                        bounced: number;
+                        complained: number;
+                        suppressed: number;
+                        startedAt: string | null;
+                        completedAt: string | null;
+                        createdAt: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
                         error: string;
                     };
                 };
@@ -4644,7 +5441,22 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -4787,7 +5599,22 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
@@ -4799,7 +5626,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Draft broadcast ID */
+                /** @description Draft or scheduled broadcast ID */
                 id: string;
             };
             cookie?: never;
@@ -4837,6 +5664,8 @@ export interface operations {
                     /** @description Schedule for the draft. null clears it. */
                     scheduledFor?: string | null;
                     awsAccountId?: string | null;
+                    /** @description Scheduled broadcasts only. Ignored for a draft. */
+                    totalRecipients?: number;
                 };
                 "multipart/form-data": {
                     channel?: "email" | "sms";
@@ -4869,6 +5698,8 @@ export interface operations {
                     /** @description Schedule for the draft. null clears it. */
                     scheduledFor?: string | null;
                     awsAccountId?: string | null;
+                    /** @description Scheduled broadcasts only. Ignored for a draft. */
+                    totalRecipients?: number;
                 };
                 "text/plain": {
                     channel?: "email" | "sms";
@@ -4901,6 +5732,8 @@ export interface operations {
                     /** @description Schedule for the draft. null clears it. */
                     scheduledFor?: string | null;
                     awsAccountId?: string | null;
+                    /** @description Scheduled broadcasts only. Ignored for a draft. */
+                    totalRecipients?: number;
                 };
             };
         };
@@ -4922,6 +5755,12 @@ export interface operations {
                         awsAccountId: string | null;
                         /** @description ISO 8601 schedule for the draft, or null */
                         scheduledFor: string | null;
+                    } | {
+                        id: string;
+                        status: string;
+                        /** Format: date-time */
+                        scheduledFor: string;
+                        warning?: string;
                     };
                     "multipart/form-data": {
                         id: string;
@@ -4935,6 +5774,12 @@ export interface operations {
                         awsAccountId: string | null;
                         /** @description ISO 8601 schedule for the draft, or null */
                         scheduledFor: string | null;
+                    } | {
+                        id: string;
+                        status: string;
+                        /** Format: date-time */
+                        scheduledFor: string;
+                        warning?: string;
                     };
                     "text/plain": {
                         id: string;
@@ -4948,6 +5793,12 @@ export interface operations {
                         awsAccountId: string | null;
                         /** @description ISO 8601 schedule for the draft, or null */
                         scheduledFor: string | null;
+                    } | {
+                        id: string;
+                        status: string;
+                        /** Format: date-time */
+                        scheduledFor: string;
+                        warning?: string;
                     };
                 };
             };
@@ -5288,7 +6139,22 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
@@ -5322,15 +6188,24 @@ export interface operations {
             };
         };
         responses: {
-            200: {
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
             };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
@@ -5604,7 +6479,22 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
@@ -5718,7 +6608,22 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5851,7 +6756,22 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5936,7 +6856,22 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
@@ -7280,6 +8215,887 @@ export interface operations {
             500: components["responses"]["InternalError"];
         };
     };
+    "getV1Brand-kits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        brandKits: {
+                            id: string;
+                            organizationId: string;
+                            name: string;
+                            logoUrl: string | null;
+                            primaryColor: string;
+                            secondaryColor: string;
+                            backgroundColor: string;
+                            textColor: string;
+                            fontFamily: string;
+                            headingFontFamily: string | null;
+                            /** @description Dashboard values: rounded, square or pill. */
+                            buttonStyle: string;
+                            buttonRadius: string;
+                            companyName: string | null;
+                            companyAddress: string | null;
+                            socialLinks: {
+                                platform: string;
+                                url: string;
+                            }[];
+                            sourceDomain: string | null;
+                            autoExtracted: boolean;
+                            /** @description True for exactly one kit per organization, when any exist. */
+                            isDefault: boolean;
+                            createdAt: string;
+                            updatedAt: string;
+                        }[];
+                        /** @description Number of kits returned, which is every kit in the org. */
+                        count: number;
+                    };
+                    "multipart/form-data": {
+                        brandKits: {
+                            id: string;
+                            organizationId: string;
+                            name: string;
+                            logoUrl: string | null;
+                            primaryColor: string;
+                            secondaryColor: string;
+                            backgroundColor: string;
+                            textColor: string;
+                            fontFamily: string;
+                            headingFontFamily: string | null;
+                            /** @description Dashboard values: rounded, square or pill. */
+                            buttonStyle: string;
+                            buttonRadius: string;
+                            companyName: string | null;
+                            companyAddress: string | null;
+                            socialLinks: {
+                                platform: string;
+                                url: string;
+                            }[];
+                            sourceDomain: string | null;
+                            autoExtracted: boolean;
+                            /** @description True for exactly one kit per organization, when any exist. */
+                            isDefault: boolean;
+                            createdAt: string;
+                            updatedAt: string;
+                        }[];
+                        /** @description Number of kits returned, which is every kit in the org. */
+                        count: number;
+                    };
+                    "text/plain": {
+                        brandKits: {
+                            id: string;
+                            organizationId: string;
+                            name: string;
+                            logoUrl: string | null;
+                            primaryColor: string;
+                            secondaryColor: string;
+                            backgroundColor: string;
+                            textColor: string;
+                            fontFamily: string;
+                            headingFontFamily: string | null;
+                            /** @description Dashboard values: rounded, square or pill. */
+                            buttonStyle: string;
+                            buttonRadius: string;
+                            companyName: string | null;
+                            companyAddress: string | null;
+                            socialLinks: {
+                                platform: string;
+                                url: string;
+                            }[];
+                            sourceDomain: string | null;
+                            autoExtracted: boolean;
+                            /** @description True for exactly one kit per organization, when any exist. */
+                            isDefault: boolean;
+                            createdAt: string;
+                            updatedAt: string;
+                        }[];
+                        /** @description Number of kits returned, which is every kit in the org. */
+                        count: number;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    "postV1Brand-kits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    logoUrl?: string | null;
+                    primaryColor?: string;
+                    secondaryColor?: string;
+                    backgroundColor?: string;
+                    textColor?: string;
+                    fontFamily?: string;
+                    headingFontFamily?: string | null;
+                    buttonStyle?: string;
+                    buttonRadius?: string;
+                    companyName?: string | null;
+                    companyAddress?: string | null;
+                    socialLinks?: {
+                        platform: string;
+                        url: string;
+                    }[];
+                    sourceDomain?: string | null;
+                    autoExtracted?: boolean;
+                    /** @description The first kit in an organization is always the default. Otherwise pass true to make this kit the default. */
+                    isDefault?: boolean;
+                };
+                "multipart/form-data": {
+                    name?: string;
+                    logoUrl?: string | null;
+                    primaryColor?: string;
+                    secondaryColor?: string;
+                    backgroundColor?: string;
+                    textColor?: string;
+                    fontFamily?: string;
+                    headingFontFamily?: string | null;
+                    buttonStyle?: string;
+                    buttonRadius?: string;
+                    companyName?: string | null;
+                    companyAddress?: string | null;
+                    socialLinks?: {
+                        platform: string;
+                        url: string;
+                    }[];
+                    sourceDomain?: string | null;
+                    autoExtracted?: boolean;
+                    /** @description The first kit in an organization is always the default. Otherwise pass true to make this kit the default. */
+                    isDefault?: boolean;
+                };
+                "text/plain": {
+                    name?: string;
+                    logoUrl?: string | null;
+                    primaryColor?: string;
+                    secondaryColor?: string;
+                    backgroundColor?: string;
+                    textColor?: string;
+                    fontFamily?: string;
+                    headingFontFamily?: string | null;
+                    buttonStyle?: string;
+                    buttonRadius?: string;
+                    companyName?: string | null;
+                    companyAddress?: string | null;
+                    socialLinks?: {
+                        platform: string;
+                        url: string;
+                    }[];
+                    sourceDomain?: string | null;
+                    autoExtracted?: boolean;
+                    /** @description The first kit in an organization is always the default. Otherwise pass true to make this kit the default. */
+                    isDefault?: boolean;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        logoUrl: string | null;
+                        primaryColor: string;
+                        secondaryColor: string;
+                        backgroundColor: string;
+                        textColor: string;
+                        fontFamily: string;
+                        headingFontFamily: string | null;
+                        /** @description Dashboard values: rounded, square or pill. */
+                        buttonStyle: string;
+                        buttonRadius: string;
+                        companyName: string | null;
+                        companyAddress: string | null;
+                        socialLinks: {
+                            platform: string;
+                            url: string;
+                        }[];
+                        sourceDomain: string | null;
+                        autoExtracted: boolean;
+                        /** @description True for exactly one kit per organization, when any exist. */
+                        isDefault: boolean;
+                        createdAt: string;
+                        updatedAt: string;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        logoUrl: string | null;
+                        primaryColor: string;
+                        secondaryColor: string;
+                        backgroundColor: string;
+                        textColor: string;
+                        fontFamily: string;
+                        headingFontFamily: string | null;
+                        /** @description Dashboard values: rounded, square or pill. */
+                        buttonStyle: string;
+                        buttonRadius: string;
+                        companyName: string | null;
+                        companyAddress: string | null;
+                        socialLinks: {
+                            platform: string;
+                            url: string;
+                        }[];
+                        sourceDomain: string | null;
+                        autoExtracted: boolean;
+                        /** @description True for exactly one kit per organization, when any exist. */
+                        isDefault: boolean;
+                        createdAt: string;
+                        updatedAt: string;
+                    };
+                    "text/plain": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        logoUrl: string | null;
+                        primaryColor: string;
+                        secondaryColor: string;
+                        backgroundColor: string;
+                        textColor: string;
+                        fontFamily: string;
+                        headingFontFamily: string | null;
+                        /** @description Dashboard values: rounded, square or pill. */
+                        buttonStyle: string;
+                        buttonRadius: string;
+                        companyName: string | null;
+                        companyAddress: string | null;
+                        socialLinks: {
+                            platform: string;
+                            url: string;
+                        }[];
+                        sourceDomain: string | null;
+                        autoExtracted: boolean;
+                        /** @description True for exactly one kit per organization, when any exist. */
+                        isDefault: boolean;
+                        createdAt: string;
+                        updatedAt: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    "getV1Brand-kitsById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        logoUrl: string | null;
+                        primaryColor: string;
+                        secondaryColor: string;
+                        backgroundColor: string;
+                        textColor: string;
+                        fontFamily: string;
+                        headingFontFamily: string | null;
+                        /** @description Dashboard values: rounded, square or pill. */
+                        buttonStyle: string;
+                        buttonRadius: string;
+                        companyName: string | null;
+                        companyAddress: string | null;
+                        socialLinks: {
+                            platform: string;
+                            url: string;
+                        }[];
+                        sourceDomain: string | null;
+                        autoExtracted: boolean;
+                        /** @description True for exactly one kit per organization, when any exist. */
+                        isDefault: boolean;
+                        createdAt: string;
+                        updatedAt: string;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        logoUrl: string | null;
+                        primaryColor: string;
+                        secondaryColor: string;
+                        backgroundColor: string;
+                        textColor: string;
+                        fontFamily: string;
+                        headingFontFamily: string | null;
+                        /** @description Dashboard values: rounded, square or pill. */
+                        buttonStyle: string;
+                        buttonRadius: string;
+                        companyName: string | null;
+                        companyAddress: string | null;
+                        socialLinks: {
+                            platform: string;
+                            url: string;
+                        }[];
+                        sourceDomain: string | null;
+                        autoExtracted: boolean;
+                        /** @description True for exactly one kit per organization, when any exist. */
+                        isDefault: boolean;
+                        createdAt: string;
+                        updatedAt: string;
+                    };
+                    "text/plain": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        logoUrl: string | null;
+                        primaryColor: string;
+                        secondaryColor: string;
+                        backgroundColor: string;
+                        textColor: string;
+                        fontFamily: string;
+                        headingFontFamily: string | null;
+                        /** @description Dashboard values: rounded, square or pill. */
+                        buttonStyle: string;
+                        buttonRadius: string;
+                        companyName: string | null;
+                        companyAddress: string | null;
+                        socialLinks: {
+                            platform: string;
+                            url: string;
+                        }[];
+                        sourceDomain: string | null;
+                        autoExtracted: boolean;
+                        /** @description True for exactly one kit per organization, when any exist. */
+                        isDefault: boolean;
+                        createdAt: string;
+                        updatedAt: string;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    "deleteV1Brand-kitsById": {
+        parameters: {
+            query?: {
+                /** @description Must be the string `true` to delete. Required. */
+                confirm?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                    "multipart/form-data": {
+                        success: boolean;
+                    };
+                    "text/plain": {
+                        success: boolean;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    "patchV1Brand-kitsById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    logoUrl?: string | null;
+                    primaryColor?: string;
+                    secondaryColor?: string;
+                    backgroundColor?: string;
+                    textColor?: string;
+                    fontFamily?: string;
+                    headingFontFamily?: string | null;
+                    buttonStyle?: string;
+                    buttonRadius?: string;
+                    companyName?: string | null;
+                    companyAddress?: string | null;
+                    socialLinks?: {
+                        platform: string;
+                        url: string;
+                    }[];
+                    sourceDomain?: string | null;
+                };
+                "multipart/form-data": {
+                    name?: string;
+                    logoUrl?: string | null;
+                    primaryColor?: string;
+                    secondaryColor?: string;
+                    backgroundColor?: string;
+                    textColor?: string;
+                    fontFamily?: string;
+                    headingFontFamily?: string | null;
+                    buttonStyle?: string;
+                    buttonRadius?: string;
+                    companyName?: string | null;
+                    companyAddress?: string | null;
+                    socialLinks?: {
+                        platform: string;
+                        url: string;
+                    }[];
+                    sourceDomain?: string | null;
+                };
+                "text/plain": {
+                    name?: string;
+                    logoUrl?: string | null;
+                    primaryColor?: string;
+                    secondaryColor?: string;
+                    backgroundColor?: string;
+                    textColor?: string;
+                    fontFamily?: string;
+                    headingFontFamily?: string | null;
+                    buttonStyle?: string;
+                    buttonRadius?: string;
+                    companyName?: string | null;
+                    companyAddress?: string | null;
+                    socialLinks?: {
+                        platform: string;
+                        url: string;
+                    }[];
+                    sourceDomain?: string | null;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        logoUrl: string | null;
+                        primaryColor: string;
+                        secondaryColor: string;
+                        backgroundColor: string;
+                        textColor: string;
+                        fontFamily: string;
+                        headingFontFamily: string | null;
+                        /** @description Dashboard values: rounded, square or pill. */
+                        buttonStyle: string;
+                        buttonRadius: string;
+                        companyName: string | null;
+                        companyAddress: string | null;
+                        socialLinks: {
+                            platform: string;
+                            url: string;
+                        }[];
+                        sourceDomain: string | null;
+                        autoExtracted: boolean;
+                        /** @description True for exactly one kit per organization, when any exist. */
+                        isDefault: boolean;
+                        createdAt: string;
+                        updatedAt: string;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        logoUrl: string | null;
+                        primaryColor: string;
+                        secondaryColor: string;
+                        backgroundColor: string;
+                        textColor: string;
+                        fontFamily: string;
+                        headingFontFamily: string | null;
+                        /** @description Dashboard values: rounded, square or pill. */
+                        buttonStyle: string;
+                        buttonRadius: string;
+                        companyName: string | null;
+                        companyAddress: string | null;
+                        socialLinks: {
+                            platform: string;
+                            url: string;
+                        }[];
+                        sourceDomain: string | null;
+                        autoExtracted: boolean;
+                        /** @description True for exactly one kit per organization, when any exist. */
+                        isDefault: boolean;
+                        createdAt: string;
+                        updatedAt: string;
+                    };
+                    "text/plain": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        logoUrl: string | null;
+                        primaryColor: string;
+                        secondaryColor: string;
+                        backgroundColor: string;
+                        textColor: string;
+                        fontFamily: string;
+                        headingFontFamily: string | null;
+                        /** @description Dashboard values: rounded, square or pill. */
+                        buttonStyle: string;
+                        buttonRadius: string;
+                        companyName: string | null;
+                        companyAddress: string | null;
+                        socialLinks: {
+                            platform: string;
+                            url: string;
+                        }[];
+                        sourceDomain: string | null;
+                        autoExtracted: boolean;
+                        /** @description True for exactly one kit per organization, when any exist. */
+                        isDefault: boolean;
+                        createdAt: string;
+                        updatedAt: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    "postV1Brand-kitsByIdDefault": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        logoUrl: string | null;
+                        primaryColor: string;
+                        secondaryColor: string;
+                        backgroundColor: string;
+                        textColor: string;
+                        fontFamily: string;
+                        headingFontFamily: string | null;
+                        /** @description Dashboard values: rounded, square or pill. */
+                        buttonStyle: string;
+                        buttonRadius: string;
+                        companyName: string | null;
+                        companyAddress: string | null;
+                        socialLinks: {
+                            platform: string;
+                            url: string;
+                        }[];
+                        sourceDomain: string | null;
+                        autoExtracted: boolean;
+                        /** @description True for exactly one kit per organization, when any exist. */
+                        isDefault: boolean;
+                        createdAt: string;
+                        updatedAt: string;
+                    };
+                    "multipart/form-data": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        logoUrl: string | null;
+                        primaryColor: string;
+                        secondaryColor: string;
+                        backgroundColor: string;
+                        textColor: string;
+                        fontFamily: string;
+                        headingFontFamily: string | null;
+                        /** @description Dashboard values: rounded, square or pill. */
+                        buttonStyle: string;
+                        buttonRadius: string;
+                        companyName: string | null;
+                        companyAddress: string | null;
+                        socialLinks: {
+                            platform: string;
+                            url: string;
+                        }[];
+                        sourceDomain: string | null;
+                        autoExtracted: boolean;
+                        /** @description True for exactly one kit per organization, when any exist. */
+                        isDefault: boolean;
+                        createdAt: string;
+                        updatedAt: string;
+                    };
+                    "text/plain": {
+                        id: string;
+                        organizationId: string;
+                        name: string;
+                        logoUrl: string | null;
+                        primaryColor: string;
+                        secondaryColor: string;
+                        backgroundColor: string;
+                        textColor: string;
+                        fontFamily: string;
+                        headingFontFamily: string | null;
+                        /** @description Dashboard values: rounded, square or pill. */
+                        buttonStyle: string;
+                        buttonRadius: string;
+                        companyName: string | null;
+                        companyAddress: string | null;
+                        socialLinks: {
+                            platform: string;
+                            url: string;
+                        }[];
+                        sourceDomain: string | null;
+                        autoExtracted: boolean;
+                        /** @description True for exactly one kit per organization, when any exist. */
+                        isDefault: boolean;
+                        createdAt: string;
+                        updatedAt: string;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
     getV1Events: {
         parameters: {
             query?: {
@@ -7974,7 +9790,22 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
@@ -8077,7 +9908,22 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
@@ -8120,7 +9966,22 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
@@ -8160,7 +10021,22 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
@@ -8570,15 +10446,24 @@ export interface operations {
             };
         };
         responses: {
-            200: {
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
             };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
@@ -8657,15 +10542,24 @@ export interface operations {
             };
         };
         responses: {
-            200: {
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
             };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
@@ -8917,7 +10811,22 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
             404: components["responses"]["NotFound"];
             409: {
                 headers: {
@@ -9178,7 +11087,22 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
             404: components["responses"]["NotFound"];
             409: {
                 headers: {
@@ -9260,7 +11184,22 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
@@ -9347,7 +11286,22 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
@@ -9528,15 +11482,27 @@ export interface operations {
             };
         };
         responses: {
-            200: {
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        error: string;
+                        message?: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                        message?: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                        message?: string;
+                    };
+                };
             };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
@@ -9687,15 +11653,27 @@ export interface operations {
             };
         };
         responses: {
-            200: {
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        error: string;
+                        message?: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                        message?: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                        message?: string;
+                    };
+                };
             };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
@@ -11139,15 +13117,24 @@ export interface operations {
             };
         };
         responses: {
-            200: {
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
             };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
@@ -11165,15 +13152,24 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            200: {
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
             };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
@@ -11206,15 +13202,24 @@ export interface operations {
             };
         };
         responses: {
-            200: {
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
             };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];

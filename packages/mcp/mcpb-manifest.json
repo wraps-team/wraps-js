@@ -34,7 +34,9 @@
       "args": ["${__dirname}/server/index.js"],
       "env": {
         "AWS_REGION": "${user_config.aws_region}",
-        "AWS_PROFILE": "${user_config.aws_profile}"
+        "AWS_PROFILE": "${user_config.aws_profile}",
+        "WRAPS_API_KEY": "${user_config.wraps_api_key}",
+        "WRAPS_ORG_ID": "${user_config.wraps_org_id}"
       }
     }
   },
@@ -49,6 +51,19 @@
       "type": "string",
       "title": "AWS profile",
       "description": "AWS profile to use. Credentials are read locally and never leave your machine.",
+      "required": false
+    },
+    "wraps_api_key": {
+      "type": "string",
+      "title": "Wraps API key",
+      "description": "Optional. Enables the Wraps platform tools (contacts, broadcasts, workflows, inbound, brand kits and more). Create one in the Wraps dashboard.",
+      "sensitive": true,
+      "required": false
+    },
+    "wraps_org_id": {
+      "type": "string",
+      "title": "Wraps organization id",
+      "description": "Optional. Only needed with a CLI session that belongs to several organizations.",
       "required": false
     }
   },
@@ -85,6 +100,254 @@
     {
       "name": "estimate_cost",
       "description": "Estimate the monthly cost of sending email with Wraps + AWS: the flat Wraps plan fee and an itemized AWS bill (SES, EventBridge, SQS, Lambda, DynamoDB, dedicated IP, WAF)."
+    },
+    {
+      "name": "list_contacts",
+      "description": "List contacts in your Wraps organization, optionally filtered by email status, SMS status, preferred channel, or a search string on email or phone."
+    },
+    {
+      "name": "get_contact",
+      "description": "Get one contact in full, including its topic subscriptions."
+    },
+    {
+      "name": "create_contact",
+      "description": "Create one new contact."
+    },
+    {
+      "name": "update_contact",
+      "description": "Change one existing contact."
+    },
+    {
+      "name": "set_contact_topics",
+      "description": "REPLACE the full topic subscription list of one contact."
+    },
+    {
+      "name": "delete_contact",
+      "description": "Permanently delete ONE contact by UUID, email, or externalId."
+    },
+    {
+      "name": "validate_contact_emails",
+      "description": "Check up to 100 email addresses with SES Email Address Insights and return a deliverability verdict (HIGH, MEDIUM, LOW, or UNKNOWN) for each."
+    },
+    {
+      "name": "list_segments",
+      "description": "List the audience segments saved in this Wraps organization, with each segment's live member count."
+    },
+    {
+      "name": "get_segment",
+      "description": "Get one audience segment by id, including its full filter condition and live member count."
+    },
+    {
+      "name": "preview_segment",
+      "description": "Preview the audience an unsaved filter condition would reach, without saving a segment."
+    },
+    {
+      "name": "create_segment",
+      "description": "Save a new audience segment from a filter condition."
+    },
+    {
+      "name": "update_segment",
+      "description": "Change an existing audience segment: rename it, edit its description, replace its condition, or toggle trackMembership."
+    },
+    {
+      "name": "delete_segment",
+      "description": "Permanently delete an audience segment."
+    },
+    {
+      "name": "list_topics",
+      "description": "List the organization's subscription topics with live audience counts: subscriberCount (opted in), sendableCount (a broadcast would reach now) and pendingCount (waiting on double opt-in)."
+    },
+    {
+      "name": "get_topic",
+      "description": "Get one subscription topic by id, with its audience counts (subscriberCount, sendableCount, pendingCount) and its creator."
+    },
+    {
+      "name": "list_topic_subscribers",
+      "description": "List the contacts subscribed to one topic, filtered by status (subscribed, pending for double opt-in not yet confirmed, or unsubscribed)."
+    },
+    {
+      "name": "create_topic",
+      "description": "Create a subscription topic that contacts can subscribe to and broadcasts can target."
+    },
+    {
+      "name": "update_topic",
+      "description": "Change a subscription topic's name, slug, description, public flag or double opt-in setting."
+    },
+    {
+      "name": "delete_topic",
+      "description": "Permanently delete a subscription topic and every subscription to it."
+    },
+    {
+      "name": "list_templates",
+      "description": "List the Wraps email and SMS templates in your organization."
+    },
+    {
+      "name": "get_template",
+      "description": "Get one Wraps template by id: its metadata, status, variables, and by default its React Email source, compiled HTML, and compiled text."
+    },
+    {
+      "name": "create_template",
+      "description": "Create a new Wraps email or SMS template as a DRAFT."
+    },
+    {
+      "name": "update_template",
+      "description": "Change an existing Wraps template."
+    },
+    {
+      "name": "duplicate_template",
+      "description": "Copy an existing Wraps template to start a variant."
+    },
+    {
+      "name": "publish_template",
+      "description": "Publish a Wraps template to SES, so sends and workflows that use it get this content."
+    },
+    {
+      "name": "list_broadcasts",
+      "description": "List broadcasts (email or SMS batch sends) for your organization, with their status and delivery counts."
+    },
+    {
+      "name": "get_broadcast",
+      "description": "Get the status and delivery counts of ONE broadcast by id."
+    },
+    {
+      "name": "list_broadcast_recipients",
+      "description": "List the per-recipient outcome of one broadcast: who was sent to, and whether each send was delivered, bounced, suppressed or failed, with the error reason."
+    },
+    {
+      "name": "get_broadcast_clicks",
+      "description": "Get the link-click breakdown for ONE broadcast: which URLs were clicked and how often, plus the unsubscribe click count."
+    },
+    {
+      "name": "update_broadcast",
+      "description": "Edit a DRAFT or a SCHEDULED broadcast: its content, sender, audience, template, AWS account or send time."
+    },
+    {
+      "name": "duplicate_broadcast",
+      "description": "Copy an existing broadcast into a NEW draft, whatever the status of the original."
+    },
+    {
+      "name": "send_broadcast",
+      "description": "Send a DRAFT broadcast to its audience, now or at scheduledFor."
+    },
+    {
+      "name": "resume_broadcast",
+      "description": "Resume an email broadcast that stopped part-way, from the last chunk it finished, so recipients who were not yet sent to get the message."
+    },
+    {
+      "name": "cancel_broadcast",
+      "description": "Cancel a broadcast that is scheduled, queued or processing, so the messages that have not gone out yet are not sent."
+    },
+    {
+      "name": "list_events",
+      "description": "List custom events tracked for this Wraps organization, newest first, optionally filtered by event name, contact, text search, or date range."
+    },
+    {
+      "name": "get_event",
+      "description": "Get one custom event by id: its name, properties, time, and the contact it belongs to."
+    },
+    {
+      "name": "get_event_analytics",
+      "description": "Get custom-event totals for this organization over the last 7 or 30 days: events in the period, active contacts, average events per contact, a zero-filled daily series, and the top event names."
+    },
+    {
+      "name": "list_event_names",
+      "description": "List every distinct custom event name recorded for this Wraps organization, sorted."
+    },
+    {
+      "name": "track_event",
+      "description": "Record a custom event for one contact."
+    },
+    {
+      "name": "remove_suppression",
+      "description": "Remove one address from the SES account-level suppression list of one AWS account, so Wraps sends to it again."
+    },
+    {
+      "name": "list_workflows",
+      "description": "List the email and SMS automation workflows in your Wraps organization, newest first, with status and execution counts."
+    },
+    {
+      "name": "get_workflow",
+      "description": "Get one workflow by id, including its trigger config, steps and transitions, so you can see what it does before triggering it or changing its schedule."
+    },
+    {
+      "name": "list_workflow_executions",
+      "description": "List the executions of one workflow (one run per contact), newest first, each with its contact and status."
+    },
+    {
+      "name": "get_workflow_execution",
+      "description": "Get one workflow execution by id, with its step trace (every step it reached and that step status), its contact, the workflow name and per-step engagement."
+    },
+    {
+      "name": "enable_workflow_schedule",
+      "description": "Turn on the recurring schedule of a schedule-triggered workflow by creating its next one-time run from a cron expression and timezone."
+    },
+    {
+      "name": "disable_workflow_schedule",
+      "description": "Turn off the recurring schedule of a schedule-triggered workflow by deleting its pending scheduled run."
+    },
+    {
+      "name": "trigger_workflow",
+      "description": "Start one run of an API-triggered workflow for one contact, so the workflow steps begin for that contact now."
+    },
+    {
+      "name": "retry_workflow_execution",
+      "description": "Retry a failed workflow execution from the step where it failed."
+    },
+    {
+      "name": "cancel_workflow_execution",
+      "description": "Cancel a workflow execution that is still running (pending, active, paused or waiting), so no further steps run for that contact and its scheduled steps are removed."
+    },
+    {
+      "name": "list_agent_approvals",
+      "description": "List the approval queue for agents: the sends that an agent asked to make and that were held for a human decision."
+    },
+    {
+      "name": "approve_agent_approval",
+      "description": "Approve one send that an agent asked to make and that was held for a human decision, so Wraps sends it now."
+    },
+    {
+      "name": "reject_agent_approval",
+      "description": "Reject one send that an agent asked to make and that was held for a human decision, so it is never delivered."
+    },
+    {
+      "name": "get_email_metrics",
+      "description": "Get aggregate email sending metrics for this organization over a time window: sent, delivered, bounced (split into permanent, transient and undetermined), complained, suppressed, opened, clicked, failed, and an estimated costUsd."
+    },
+    {
+      "name": "list_inbound_emails",
+      "description": "List one page of parsed inbound emails that the customer's SES inbound bucket received, across the organization's connected AWS accounts."
+    },
+    {
+      "name": "get_inbound_email",
+      "description": "Get one parsed inbound email from the customer's SES inbound bucket by emailId, with its from/to/cc, subject, date, headers, text body, HTML body and attachment metadata."
+    },
+    {
+      "name": "list_brand_kits",
+      "description": "List the organization's brand kits: name, logo, colors, fonts, button style, company details and social links, with isDefault marking the one default kit."
+    },
+    {
+      "name": "get_brand_kit",
+      "description": "Get one brand kit by id: logo, colors, fonts, button style, company details, social links, and isDefault."
+    },
+    {
+      "name": "create_brand_kit",
+      "description": "Create a brand kit: a name, logo, colors, fonts, button style, company details and social links that email templates can use."
+    },
+    {
+      "name": "update_brand_kit",
+      "description": "Change one or more fields of a brand kit: name, logo, colors, fonts, button style, company details, social links."
+    },
+    {
+      "name": "set_default_brand_kit",
+      "description": "Make one brand kit the default for the organization."
+    },
+    {
+      "name": "delete_brand_kit",
+      "description": "Delete a brand kit permanently."
+    },
+    {
+      "name": "create_broadcast",
+      "description": "Create a NEW broadcast as a draft."
     }
   ]
 }
