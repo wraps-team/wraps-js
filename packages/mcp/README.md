@@ -32,6 +32,10 @@ Runs locally via stdio. Your AWS credentials never leave your machine.
 | `set_contact_topics` | REPLACE the full topic subscription list of one contact. | Yes (API key or `wraps auth login`) | Yes — requires `WRAPS_WRITE_ENABLED=true` |
 | `delete_contact` | Permanently delete ONE contact by UUID, email, or externalId. | Yes (API key or `wraps auth login`) | Yes — requires `WRAPS_WRITE_ENABLED=true` and `confirm: true` |
 | `validate_contact_emails` | Check up to 100 email addresses with SES Email Address Insights and return a deliverability verdict (HIGH, MEDIUM, LOW, or UNKNOWN) for each. | Yes (API key or `wraps auth login`) | No |
+| `import_contacts` | Import up to 10,000 contacts in one call, with created, updated, skipped and invalid counts and the reason for each rejected row. `duplicateStrategy: "update"` changes existing contacts and needs `confirm: true`. | Yes (API key or `wraps auth login`) | Yes — requires `WRAPS_WRITE_ENABLED=true` (and `confirm: true` for `update`) |
+| `export_contacts` | Export the contacts that match optional filters, newest first, up to 1,000 rows per call. `truncated` says when more matched. | Yes (API key or `wraps auth login`) | No |
+| `get_account_health` | Get the SES sending health of the connected AWS accounts: status, last check time, quota, reputation and reasons, for all accounts or one by its Wraps id. | Yes (API key or `wraps auth login`) | No |
+| `email_check` | Check a domain's SPF, DKIM, DMARC, MX and blacklist setup and return a grade with the issues that cost points. The request is public and rate limited to 10 per minute per IP. | Yes (API key or `wraps auth login`); the request is sent without it | No |
 | `list_segments` | List the audience segments saved in this Wraps organization, with each segment's live member count. | Yes (API key or `wraps auth login`) | No |
 | `get_segment` | Get one audience segment by id, including its full filter condition and live member count. | Yes (API key or `wraps auth login`) | No |
 | `preview_segment` | Preview the audience an unsaved filter condition would reach, without saving a segment. | Yes (API key or `wraps auth login`) | No |
@@ -50,6 +54,7 @@ Runs locally via stdio. Your AWS credentials never leave your machine.
 | `update_template` | Change an existing Wraps template. | Yes (API key or `wraps auth login`) | Yes — requires `WRAPS_WRITE_ENABLED=true` |
 | `duplicate_template` | Copy an existing Wraps template to start a variant. | Yes (API key or `wraps auth login`) | Yes — requires `WRAPS_WRITE_ENABLED=true` |
 | `publish_template` | Publish a Wraps template to SES, so sends and workflows that use it get this content. | Yes (API key or `wraps auth login`) | Yes — requires `WRAPS_WRITE_ENABLED=true` and `confirm: true` |
+| `delete_template` | Permanently delete up to 100 Wraps templates with their versions, and their published SES copies where no other template uses the same SES name. Refused with 409 (nothing deleted) while a scheduled, queued or processing broadcast, or an enabled workflow, uses one. | Yes (API key or `wraps auth login`) | Yes — requires `WRAPS_WRITE_ENABLED=true` and `confirm: true` |
 | `list_broadcasts` | List broadcasts (email or SMS batch sends) for your organization, with their status and delivery counts. | Yes (API key or `wraps auth login`) | No |
 | `get_broadcast` | Get the status and delivery counts of ONE broadcast by id. | Yes (API key or `wraps auth login`) | No |
 | `list_broadcast_recipients` | List the per-recipient outcome of one broadcast: who was sent to, and whether each send was delivered, bounced, suppressed or failed, with the error reason. | Yes (API key or `wraps auth login`) | No |
@@ -66,6 +71,7 @@ Runs locally via stdio. Your AWS credentials never leave your machine.
 | `list_event_names` | List every distinct custom event name recorded for this Wraps organization, sorted. | Yes (API key or `wraps auth login`) | No |
 | `track_event` | Record a custom event for one contact. | Yes (API key or `wraps auth login`) | Yes — requires `WRAPS_WRITE_ENABLED=true` and `confirm: true` |
 | `remove_suppression` | Remove one address from the SES account-level suppression list of one AWS account, so Wraps sends to it again. | Yes (API key or `wraps auth login`) | Yes — requires `WRAPS_WRITE_ENABLED=true` and `confirm: true` |
+| `add_suppression` | Add one or more addresses to the SES account-level suppression list of one AWS account, so Wraps stops sending to them. Up to 100 per call; undo one at a time with `remove_suppression`. | Yes (API key or `wraps auth login`) | Yes — requires `WRAPS_WRITE_ENABLED=true` and `confirm: true` |
 | `list_workflows` | List the email and SMS automation workflows in your Wraps organization, newest first, with status and execution counts. | Yes (API key or `wraps auth login`) | No |
 | `get_workflow` | Get one workflow by id, including its trigger config, steps and transitions, so you can see what it does before triggering it or changing its schedule. | Yes (API key or `wraps auth login`) | No |
 | `list_workflow_executions` | List the executions of one workflow (one run per contact), newest first, each with its contact and status. | Yes (API key or `wraps auth login`) | No |
@@ -78,6 +84,10 @@ Runs locally via stdio. Your AWS credentials never leave your machine.
 | `list_agent_approvals` | List the approval queue for agents: the sends that an agent asked to make and that were held for a human decision. | Yes (API key or `wraps auth login`) | No |
 | `approve_agent_approval` | Approve one send that an agent asked to make and that was held for a human decision, so Wraps sends it now. | Yes (API key or `wraps auth login`) | Yes — requires `WRAPS_WRITE_ENABLED=true` and `confirm: true` |
 | `reject_agent_approval` | Reject one send that an agent asked to make and that was held for a human decision, so it is never delivered. | Yes (API key or `wraps auth login`) | Yes — requires `WRAPS_WRITE_ENABLED=true` and `confirm: true` |
+| `list_agents` | List the leashed agents in this organization: each one's address, send policy (caps and allowlists) and whether it is ACTIVE or KILLED. | Yes (API key or `wraps auth login`) | No |
+| `create_agent` | Create a leashed agent: a named sender with its own email address and send policy. Recorded in Wraps only; its AWS resources are deployed with the CLI. | Yes (API key or `wraps auth login`) | Yes — requires `WRAPS_WRITE_ENABLED=true` |
+| `kill_agent` | Kill one leashed agent so it can no longer send. Irreversible; a kill that does not reach the enforcer is reported as incomplete. Not registered in enforced mode. | Yes (API key or `wraps auth login`) | Yes — requires `WRAPS_WRITE_ENABLED=true` and `confirm: true` |
+| `set_agent_policy` | Replace one leashed agent's send policy (hourly and daily caps and recipient allowlists) in full. Overwrites the previous policy. Not registered in enforced mode. | Yes (API key or `wraps auth login`) | Yes — requires `WRAPS_WRITE_ENABLED=true` and `confirm: true` |
 | `get_email_metrics` | Get aggregate email sending metrics for this organization over a time window: sent, delivered, bounced (split into permanent, transient and undetermined), complained, suppressed, opened, clicked, failed, and an estimated costUsd. | Yes (API key or `wraps auth login`) | No |
 | `list_inbound_emails` | List one page of parsed inbound emails that the customer's SES inbound bucket received, across the organization's connected AWS accounts. | Yes (API key or `wraps auth login`) | No |
 | `get_inbound_email` | Get one parsed inbound email from the customer's SES inbound bucket by emailId, with its from/to/cc, subject, date, headers, text body, HTML body and attachment metadata. | Yes (API key or `wraps auth login`) | No |
@@ -155,7 +165,7 @@ The tools marked "Needs Wraps? Yes (API key or `wraps auth login`)" call the Wra
 
 With neither, only the AWS tools register. An expired or revoked credential does not stop startup; the call returns a tool error that names the fix.
 
-Write tools need `WRAPS_WRITE_ENABLED=true`. Destructive tools also need `confirm: true` in the call, so set it only after the user has confirmed the change. When `WRAPS_AGENT_ID` is set (enforced mode), `approve_agent_approval` and `reject_agent_approval` are not registered.
+Write tools need `WRAPS_WRITE_ENABLED=true`. Destructive tools also need `confirm: true` in the call, so set it only after the user has confirmed the change. When `WRAPS_AGENT_ID` is set (enforced mode), `approve_agent_approval`, `reject_agent_approval`, `create_agent`, `kill_agent` and `set_agent_policy` are not registered. `list_agents` stays registered.
 
 ```json
 {

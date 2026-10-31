@@ -1,9 +1,11 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { MCPConfig } from '../config.ts';
+import { registerAddSuppression } from './add-suppression.ts';
 import { registerApproveAgentApproval } from './approve-agent-approval.ts';
 import { registerCancelBroadcast } from './cancel-broadcast.ts';
 import { registerCancelWorkflowExecution } from './cancel-workflow-execution.ts';
 import { registerCheckSendStatus } from './check-send-status.ts';
+import { registerCreateAgent } from './create-agent.ts';
 import { registerCreateBrandKit } from './create-brand-kit.ts';
 import { registerCreateBroadcast } from './create-broadcast.ts';
 import { registerCreateContact } from './create-contact.ts';
@@ -13,12 +15,16 @@ import { registerCreateTopic } from './create-topic.ts';
 import { registerDeleteBrandKit } from './delete-brand-kit.ts';
 import { registerDeleteContact } from './delete-contact.ts';
 import { registerDeleteSegment } from './delete-segment.ts';
+import { registerDeleteTemplate } from './delete-template.ts';
 import { registerDeleteTopic } from './delete-topic.ts';
 import { registerDisableWorkflowSchedule } from './disable-workflow-schedule.ts';
 import { registerDuplicateBroadcast } from './duplicate-broadcast.ts';
 import { registerDuplicateTemplate } from './duplicate-template.ts';
+import { registerEmailCheck } from './email-check.ts';
 import { registerEnableWorkflowSchedule } from './enable-workflow-schedule.ts';
 import { registerEstimateCost } from './estimate-cost.ts';
+import { registerExportContacts } from './export-contacts.ts';
+import { registerGetAccountHealth } from './get-account-health.ts';
 import { registerGetBrandKit } from './get-brand-kit.ts';
 import { registerGetBroadcast } from './get-broadcast.ts';
 import { registerGetBroadcastClicks } from './get-broadcast-clicks.ts';
@@ -34,7 +40,10 @@ import { registerGetTemplate } from './get-template.ts';
 import { registerGetTopic } from './get-topic.ts';
 import { registerGetWorkflow } from './get-workflow.ts';
 import { registerGetWorkflowExecution } from './get-workflow-execution.ts';
+import { registerImportContacts } from './import-contacts.ts';
+import { registerKillAgent } from './kill-agent.ts';
 import { registerListAgentApprovals } from './list-agent-approvals.ts';
+import { registerListAgents } from './list-agents.ts';
 import { registerListBrandKits } from './list-brand-kits.ts';
 import { registerListBroadcastRecipients } from './list-broadcast-recipients.ts';
 import { registerListBroadcasts } from './list-broadcasts.ts';
@@ -58,6 +67,7 @@ import { registerResumeBroadcast } from './resume-broadcast.ts';
 import { registerRetryWorkflowExecution } from './retry-workflow-execution.ts';
 import { registerSendBroadcast } from './send-broadcast.ts';
 import { registerSendEmail } from './send-email.ts';
+import { registerSetAgentPolicy } from './set-agent-policy.ts';
 import { registerSetContactTopics } from './set-contact-topics.ts';
 import { registerSetDefaultBrandKit } from './set-default-brand-kit.ts';
 import { registerTrackEvent } from './track-event.ts';
@@ -89,6 +99,8 @@ export function registerAllTools(server: McpServer, config: MCPConfig): void {
     registerSetContactTopics(server, config);
     registerDeleteContact(server, config);
     registerValidateContactEmails(server, config);
+    registerImportContacts(server, config);
+    registerExportContacts(server, config);
     registerListSegments(server, config);
     registerGetSegment(server, config);
     registerPreviewSegment(server, config);
@@ -107,6 +119,7 @@ export function registerAllTools(server: McpServer, config: MCPConfig): void {
     registerUpdateTemplate(server, config);
     registerDuplicateTemplate(server, config);
     registerPublishTemplate(server, config);
+    registerDeleteTemplate(server, config);
     registerListBroadcasts(server, config);
     registerGetBroadcast(server, config);
     registerListBroadcastRecipients(server, config);
@@ -123,6 +136,7 @@ export function registerAllTools(server: McpServer, config: MCPConfig): void {
     registerListEventNames(server, config);
     registerTrackEvent(server, config);
     registerRemoveSuppression(server, config);
+    registerAddSuppression(server, config);
     registerListWorkflows(server, config);
     registerGetWorkflow(server, config);
     registerListWorkflowExecutions(server, config);
@@ -133,11 +147,17 @@ export function registerAllTools(server: McpServer, config: MCPConfig): void {
     registerRetryWorkflowExecution(server, config);
     registerCancelWorkflowExecution(server, config);
     registerListAgentApprovals(server, config);
+    registerListAgents(server, config);
     if (!config.enforcedMode) {
       registerApproveAgentApproval(server, config);
     }
     if (!config.enforcedMode) {
       registerRejectAgentApproval(server, config);
+    }
+    if (!config.enforcedMode) {
+      registerCreateAgent(server, config);
+      registerKillAgent(server, config);
+      registerSetAgentPolicy(server, config);
     }
     registerGetEmailMetrics(server, config);
     registerListInboundEmails(server, config);
@@ -148,6 +168,8 @@ export function registerAllTools(server: McpServer, config: MCPConfig): void {
     registerUpdateBrandKit(server, config);
     registerSetDefaultBrandKit(server, config);
     registerDeleteBrandKit(server, config);
+    registerGetAccountHealth(server, config);
+    registerEmailCheck(server, config);
   }
   if (config.enforcedMode) {
     registerCheckSendStatus(server, config);

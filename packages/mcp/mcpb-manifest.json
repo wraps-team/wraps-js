@@ -130,6 +130,22 @@
       "description": "Check up to 100 email addresses with SES Email Address Insights and return a deliverability verdict (HIGH, MEDIUM, LOW, or UNKNOWN) for each."
     },
     {
+      "name": "import_contacts",
+      "description": "Import up to 10,000 contacts in one call, with created, updated, skipped and invalid counts and the reason for each rejected row. duplicateStrategy update changes existing contacts and needs confirm: true."
+    },
+    {
+      "name": "export_contacts",
+      "description": "Export the contacts that match optional filters, newest first, up to 1,000 rows per call. truncated says when more matched."
+    },
+    {
+      "name": "get_account_health",
+      "description": "Get the SES sending health of the connected AWS accounts: status, last check time, quota, reputation and reasons, for all accounts or one by its Wraps id."
+    },
+    {
+      "name": "email_check",
+      "description": "Check a domain's SPF, DKIM, DMARC, MX and blacklist setup and return a grade with the issues that cost points. The request is public and rate limited to 10 per minute per IP."
+    },
+    {
       "name": "list_segments",
       "description": "List the audience segments saved in this Wraps organization, with each segment's live member count."
     },
@@ -202,6 +218,10 @@
       "description": "Publish a Wraps template to SES, so sends and workflows that use it get this content."
     },
     {
+      "name": "delete_template",
+      "description": "Permanently delete up to 100 Wraps templates with their versions. Refused with 409 and nothing deleted while a live broadcast or enabled workflow uses one."
+    },
+    {
       "name": "list_broadcasts",
       "description": "List broadcasts (email or SMS batch sends) for your organization, with their status and delivery counts."
     },
@@ -262,6 +282,10 @@
       "description": "Remove one address from the SES account-level suppression list of one AWS account, so Wraps sends to it again."
     },
     {
+      "name": "add_suppression",
+      "description": "Add one or more addresses to the SES account-level suppression list of one AWS account, so Wraps stops sending to them. Undo one address at a time with remove_suppression."
+    },
+    {
       "name": "list_workflows",
       "description": "List the email and SMS automation workflows in your Wraps organization, newest first, with status and execution counts."
     },
@@ -308,6 +332,22 @@
     {
       "name": "reject_agent_approval",
       "description": "Reject one send that an agent asked to make and that was held for a human decision, so it is never delivered."
+    },
+    {
+      "name": "list_agents",
+      "description": "List the leashed agents in this organization: each one's address, send policy and whether it is ACTIVE or KILLED."
+    },
+    {
+      "name": "create_agent",
+      "description": "Create a leashed agent: a named sender with its own email address and send policy. Recorded in Wraps only."
+    },
+    {
+      "name": "kill_agent",
+      "description": "Kill one leashed agent so it can no longer send. Irreversible; a kill that does not reach the enforcer is reported as incomplete."
+    },
+    {
+      "name": "set_agent_policy",
+      "description": "Replace one leashed agent's send policy (hourly and daily caps and recipient allowlists) in full. Overwrites the previous policy."
     },
     {
       "name": "get_email_metrics",
