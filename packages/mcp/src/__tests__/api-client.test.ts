@@ -403,3 +403,27 @@ describe('apiRequest(): timeout and network failure', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+describe('apiRequest(): public routes (auth: false)', () => {
+  it('sends no Authorization and no x-organization-id when auth is false, and keeps the user-agent', async () => {
+    const api = mockApi([{ method: 'POST', path: '/tools/email-check', body: { success: true } }]);
+    const result = await apiRequest(
+      { ...KEY_API, orgId: 'org_123' },
+      { method: 'POST', path: '/tools/email-check', body: { domain: 'example.com' }, auth: false }
+    );
+    expect(result.ok).toBe(true);
+    const headers = api.calls[0].headers;
+    expect(headers.authorization).toBeUndefined();
+    expect(headers['x-organization-id']).toBeUndefined();
+    expect(headers['user-agent']).toMatch(/^wraps-mcp\/\d+\.\d+\.\d+/);
+    expect(headers['content-type']).toBe('application/json');
+    expect(api.calls[0].body).toEqual({ domain: 'example.com' });
+  });
+
+  it('still sends Bearer and x-organization-id when auth is omitted', async () => {
+    const api = mockApi([{ method: 'GET', path: '/v1/contacts', body: [] }]);
+    await apiRequest({ ...KEY_API, orgId: 'org_123' }, { method: 'GET', path: '/v1/contacts' });
+    expect(api.calls[0].headers.authorization).toBe('Bearer wk_live_SECRET_TOKEN');
+    expect(api.calls[0].headers['x-organization-id']).toBe('org_123');
+  });
+});

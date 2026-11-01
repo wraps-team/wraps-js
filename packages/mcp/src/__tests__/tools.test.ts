@@ -1323,3 +1323,97 @@ describe('tool annotations', () => {
     }
   });
 });
+
+describe('agent tool registration by mode (D7, A9)', () => {
+  const AGENT_WRITE_TOOLS_ABSENT_IN_ENFORCED_MODE = [
+    'approve_agent_approval',
+    'reject_agent_approval',
+    'create_agent',
+    'kill_agent',
+    'set_agent_policy',
+  ];
+
+  const apiCredential = {
+    token: 'test-token-not-real',
+    tokenType: 'api-key' as const,
+    apiBase: 'https://api.wraps.test',
+    source: 'env' as const,
+  };
+
+  async function registeredToolNames(config: MCPConfig): Promise<string[]> {
+    const server = new McpServer({ name: 'test', version: '1.0' });
+    registerAllTools(server, config);
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await server.connect(serverTransport);
+    const client = new Client({ name: 'test-client', version: '1.0' });
+    await client.connect(clientTransport);
+    const { tools } = await client.listTools();
+    await client.close();
+    return tools.map((tool) => tool.name);
+  }
+
+  it('leaves the agent write tools out of enforced mode and keeps list_agents', async () => {
+    const names = await registeredToolNames({
+      ...baseConfig,
+      api: apiCredential,
+      agentId: 'agent-abc',
+      enforcerFunction: 'arn:aws:lambda:us-east-1:123456789012:function:e:agent-abc',
+      enforcedMode: true,
+    });
+    for (const name of AGENT_WRITE_TOOLS_ABSENT_IN_ENFORCED_MODE) {
+      expect(names).not.toContain(name);
+    }
+    expect(names).toContain('list_agents');
+  });
+
+  it('registers the agent write tools and list_agents outside enforced mode', async () => {
+    const names = await registeredToolNames({
+      ...baseConfig,
+      api: apiCredential,
+      writeEnabled: true,
+    });
+    for (const name of [...AGENT_WRITE_TOOLS_ABSENT_IN_ENFORCED_MODE, 'list_agents']) {
+      expect(names).toContain(name);
+    }
+  });
+});
+
+describe('G5b tools registration (Wraps credentials only)', () => {
+  const G5B_TOOLS = ['import_contacts', 'export_contacts', 'get_account_health', 'email_check'];
+
+  it('registers the four G5b tools when Wraps credentials are configured', async () => {
+    const { client, cleanup } = await createTestClient(
+      (server, config) => registerAllTools(server, config),
+      {
+        ...baseConfig,
+        api: {
+          token: 'test-token-not-real',
+          tokenType: 'api-key',
+          apiBase: 'https://api.wraps.test',
+          source: 'env',
+        },
+      }
+    );
+    const { tools } = await client.listTools();
+    await cleanup();
+    const names = tools.map((t) => t.name);
+    for (const name of G5B_TOOLS) {
+      expect(names).toContain(name);
+    }
+  });
+
+  it('does not register them without Wraps credentials, so email_check cannot send a domain anywhere', async () => {
+    const noCredentials: MCPConfig = { ...baseConfig };
+    delete noCredentials.api;
+    const { client, cleanup } = await createTestClient(
+      (server, config) => registerAllTools(server, config),
+      noCredentials
+    );
+    const { tools } = await client.listTools();
+    await cleanup();
+    const names = tools.map((t) => t.name);
+    for (const name of G5B_TOOLS) {
+      expect(names).not.toContain(name);
+    }
+  });
+});
