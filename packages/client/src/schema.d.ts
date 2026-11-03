@@ -731,7 +731,31 @@ export interface paths {
          */
         get: operations["getV1Suppressions"];
         put?: never;
-        post?: never;
+        /**
+         * Add a suppressed address
+         * @description Adds one address to the SES suppression list of the given AWS account, so Wraps stops sending to it. The address is trimmed and lowercased. Repeat adds are idempotent: an address already suppressed (or already a COMPLAINT) returns alreadyPresent true and writes nothing new. A BOUNCE can be upgraded to COMPLAINT; a COMPLAINT is never downgraded. A matching contact is set to suppressed so broadcasts skip it. Undo with DELETE /v1/suppressions/:email?awsAccountId=...&confirm=true. Requires awsAccounts:write; API keys need contacts:write.
+         */
+        post: operations["postV1Suppressions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/suppressions/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add many suppressed addresses
+         * @description Adds up to 100 addresses in one request, each with the same rules as POST /v1/suppressions. The response has one result per entry, in request order. An entry that fails (invalid address, an AWS account outside the org, SES denied, or an SES error) fails only itself; the rest still run. An empty list or more than 100 entries is refused with 400. Undo each address with DELETE /v1/suppressions/:email. Requires awsAccounts:write; API keys need contacts:write.
+         */
+        post: operations["postV1SuppressionsBulk"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1228,7 +1252,11 @@ export interface paths {
          * @description Creates a DRAFT template. The API does not compile TSX — pass compiledHtml/compiledText if you have them, or publish will refuse the template until it's compiled. Always created as react-email format.
          */
         post: operations["postV1Templates"];
-        delete?: never;
+        /**
+         * Bulk delete templates
+         * @description Deletes up to 100 templates in one request (body { ids }), org-scoped. Destructive: pass confirm=true, or the request is refused with 400. All-or-nothing: if any template is still used by a scheduled, queued or processing broadcast, or an enabled workflow, the whole request returns 409 with blockingIds and deletes nothing. Ids that are not templates of this organization are listed in notFound and skipped. Requires templates delete permission (campaigns:write for API keys).
+         */
+        delete: operations["deleteV1Templates"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1248,7 +1276,11 @@ export interface paths {
         get: operations["getV1TemplatesById"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete a template
+         * @description Deletes one template, org-scoped, along with its versions. Destructive: pass confirm=true, or the request is refused with 400 before anything changes. Refused with 409 (and nothing deleted) while a scheduled, queued or processing broadcast, or an enabled workflow (a send_email or send_sms step, or a cascade channel), still uses the template; blockingIds lists the template ids that are blocked. Draft, paused, completed and other non-blocking broadcasts or workflows do not block. A published SES copy is removed best-effort from the org's AWS accounts. Requires templates delete permission (campaigns:write for API keys).
+         */
+        delete: operations["deleteV1TemplatesById"];
         options?: never;
         head?: never;
         /**
@@ -7319,6 +7351,264 @@ export interface operations {
             };
         };
     };
+    postV1Suppressions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    awsAccountId: string;
+                    /** @description Email address to suppress. */
+                    email: string;
+                    /** @description BOUNCE or COMPLAINT. */
+                    reason: string;
+                };
+                "multipart/form-data": {
+                    awsAccountId: string;
+                    /** @description Email address to suppress. */
+                    email: string;
+                    /** @description BOUNCE or COMPLAINT. */
+                    reason: string;
+                };
+                "text/plain": {
+                    awsAccountId: string;
+                    /** @description Email address to suppress. */
+                    email: string;
+                    /** @description BOUNCE or COMPLAINT. */
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        email: string;
+                        awsAccountId: string;
+                        alreadyPresent: boolean;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        email: string;
+                        awsAccountId: string;
+                        alreadyPresent: boolean;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        email: string;
+                        awsAccountId: string;
+                        alreadyPresent: boolean;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
+    postV1SuppressionsBulk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Between 1 and 100 entries. Each entry has its own awsAccountId. */
+                    entries: {
+                        awsAccountId: string;
+                        /** @description Email address to suppress. */
+                        email: string;
+                        /** @description BOUNCE or COMPLAINT. */
+                        reason: string;
+                    }[];
+                };
+                "multipart/form-data": {
+                    /** @description Between 1 and 100 entries. Each entry has its own awsAccountId. */
+                    entries: {
+                        awsAccountId: string;
+                        /** @description Email address to suppress. */
+                        email: string;
+                        /** @description BOUNCE or COMPLAINT. */
+                        reason: string;
+                    }[];
+                };
+                "text/plain": {
+                    /** @description Between 1 and 100 entries. Each entry has its own awsAccountId. */
+                    entries: {
+                        awsAccountId: string;
+                        /** @description Email address to suppress. */
+                        email: string;
+                        /** @description BOUNCE or COMPLAINT. */
+                        reason: string;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        results: ({
+                            email: string;
+                            /** @constant */
+                            success: true;
+                            alreadyPresent: boolean;
+                        } | {
+                            email: string;
+                            /** @constant */
+                            success: false;
+                            error: string;
+                        })[];
+                    };
+                    "multipart/form-data": {
+                        results: ({
+                            email: string;
+                            /** @constant */
+                            success: true;
+                            alreadyPresent: boolean;
+                        } | {
+                            email: string;
+                            /** @constant */
+                            success: false;
+                            error: string;
+                        })[];
+                    };
+                    "text/plain": {
+                        results: ({
+                            email: string;
+                            /** @constant */
+                            success: true;
+                            alreadyPresent: boolean;
+                        } | {
+                            email: string;
+                            /** @constant */
+                            success: false;
+                            error: string;
+                        })[];
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
     deleteV1SuppressionsByEmail: {
         parameters: {
             query: {
@@ -10852,6 +11142,119 @@ export interface operations {
             500: components["responses"]["InternalError"];
         };
     };
+    deleteV1Templates: {
+        parameters: {
+            query?: {
+                /** @description Must be the string true */
+                confirm?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Template IDs to delete (1-100) */
+                    ids: string[];
+                };
+                "multipart/form-data": {
+                    /** @description Template IDs to delete (1-100) */
+                    ids: string[];
+                };
+                "text/plain": {
+                    /** @description Template IDs to delete (1-100) */
+                    ids: string[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Number of templates deleted */
+                        deleted: number;
+                        /** @description Ids that are not templates of this organization (skipped, nothing deleted for them) */
+                        notFound: string[];
+                    };
+                    "multipart/form-data": {
+                        /** @description Number of templates deleted */
+                        deleted: number;
+                        /** @description Ids that are not templates of this organization (skipped, nothing deleted for them) */
+                        notFound: string[];
+                    };
+                    "text/plain": {
+                        /** @description Number of templates deleted */
+                        deleted: number;
+                        /** @description Ids that are not templates of this organization (skipped, nothing deleted for them) */
+                        notFound: string[];
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: components["responses"]["NotFound"];
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @description Template ids that a live broadcast or enabled workflow uses */
+                        blockingIds: string[];
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                        /** @description Template ids that a live broadcast or enabled workflow uses */
+                        blockingIds: string[];
+                    };
+                    "text/plain": {
+                        error: string;
+                        /** @description Template ids that a live broadcast or enabled workflow uses */
+                        blockingIds: string[];
+                    };
+                };
+            };
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
     getV1TemplatesById: {
         parameters: {
             query?: {
@@ -10936,6 +11339,118 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationFailed"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    deleteV1TemplatesById: {
+        parameters: {
+            query?: {
+                /** @description Must be the string true */
+                confirm?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        id: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        id: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        id: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @description Template ids that a live broadcast or enabled workflow uses */
+                        blockingIds: string[];
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                        /** @description Template ids that a live broadcast or enabled workflow uses */
+                        blockingIds: string[];
+                    };
+                    "text/plain": {
+                        error: string;
+                        /** @description Template ids that a live broadcast or enabled workflow uses */
+                        blockingIds: string[];
+                    };
+                };
+            };
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
             500: components["responses"]["InternalError"];
