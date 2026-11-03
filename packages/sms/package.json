@@ -45,7 +45,7 @@
     "@types/node": "^24.10.0",
     "@vercel/oidc-aws-credentials-provider": "3.3.13",
     "@vitest/coverage-v8": "^4.0.8",
-    "tsup": "^8.5.1",
+    "tsup": "^9.0.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.8"
   },
