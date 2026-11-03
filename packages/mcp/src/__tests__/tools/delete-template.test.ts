@@ -121,7 +121,7 @@ describe('delete_template', () => {
         status: 409,
         body: {
           error:
-            'Cannot delete: still in use by broadcast "Launch" (scheduled). Nothing was deleted. Wait for or cancel the broadcasts, or disable the workflows and remove the template from their steps, then retry.',
+            'Cannot delete: still in use by broadcast "Launch" (scheduled). Nothing was deleted. Point each draft broadcast that uses it at another template, or clear its template. Wait for or cancel each scheduled, queued or processing broadcast that uses it. Pause each enabled workflow in the dashboard, or, for a workflow defined in code, remove the template from its steps and run `wraps email workflows push` again (if the push reports a dashboard edit, ask the user before using `--force`, which overwrites those edits). Then retry.',
           blockingIds: ['tpl_b'],
         },
       },
