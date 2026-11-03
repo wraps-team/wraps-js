@@ -111,8 +111,8 @@ importers:
         specifier: ^19.2.3
         version: 19.3.0
       '@vercel/oidc-aws-credentials-provider':
-        specifier: 3.3.13
-        version: 3.3.13
+        specifier: 3.3.17
+        version: 3.3.17
       '@vitest/coverage-v8':
         specifier: ^4.0.8
         version: 4.0.8(vitest@4.1.11)
@@ -185,8 +185,8 @@ importers:
         specifier: ^24.10.0
         version: 24.19.2
       '@vercel/oidc-aws-credentials-provider':
-        specifier: 3.3.13
-        version: 3.3.13
+        specifier: 3.3.17
+        version: 3.3.17
       '@vitest/coverage-v8':
         specifier: ^4.0.8
         version: 4.0.8(vitest@4.1.11)
@@ -276,10 +276,6 @@ packages:
 
   '@aws-sdk/credential-provider-sso@3.973.24':
     resolution: {integrity: sha512-nlg3BKG03Cgzvv/dMnhxvDJPhAhQSpaN0RUdwgU7ziwkasoev7iI8el8Xy4Rd5sqzgaDUbV269fOXck5SargqA==}
-    engines: {node: '>=20.0.0'}
-
-  '@aws-sdk/credential-provider-web-identity@3.972.80':
-    resolution: {integrity: sha512-TJF25Ndwy2HxcVj6oxMgp8qVlJAawlExHYBXqhuC6Zt2m+A7WpdkjBD6QglNbiArlteYljZHEY3R7KKmno6ISA==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/credential-provider-web-identity@3.972.86':
@@ -1144,19 +1140,19 @@ packages:
   '@types/react@19.3.0':
     resolution: {integrity: sha512-N0rFCuH9YoxG9/m61l9MfpJKfmLOVU0em7ipIz6TRgSSkvReLB9vL85GB+yr8Bs5leqpvg96JSwF4ZS1s4viQg==}
 
-  '@vercel/cli-config@0.3.1':
-    resolution: {integrity: sha512-sISbygqlFXYb8qfPu/+2Cf/A8IjrlAuZePdag3EDQr2PRA455s7UZtl9Ro674CWsB/saBRmz3jEkw0YsQs8OoQ==}
+  '@vercel/cli-config@0.3.5':
+    resolution: {integrity: sha512-O7y3EFzHENSLtE/3fjM3vIRqDpFFhZor2dMcZaND4G1d88gQk9u8yBcZhRR9CKnBowgzXdl0qcXkuINI05I72w==}
 
   '@vercel/cli-exec@1.0.1':
     resolution: {integrity: sha512-g9XerViJ/paZujufXYcu5XYI2vU2rtB4sgdpjUHde5RnOkdmpu0ngH46LCFGHoPXO/C+qDPSczIHIRN+8Q2YKQ==}
     engines: {node: '>= 18'}
 
-  '@vercel/oidc-aws-credentials-provider@3.3.13':
-    resolution: {integrity: sha512-48e1lATWJGeemjdfEyC6+EPwqDIcfurzq5ypyc+Qmpx2h891NHhMa1KNu3CsHLEJgjmwx6NgDgmD/G5fT0Lo+Q==}
+  '@vercel/oidc-aws-credentials-provider@3.3.17':
+    resolution: {integrity: sha512-+fwySZ1CO3hutIkcofGD4WUfCpqqzOTNV6vWBgBsN+AJOZGC2L2+9Z5yDhQZv+qcKlBOzUXhNXZbJ+AXnfFlag==}
     engines: {node: '>= 20'}
 
-  '@vercel/oidc@4.0.1':
-    resolution: {integrity: sha512-l//xMmDTj2WR6EMtfA2BEF2oR7ViKCD1SCxqFKCn1/8wOZBxgxhxkegSGi90ICTc1rB50ZbKuPIslc8aJxAqew==}
+  '@vercel/oidc@4.0.5':
+    resolution: {integrity: sha512-E+duTxv0W8r3qNCGUYxTLt0V0BlLUlrEqxYOu2OoFubIbxwGjwm4wofache+YgU6Sr0MwoAA/vsSrrNrrWjimw==}
     engines: {node: '>= 20'}
 
   '@vitest/coverage-v8@4.0.8':
@@ -2477,15 +2473,6 @@ snapshots:
       '@smithy/types': 4.19.0
       tslib: 2.9.1
 
-  '@aws-sdk/credential-provider-web-identity@3.972.80':
-    dependencies:
-      '@aws-sdk/core': 3.979.1
-      '@aws-sdk/nested-clients': 3.997.54
-      '@aws-sdk/types': 3.975.0
-      '@smithy/core': 3.38.1
-      '@smithy/types': 4.19.0
-      tslib: 2.9.1
-
   '@aws-sdk/credential-provider-web-identity@3.972.86':
     dependencies:
       '@aws-sdk/core': 3.979.1
@@ -3176,7 +3163,7 @@ snapshots:
     dependencies:
       csstype: 3.2.3
 
-  '@vercel/cli-config@0.3.1':
+  '@vercel/cli-config@0.3.5':
     dependencies:
       xdg-app-paths: 5.5.1
       zod: 4.1.11
@@ -3185,14 +3172,14 @@ snapshots:
     dependencies:
       execa: 5.1.1
 
-  '@vercel/oidc-aws-credentials-provider@3.3.13':
+  '@vercel/oidc-aws-credentials-provider@3.3.17':
     dependencies:
-      '@aws-sdk/credential-provider-web-identity': 3.972.80
-      '@vercel/oidc': 4.0.1
+      '@aws-sdk/credential-provider-web-identity': 3.972.86
+      '@vercel/oidc': 4.0.5
 
-  '@vercel/oidc@4.0.1':
+  '@vercel/oidc@4.0.5':
     dependencies:
-      '@vercel/cli-config': 0.3.1
+      '@vercel/cli-config': 0.3.5
       '@vercel/cli-exec': 1.0.1
       jose: 5.10.0
 
