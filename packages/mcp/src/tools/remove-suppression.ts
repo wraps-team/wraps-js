@@ -86,7 +86,7 @@ export function registerRemoveSuppression(server: McpServer, config: MCPConfig):
       return textResult(
         wasPresent
           ? `Removed ${email} from the suppression list of AWS account ${input.awsAccountId}. Wraps can send to it again.`
-          : `${email} was already gone from the suppression list of AWS account ${input.awsAccountId}. Nothing else changed.`,
+          : `${email} was already gone from the suppression list of AWS account ${input.awsAccountId}.`,
         { id: email, email, success: true as const, wasPresent }
       );
     }
