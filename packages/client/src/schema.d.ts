@@ -774,7 +774,7 @@ export interface paths {
         post?: never;
         /**
          * Remove a suppressed address
-         * @description Removes one address from the SES suppression list of the given AWS account. Destructive: pass confirm=true, or the request is refused with 400 before anything changes. Addresses suppressed for a spam complaint also need acknowledgedComplaint=true (409 otherwise). Percent-encode the email in the path. Requires awsAccounts:write.
+         * @description Removes one address from the SES suppression list of the given AWS account. Destructive: pass confirm=true, or the request is refused with 400 before anything changes. Addresses suppressed for a spam complaint also need acknowledgedComplaint=true (409 otherwise). Percent-encode the email in the path. A contact for this address whose status is suppressed becomes active again; other statuses are unchanged. Requires awsAccounts:write.
          */
         delete: operations["deleteV1SuppressionsByEmail"];
         options?: never;
@@ -1254,7 +1254,7 @@ export interface paths {
         post: operations["postV1Templates"];
         /**
          * Bulk delete templates
-         * @description Deletes up to 100 templates in one request (body { ids }), org-scoped. Destructive: pass confirm=true, or the request is refused with 400. All-or-nothing: if any template is still used by a scheduled, queued or processing broadcast, or an enabled workflow, the whole request returns 409 with blockingIds and deletes nothing. Ids that are not templates of this organization are listed in notFound and skipped. Requires templates delete permission (campaigns:write for API keys).
+         * @description Deletes up to 100 templates in one request (body { ids }), org-scoped. Destructive: pass confirm=true, or the request is refused with 400. All-or-nothing: if any template is still used by a draft, scheduled, queued or processing broadcast, or an enabled workflow, the whole request returns 409 with blockingIds and deletes nothing. Ids that are not templates of this organization are listed in notFound and skipped. Requires templates delete permission (campaigns:write for API keys).
          */
         delete: operations["deleteV1Templates"];
         options?: never;
@@ -1278,7 +1278,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a template
-         * @description Deletes one template, org-scoped, along with its versions. Destructive: pass confirm=true, or the request is refused with 400 before anything changes. Refused with 409 (and nothing deleted) while a scheduled, queued or processing broadcast, or an enabled workflow (a send_email or send_sms step, or a cascade channel), still uses the template; blockingIds lists the template ids that are blocked. Draft, paused, completed and other non-blocking broadcasts or workflows do not block. A published SES copy is removed best-effort from the org's AWS accounts. Requires templates delete permission (campaigns:write for API keys).
+         * @description Deletes one template, org-scoped, along with its versions. Destructive: pass confirm=true, or the request is refused with 400 before anything changes. Refused with 409 (and nothing deleted) while a draft, scheduled, queued or processing broadcast (a paused broadcast counts as processing), or an enabled workflow (a send_email or send_sms step, or a cascade channel), still uses the template; blockingIds lists the template ids that are blocked. Completed, failed and cancelled broadcasts, and draft, paused and archived workflows, do not block. A published SES copy is removed best-effort from the org's AWS accounts. Requires templates delete permission (campaigns:write for API keys).
          */
         delete: operations["deleteV1TemplatesById"];
         options?: never;
@@ -1379,7 +1379,7 @@ export interface paths {
         };
         /**
          * Pull workflows for CLI sync
-         * @description Returns all workflows pushed from CLI with their TypeScript source.
+         * @description Returns all workflows pushed from CLI with their TypeScript source. Requires the `workflows` read permission (`workflows:read` for API keys).
          */
         get: operations["getV1WorkflowsPull"];
         put?: never;
@@ -11235,17 +11235,17 @@ export interface operations {
                 content: {
                     "application/json": {
                         error: string;
-                        /** @description Template ids that a live broadcast or enabled workflow uses */
+                        /** @description Template ids that a draft, scheduled, queued or processing broadcast, or an enabled workflow, uses */
                         blockingIds: string[];
                     };
                     "multipart/form-data": {
                         error: string;
-                        /** @description Template ids that a live broadcast or enabled workflow uses */
+                        /** @description Template ids that a draft, scheduled, queued or processing broadcast, or an enabled workflow, uses */
                         blockingIds: string[];
                     };
                     "text/plain": {
                         error: string;
-                        /** @description Template ids that a live broadcast or enabled workflow uses */
+                        /** @description Template ids that a draft, scheduled, queued or processing broadcast, or an enabled workflow, uses */
                         blockingIds: string[];
                     };
                 };
@@ -11436,17 +11436,17 @@ export interface operations {
                 content: {
                     "application/json": {
                         error: string;
-                        /** @description Template ids that a live broadcast or enabled workflow uses */
+                        /** @description Template ids that a draft, scheduled, queued or processing broadcast, or an enabled workflow, uses */
                         blockingIds: string[];
                     };
                     "multipart/form-data": {
                         error: string;
-                        /** @description Template ids that a live broadcast or enabled workflow uses */
+                        /** @description Template ids that a draft, scheduled, queued or processing broadcast, or an enabled workflow, uses */
                         blockingIds: string[];
                     };
                     "text/plain": {
                         error: string;
-                        /** @description Template ids that a live broadcast or enabled workflow uses */
+                        /** @description Template ids that a draft, scheduled, queued or processing broadcast, or an enabled workflow, uses */
                         blockingIds: string[];
                     };
                 };
@@ -12204,15 +12204,24 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            200: {
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                    };
+                };
             };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationFailed"];
             429: components["responses"]["RateLimited"];
