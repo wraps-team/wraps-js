@@ -219,7 +219,7 @@
     },
     {
       "name": "delete_template",
-      "description": "Permanently delete up to 100 Wraps templates with their versions. Refused with 409 and nothing deleted while a live broadcast or enabled workflow uses one."
+      "description": "Permanently delete up to 100 Wraps templates with their versions. Refused with 409 and nothing deleted while a draft, scheduled, queued or processing broadcast, or an enabled workflow, uses one."
     },
     {
       "name": "list_broadcasts",
