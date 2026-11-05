@@ -10736,6 +10736,112 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Template written */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Template id */
+                        id: string;
+                        /** @description Template slug */
+                        slug: string;
+                        /**
+                         * @description Every template a push writes is published
+                         * @constant
+                         */
+                        status: "PUBLISHED";
+                        /** @description ISO 8601 time the template was written */
+                        updatedAt: string;
+                        /** @description The sourceHash that was pushed, echoed back */
+                        remoteHash: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Template id */
+                        id: string;
+                        /** @description Template slug */
+                        slug: string;
+                        /**
+                         * @description Every template a push writes is published
+                         * @constant
+                         */
+                        status: "PUBLISHED";
+                        /** @description ISO 8601 time the template was written */
+                        updatedAt: string;
+                        /** @description The sourceHash that was pushed, echoed back */
+                        remoteHash: string;
+                    };
+                    "text/plain": {
+                        /** @description Template id */
+                        id: string;
+                        /** @description Template slug */
+                        slug: string;
+                        /**
+                         * @description Every template a push writes is published
+                         * @constant
+                         */
+                        status: "PUBLISHED";
+                        /** @description ISO 8601 time the template was written */
+                        updatedAt: string;
+                        /** @description The sourceHash that was pushed, echoed back */
+                        remoteHash: string;
+                    };
+                };
+            };
+            /** @description Template written */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Template id */
+                        id: string;
+                        /** @description Template slug */
+                        slug: string;
+                        /**
+                         * @description Every template a push writes is published
+                         * @constant
+                         */
+                        status: "PUBLISHED";
+                        /** @description ISO 8601 time the template was written */
+                        updatedAt: string;
+                        /** @description The sourceHash that was pushed, echoed back */
+                        remoteHash: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Template id */
+                        id: string;
+                        /** @description Template slug */
+                        slug: string;
+                        /**
+                         * @description Every template a push writes is published
+                         * @constant
+                         */
+                        status: "PUBLISHED";
+                        /** @description ISO 8601 time the template was written */
+                        updatedAt: string;
+                        /** @description The sourceHash that was pushed, echoed back */
+                        remoteHash: string;
+                    };
+                    "text/plain": {
+                        /** @description Template id */
+                        id: string;
+                        /** @description Template slug */
+                        slug: string;
+                        /**
+                         * @description Every template a push writes is published
+                         * @constant
+                         */
+                        status: "PUBLISHED";
+                        /** @description ISO 8601 time the template was written */
+                        updatedAt: string;
+                        /** @description The sourceHash that was pushed, echoed back */
+                        remoteHash: string;
+                    };
+                };
+            };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: {
@@ -10832,6 +10938,56 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Every template in the batch written */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description One entry per pushed template (empty for an empty batch) */
+                        results: {
+                            /** @description Template slug */
+                            slug: string;
+                            /** @description Template id */
+                            id: string;
+                            /**
+                             * @description Every template a push writes is published
+                             * @constant
+                             */
+                            status: "PUBLISHED";
+                        }[];
+                    };
+                    "multipart/form-data": {
+                        /** @description One entry per pushed template (empty for an empty batch) */
+                        results: {
+                            /** @description Template slug */
+                            slug: string;
+                            /** @description Template id */
+                            id: string;
+                            /**
+                             * @description Every template a push writes is published
+                             * @constant
+                             */
+                            status: "PUBLISHED";
+                        }[];
+                    };
+                    "text/plain": {
+                        /** @description One entry per pushed template (empty for an empty batch) */
+                        results: {
+                            /** @description Template slug */
+                            slug: string;
+                            /** @description Template id */
+                            id: string;
+                            /**
+                             * @description Every template a push writes is published
+                             * @constant
+                             */
+                            status: "PUBLISHED";
+                        }[];
+                    };
+                };
+            };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: {
@@ -10872,11 +11028,100 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Code-pushed templates */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        /** @description Code-pushed templates that have source */
+                        templates: {
+                            /** @description Template id */
+                            id: string;
+                            /** @description Template slug (filename without extension) */
+                            slug: string | null;
+                            /** @description Email subject line */
+                            subject: string | null;
+                            /** @description Email type for compliance */
+                            emailType: "marketing" | "transactional";
+                            /** @description Template channel: email or sms */
+                            channel: string;
+                            /** @description Template variables, each { name: string, fallback?: string }. Items are not validated: the column is unconstrained jsonb. */
+                            variables: unknown[] | null;
+                            /** @description SHA256 hash of the pushed source file */
+                            sourceHash: string | null;
+                            /** @description Template status */
+                            status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+                            /** @description ISO 8601 time of the last write */
+                            updatedAt: string;
+                            /** @description Where the template was last edited: cli, dashboard or api */
+                            lastEditedFrom: string | null;
+                            /** @description React Email TSX source. Absent when `source=false`. Rows with no source are filtered out, so it is never null in practice. */
+                            source?: string | null;
+                        }[];
+                        /** @description Cursor for the next page, null on the last page. Present only when `limit` is set. */
+                        nextCursor?: string | null;
+                    };
+                    "multipart/form-data": {
+                        /** @description Code-pushed templates that have source */
+                        templates: {
+                            /** @description Template id */
+                            id: string;
+                            /** @description Template slug (filename without extension) */
+                            slug: string | null;
+                            /** @description Email subject line */
+                            subject: string | null;
+                            /** @description Email type for compliance */
+                            emailType: "marketing" | "transactional";
+                            /** @description Template channel: email or sms */
+                            channel: string;
+                            /** @description Template variables, each { name: string, fallback?: string }. Items are not validated: the column is unconstrained jsonb. */
+                            variables: unknown[] | null;
+                            /** @description SHA256 hash of the pushed source file */
+                            sourceHash: string | null;
+                            /** @description Template status */
+                            status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+                            /** @description ISO 8601 time of the last write */
+                            updatedAt: string;
+                            /** @description Where the template was last edited: cli, dashboard or api */
+                            lastEditedFrom: string | null;
+                            /** @description React Email TSX source. Absent when `source=false`. Rows with no source are filtered out, so it is never null in practice. */
+                            source?: string | null;
+                        }[];
+                        /** @description Cursor for the next page, null on the last page. Present only when `limit` is set. */
+                        nextCursor?: string | null;
+                    };
+                    "text/plain": {
+                        /** @description Code-pushed templates that have source */
+                        templates: {
+                            /** @description Template id */
+                            id: string;
+                            /** @description Template slug (filename without extension) */
+                            slug: string | null;
+                            /** @description Email subject line */
+                            subject: string | null;
+                            /** @description Email type for compliance */
+                            emailType: "marketing" | "transactional";
+                            /** @description Template channel: email or sms */
+                            channel: string;
+                            /** @description Template variables, each { name: string, fallback?: string }. Items are not validated: the column is unconstrained jsonb. */
+                            variables: unknown[] | null;
+                            /** @description SHA256 hash of the pushed source file */
+                            sourceHash: string | null;
+                            /** @description Template status */
+                            status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+                            /** @description ISO 8601 time of the last write */
+                            updatedAt: string;
+                            /** @description Where the template was last edited: cli, dashboard or api */
+                            lastEditedFrom: string | null;
+                            /** @description React Email TSX source. Absent when `source=false`. Rows with no source are filtered out, so it is never null in practice. */
+                            source?: string | null;
+                        }[];
+                        /** @description Cursor for the next page, null on the last page. Present only when `limit` is set. */
+                        nextCursor?: string | null;
+                    };
+                };
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
@@ -11997,6 +12242,106 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Workflow written */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Workflow id */
+                        id: string;
+                        /** @description Workflow slug */
+                        slug: string;
+                        /** @description Workflow status after the push: draft, enabled or paused (a schedule that could not be registered leaves it draft) */
+                        status: "draft" | "enabled" | "paused" | "archived";
+                        /** @description ISO 8601 time the workflow was written */
+                        updatedAt: string;
+                        /** @description The sourceHash that was pushed, echoed back */
+                        remoteHash: string;
+                        /** @description Why the schedule could not be registered; set only then, and the workflow was saved as draft */
+                        scheduleError?: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Workflow id */
+                        id: string;
+                        /** @description Workflow slug */
+                        slug: string;
+                        /** @description Workflow status after the push: draft, enabled or paused (a schedule that could not be registered leaves it draft) */
+                        status: "draft" | "enabled" | "paused" | "archived";
+                        /** @description ISO 8601 time the workflow was written */
+                        updatedAt: string;
+                        /** @description The sourceHash that was pushed, echoed back */
+                        remoteHash: string;
+                        /** @description Why the schedule could not be registered; set only then, and the workflow was saved as draft */
+                        scheduleError?: string;
+                    };
+                    "text/plain": {
+                        /** @description Workflow id */
+                        id: string;
+                        /** @description Workflow slug */
+                        slug: string;
+                        /** @description Workflow status after the push: draft, enabled or paused (a schedule that could not be registered leaves it draft) */
+                        status: "draft" | "enabled" | "paused" | "archived";
+                        /** @description ISO 8601 time the workflow was written */
+                        updatedAt: string;
+                        /** @description The sourceHash that was pushed, echoed back */
+                        remoteHash: string;
+                        /** @description Why the schedule could not be registered; set only then, and the workflow was saved as draft */
+                        scheduleError?: string;
+                    };
+                };
+            };
+            /** @description Workflow written */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Workflow id */
+                        id: string;
+                        /** @description Workflow slug */
+                        slug: string;
+                        /** @description Workflow status after the push: draft, enabled or paused (a schedule that could not be registered leaves it draft) */
+                        status: "draft" | "enabled" | "paused" | "archived";
+                        /** @description ISO 8601 time the workflow was written */
+                        updatedAt: string;
+                        /** @description The sourceHash that was pushed, echoed back */
+                        remoteHash: string;
+                        /** @description Why the schedule could not be registered; set only then, and the workflow was saved as draft */
+                        scheduleError?: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Workflow id */
+                        id: string;
+                        /** @description Workflow slug */
+                        slug: string;
+                        /** @description Workflow status after the push: draft, enabled or paused (a schedule that could not be registered leaves it draft) */
+                        status: "draft" | "enabled" | "paused" | "archived";
+                        /** @description ISO 8601 time the workflow was written */
+                        updatedAt: string;
+                        /** @description The sourceHash that was pushed, echoed back */
+                        remoteHash: string;
+                        /** @description Why the schedule could not be registered; set only then, and the workflow was saved as draft */
+                        scheduleError?: string;
+                    };
+                    "text/plain": {
+                        /** @description Workflow id */
+                        id: string;
+                        /** @description Workflow slug */
+                        slug: string;
+                        /** @description Workflow status after the push: draft, enabled or paused (a schedule that could not be registered leaves it draft) */
+                        status: "draft" | "enabled" | "paused" | "archived";
+                        /** @description ISO 8601 time the workflow was written */
+                        updatedAt: string;
+                        /** @description The sourceHash that was pushed, echoed back */
+                        remoteHash: string;
+                        /** @description Why the schedule could not be registered; set only then, and the workflow was saved as draft */
+                        scheduleError?: string;
+                    };
+                };
+            };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: {
@@ -12168,6 +12513,53 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Every workflow in the batch written */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description One entry per pushed workflow (empty for an empty batch) */
+                        results: {
+                            /** @description Workflow slug */
+                            slug: string;
+                            /** @description Workflow id */
+                            id: string;
+                            /** @description Workflow status after the push: draft, enabled or paused (a schedule that could not be registered leaves it draft) */
+                            status: "draft" | "enabled" | "paused" | "archived";
+                            /** @description Why the schedule could not be registered; set only then, and the workflow was saved as draft */
+                            scheduleError?: string;
+                        }[];
+                    };
+                    "multipart/form-data": {
+                        /** @description One entry per pushed workflow (empty for an empty batch) */
+                        results: {
+                            /** @description Workflow slug */
+                            slug: string;
+                            /** @description Workflow id */
+                            id: string;
+                            /** @description Workflow status after the push: draft, enabled or paused (a schedule that could not be registered leaves it draft) */
+                            status: "draft" | "enabled" | "paused" | "archived";
+                            /** @description Why the schedule could not be registered; set only then, and the workflow was saved as draft */
+                            scheduleError?: string;
+                        }[];
+                    };
+                    "text/plain": {
+                        /** @description One entry per pushed workflow (empty for an empty batch) */
+                        results: {
+                            /** @description Workflow slug */
+                            slug: string;
+                            /** @description Workflow id */
+                            id: string;
+                            /** @description Workflow status after the push: draft, enabled or paused (a schedule that could not be registered leaves it draft) */
+                            status: "draft" | "enabled" | "paused" | "archived";
+                            /** @description Why the schedule could not be registered; set only then, and the workflow was saved as draft */
+                            scheduleError?: string;
+                        }[];
+                    };
+                };
+            };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: {
@@ -12204,6 +12596,227 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Code-pushed workflows */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Workflows pushed from the CLI */
+                        workflows: {
+                            /** @description Workflow id */
+                            id: string;
+                            /** @description Workflow slug (rows without a slug are never returned) */
+                            slug: string;
+                            /** @description Workflow display name */
+                            name: string;
+                            /** @description Workflow description */
+                            description: string | null;
+                            /** @description Original TypeScript source code */
+                            sourceTs: string | null;
+                            /** @description SHA256 hash of the pushed source file */
+                            sourceHash: string | null;
+                            /** @description Workflow status */
+                            status: "draft" | "enabled" | "paused" | "archived";
+                            /** @description Trigger type */
+                            triggerType: string | null;
+                            /** @description Trigger configuration */
+                            triggerConfig: ({
+                                eventName?: string | null;
+                                segmentId?: string | null;
+                                /** @description Cron expression */
+                                schedule?: string | null;
+                                timezone?: string | null;
+                                topicId?: string | null;
+                            } & {
+                                [key: string]: unknown;
+                            }) | null;
+                            /** @description Flat array of workflow steps */
+                            steps: ({
+                                id: string;
+                                /** @description Step type, e.g. send_email or delay */
+                                type: string;
+                                name: string;
+                                /** @description Canvas position */
+                                position?: ({
+                                    x: number;
+                                    y: number;
+                                } & {
+                                    [key: string]: unknown;
+                                }) | null;
+                                /** @description Step configuration, shape depends on type */
+                                config?: unknown;
+                                /** @description Cascade group this step belongs to */
+                                cascadeGroupId?: string | null;
+                                /** @description Cascade reconstruction metadata, first step of a group. Each item is { type: email | sms, id?, templateId?, body?, engagement?, waitDuration? }; items are not validated. */
+                                cascadeChannels?: unknown[] | null;
+                            } & {
+                                [key: string]: unknown;
+                            })[] | null;
+                            /** @description Flat array of step transitions */
+                            transitions: ({
+                                id: string;
+                                fromStepId: string;
+                                toStepId: string;
+                                condition?: ({
+                                    branch: string;
+                                } & {
+                                    [key: string]: unknown;
+                                }) | null;
+                            } & {
+                                [key: string]: unknown;
+                            })[] | null;
+                            /** @description ISO 8601 time of the last write */
+                            updatedAt: string;
+                            /** @description Where the workflow was last edited: cli or dashboard */
+                            lastEditedFrom: string | null;
+                        }[];
+                    };
+                    "multipart/form-data": {
+                        /** @description Workflows pushed from the CLI */
+                        workflows: {
+                            /** @description Workflow id */
+                            id: string;
+                            /** @description Workflow slug (rows without a slug are never returned) */
+                            slug: string;
+                            /** @description Workflow display name */
+                            name: string;
+                            /** @description Workflow description */
+                            description: string | null;
+                            /** @description Original TypeScript source code */
+                            sourceTs: string | null;
+                            /** @description SHA256 hash of the pushed source file */
+                            sourceHash: string | null;
+                            /** @description Workflow status */
+                            status: "draft" | "enabled" | "paused" | "archived";
+                            /** @description Trigger type */
+                            triggerType: string | null;
+                            /** @description Trigger configuration */
+                            triggerConfig: ({
+                                eventName?: string | null;
+                                segmentId?: string | null;
+                                /** @description Cron expression */
+                                schedule?: string | null;
+                                timezone?: string | null;
+                                topicId?: string | null;
+                            } & {
+                                [key: string]: unknown;
+                            }) | null;
+                            /** @description Flat array of workflow steps */
+                            steps: ({
+                                id: string;
+                                /** @description Step type, e.g. send_email or delay */
+                                type: string;
+                                name: string;
+                                /** @description Canvas position */
+                                position?: ({
+                                    x: number;
+                                    y: number;
+                                } & {
+                                    [key: string]: unknown;
+                                }) | null;
+                                /** @description Step configuration, shape depends on type */
+                                config?: unknown;
+                                /** @description Cascade group this step belongs to */
+                                cascadeGroupId?: string | null;
+                                /** @description Cascade reconstruction metadata, first step of a group. Each item is { type: email | sms, id?, templateId?, body?, engagement?, waitDuration? }; items are not validated. */
+                                cascadeChannels?: unknown[] | null;
+                            } & {
+                                [key: string]: unknown;
+                            })[] | null;
+                            /** @description Flat array of step transitions */
+                            transitions: ({
+                                id: string;
+                                fromStepId: string;
+                                toStepId: string;
+                                condition?: ({
+                                    branch: string;
+                                } & {
+                                    [key: string]: unknown;
+                                }) | null;
+                            } & {
+                                [key: string]: unknown;
+                            })[] | null;
+                            /** @description ISO 8601 time of the last write */
+                            updatedAt: string;
+                            /** @description Where the workflow was last edited: cli or dashboard */
+                            lastEditedFrom: string | null;
+                        }[];
+                    };
+                    "text/plain": {
+                        /** @description Workflows pushed from the CLI */
+                        workflows: {
+                            /** @description Workflow id */
+                            id: string;
+                            /** @description Workflow slug (rows without a slug are never returned) */
+                            slug: string;
+                            /** @description Workflow display name */
+                            name: string;
+                            /** @description Workflow description */
+                            description: string | null;
+                            /** @description Original TypeScript source code */
+                            sourceTs: string | null;
+                            /** @description SHA256 hash of the pushed source file */
+                            sourceHash: string | null;
+                            /** @description Workflow status */
+                            status: "draft" | "enabled" | "paused" | "archived";
+                            /** @description Trigger type */
+                            triggerType: string | null;
+                            /** @description Trigger configuration */
+                            triggerConfig: ({
+                                eventName?: string | null;
+                                segmentId?: string | null;
+                                /** @description Cron expression */
+                                schedule?: string | null;
+                                timezone?: string | null;
+                                topicId?: string | null;
+                            } & {
+                                [key: string]: unknown;
+                            }) | null;
+                            /** @description Flat array of workflow steps */
+                            steps: ({
+                                id: string;
+                                /** @description Step type, e.g. send_email or delay */
+                                type: string;
+                                name: string;
+                                /** @description Canvas position */
+                                position?: ({
+                                    x: number;
+                                    y: number;
+                                } & {
+                                    [key: string]: unknown;
+                                }) | null;
+                                /** @description Step configuration, shape depends on type */
+                                config?: unknown;
+                                /** @description Cascade group this step belongs to */
+                                cascadeGroupId?: string | null;
+                                /** @description Cascade reconstruction metadata, first step of a group. Each item is { type: email | sms, id?, templateId?, body?, engagement?, waitDuration? }; items are not validated. */
+                                cascadeChannels?: unknown[] | null;
+                            } & {
+                                [key: string]: unknown;
+                            })[] | null;
+                            /** @description Flat array of step transitions */
+                            transitions: ({
+                                id: string;
+                                fromStepId: string;
+                                toStepId: string;
+                                condition?: ({
+                                    branch: string;
+                                } & {
+                                    [key: string]: unknown;
+                                }) | null;
+                            } & {
+                                [key: string]: unknown;
+                            })[] | null;
+                            /** @description ISO 8601 time of the last write */
+                            updatedAt: string;
+                            /** @description Where the workflow was last edited: cli or dashboard */
+                            lastEditedFrom: string | null;
+                        }[];
+                    };
+                };
+            };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: {
