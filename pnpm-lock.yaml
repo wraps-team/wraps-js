@@ -111,8 +111,8 @@ importers:
         specifier: ^19.2.3
         version: 19.3.0
       '@vercel/oidc-aws-credentials-provider':
-        specifier: 3.3.17
-        version: 3.3.17
+        specifier: 3.3.18
+        version: 3.3.18
       '@vitest/coverage-v8':
         specifier: ^4.0.8
         version: 4.0.8(vitest@4.1.11)
@@ -185,8 +185,8 @@ importers:
         specifier: ^24.10.0
         version: 24.19.2
       '@vercel/oidc-aws-credentials-provider':
-        specifier: 3.3.17
-        version: 3.3.17
+        specifier: 3.3.18
+        version: 3.3.18
       '@vitest/coverage-v8':
         specifier: ^4.0.8
         version: 4.0.8(vitest@4.1.11)
@@ -1140,19 +1140,19 @@ packages:
   '@types/react@19.3.0':
     resolution: {integrity: sha512-N0rFCuH9YoxG9/m61l9MfpJKfmLOVU0em7ipIz6TRgSSkvReLB9vL85GB+yr8Bs5leqpvg96JSwF4ZS1s4viQg==}
 
-  '@vercel/cli-config@0.3.5':
-    resolution: {integrity: sha512-O7y3EFzHENSLtE/3fjM3vIRqDpFFhZor2dMcZaND4G1d88gQk9u8yBcZhRR9CKnBowgzXdl0qcXkuINI05I72w==}
+  '@vercel/cli-config@0.3.6':
+    resolution: {integrity: sha512-jKsEWixJ+yMs2V29fqFxeDTQDglsgj7hvSXJf9pPmyYISvuTpTt45j/g47O6RWbe7aJycPbDOk7uKPHPA+LDYg==}
 
   '@vercel/cli-exec@1.0.1':
     resolution: {integrity: sha512-g9XerViJ/paZujufXYcu5XYI2vU2rtB4sgdpjUHde5RnOkdmpu0ngH46LCFGHoPXO/C+qDPSczIHIRN+8Q2YKQ==}
     engines: {node: '>= 18'}
 
-  '@vercel/oidc-aws-credentials-provider@3.3.17':
-    resolution: {integrity: sha512-+fwySZ1CO3hutIkcofGD4WUfCpqqzOTNV6vWBgBsN+AJOZGC2L2+9Z5yDhQZv+qcKlBOzUXhNXZbJ+AXnfFlag==}
+  '@vercel/oidc-aws-credentials-provider@3.3.18':
+    resolution: {integrity: sha512-WhSV10xoyuw8bTBfWhNOsMAXOX80eT+saTWPOyWqKbA0LIsBmA9HvCzM+8+sK6d2SlOoLEtzpvBYe3vLRxO1pg==}
     engines: {node: '>= 20'}
 
-  '@vercel/oidc@4.0.5':
-    resolution: {integrity: sha512-E+duTxv0W8r3qNCGUYxTLt0V0BlLUlrEqxYOu2OoFubIbxwGjwm4wofache+YgU6Sr0MwoAA/vsSrrNrrWjimw==}
+  '@vercel/oidc@4.0.6':
+    resolution: {integrity: sha512-VlrMq9V20Sts9PRYeeh7d8+QCuTvDgujZ0OyakfEJkM7NpQTW+x2IFvVWGJzg+84RhFFa2kKir6gw5E4EcTsuw==}
     engines: {node: '>= 20'}
 
   '@vitest/coverage-v8@4.0.8':
@@ -2255,9 +2255,6 @@ packages:
     peerDependencies:
       zod: ^3.25.28 || ^4
 
-  zod@4.1.11:
-    resolution: {integrity: sha512-WPsqwxITS2tzx1bzhIKsEs19ABD5vmCVa4xBo2tq/SrV4RNZtfws1EnCWQXM6yh8bD08a1idvkB5MZSBiZsjwg==}
-
   zod@4.6.7:
     resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
 
@@ -3163,23 +3160,23 @@ snapshots:
     dependencies:
       csstype: 3.2.3
 
-  '@vercel/cli-config@0.3.5':
+  '@vercel/cli-config@0.3.6':
     dependencies:
       xdg-app-paths: 5.5.1
-      zod: 4.1.11
+      zod: 4.6.7
 
   '@vercel/cli-exec@1.0.1':
     dependencies:
       execa: 5.1.1
 
-  '@vercel/oidc-aws-credentials-provider@3.3.17':
+  '@vercel/oidc-aws-credentials-provider@3.3.18':
     dependencies:
       '@aws-sdk/credential-provider-web-identity': 3.972.86
-      '@vercel/oidc': 4.0.5
+      '@vercel/oidc': 4.0.6
 
-  '@vercel/oidc@4.0.5':
+  '@vercel/oidc@4.0.6':
     dependencies:
-      '@vercel/cli-config': 0.3.5
+      '@vercel/cli-config': 0.3.6
       '@vercel/cli-exec': 1.0.1
       jose: 5.10.0
 
@@ -4268,7 +4265,5 @@ snapshots:
   zod-to-json-schema@3.25.2(zod@4.6.7):
     dependencies:
       zod: 4.6.7
-
-  zod@4.1.11: {}
 
   zod@4.6.7: {}
