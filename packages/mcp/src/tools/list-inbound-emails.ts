@@ -24,7 +24,7 @@ const RouteSummary = z.object({
     .array(z.string())
     .optional()
     .describe(
-      'SMTP envelope recipients SES delivered to, Bcc included, lowercased. Absent (not an empty list) for mail received before the trigger upgrade, so absent means unknown, not that nothing was delivered.'
+      'SMTP envelope recipients SES delivered this message to (lowercased, Bcc included), limited to addresses this deployment receives for. Absent for mail received before the deployment was upgraded; absent means unknown, not none.'
     ),
 });
 

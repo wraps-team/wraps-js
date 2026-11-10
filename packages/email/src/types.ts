@@ -624,8 +624,9 @@ export interface InboxEmail {
   rawS3Key: string;
   receivedAt: string;
   /**
-   * SMTP envelope recipients SES delivered to, Bcc included, lowercased. Absent (not `[]`) for mail
-   * received before the deployment was upgraded.
+   * SMTP envelope recipients SES delivered this message to (lowercased, Bcc included), limited to
+   * addresses this deployment receives for. Absent for mail received before the deployment was
+   * upgraded; absent means unknown, not none.
    */
   envelopeRecipients?: string[];
 }
