@@ -20,8 +20,12 @@ const RouteSummary = z.object({
   attachmentCount: z.number(),
   spamVerdict: z.string().nullable(),
   virusVerdict: z.string().nullable(),
-  // Absent for mail received before the trigger upgrade; not an empty list.
-  envelopeRecipients: z.array(z.string()).optional(),
+  envelopeRecipients: z
+    .array(z.string())
+    .optional()
+    .describe(
+      'SMTP envelope recipients SES delivered to, Bcc included, lowercased. Absent (not an empty list) for mail received before the trigger upgrade, so absent means unknown, not that nothing was delivered.'
+    ),
 });
 
 const RouteListResponse = z.object({
