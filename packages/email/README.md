@@ -650,6 +650,8 @@ await email.inbox!.reply(full.emailId, {
 await email.inbox!.delete(full.emailId);
 ```
 
+`InboxEmail` has an optional `envelopeRecipients` (the SMTP envelope recipients SES delivered the message to, lowercased, Bcc included; absent for mail received before the deployment was upgraded). Route on that field, not `to`.
+
 Full reference: https://wraps.dev/docs/sdk-reference#inbox
 
 ## Event History
