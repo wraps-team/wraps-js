@@ -164,6 +164,31 @@ describe('list_inbound_emails', () => {
     await client.close();
   });
 
+  it('passes envelopeRecipients through per entry and leaves it absent on untagged legacy entries', async () => {
+    mockApi([
+      {
+        method: 'GET',
+        path: '/v1/email/inbound',
+        body: {
+          data: [{ ...EMAIL_A, envelopeRecipients: ['support@acme.example'] }, EMAIL_B],
+          nextCursor: null,
+          deniedAccountIds: [],
+          unreachableAccountIds: [],
+        },
+      },
+    ]);
+    const client = await connectTool(registerListInboundEmails, makeApiConfig());
+
+    const result = await client.callTool({ name: 'list_inbound_emails', arguments: {} });
+
+    expect(result.isError).toBeFalsy();
+    const emails = (result.structuredContent as { emails: Array<Record<string, unknown>> }).emails;
+    expect(emails[0]).toMatchObject({ id: 'em_a1', envelopeRecipients: ['support@acme.example'] });
+    expect(emails[1]).toMatchObject({ id: 'em_b7' });
+    expect(emails[1]).not.toHaveProperty('envelopeRecipients');
+    await client.close();
+  });
+
   it('is annotated read-only and its description states S3 key order, pagination and truncation', async () => {
     const client = await connectTool(registerListInboundEmails, makeApiConfig());
 

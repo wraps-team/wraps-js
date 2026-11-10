@@ -34,6 +34,8 @@ const RouteDetail = z.object({
   virusVerdict: z.string().nullable(),
   rawS3Key: z.string(),
   receivedAt: z.string(),
+  // Absent for mail received before the trigger upgrade; not an empty list.
+  envelopeRecipients: z.array(z.string()).optional(),
 });
 
 const GetInboundEmailInput = {

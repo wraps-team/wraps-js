@@ -623,6 +623,11 @@ export interface InboxEmail {
   virusVerdict: string | null;
   rawS3Key: string;
   receivedAt: string;
+  /**
+   * SMTP envelope recipients SES delivered to, Bcc included, lowercased. Absent (not `[]`) for mail
+   * received before the deployment was upgraded.
+   */
+  envelopeRecipients?: string[];
 }
 
 export interface InboxEmailSummary {

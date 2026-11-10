@@ -20,6 +20,8 @@ const RouteSummary = z.object({
   attachmentCount: z.number(),
   spamVerdict: z.string().nullable(),
   virusVerdict: z.string().nullable(),
+  // Absent for mail received before the trigger upgrade; not an empty list.
+  envelopeRecipients: z.array(z.string()).optional(),
 });
 
 const RouteListResponse = z.object({
