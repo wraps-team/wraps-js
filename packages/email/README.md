@@ -653,7 +653,7 @@ await email.inbox!.delete(full.emailId);
 `InboxEmail` has an optional `envelopeRecipients` (the SMTP envelope recipients SES delivered the message to, lowercased, Bcc included; absent for mail received before the deployment was upgraded). Route on `envelopeRecipients` when present, and fall back to `to` when it is absent:
 
 ```typescript
-const recipients = email.envelopeRecipients ?? email.to.map((a) => a.address.toLowerCase());
+const recipients = full.envelopeRecipients ?? full.to.map((a) => a.address.toLowerCase());
 ```
 
 Full reference: https://wraps.dev/docs/sdk-reference#inbox
