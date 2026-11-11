@@ -20,6 +20,12 @@ const RouteSummary = z.object({
   attachmentCount: z.number(),
   spamVerdict: z.string().nullable(),
   virusVerdict: z.string().nullable(),
+  envelopeRecipients: z
+    .array(z.string())
+    .optional()
+    .describe(
+      'SMTP envelope recipients SES delivered this message to (lowercased, Bcc included), limited to addresses this deployment receives for. Absent for mail received before the deployment was upgraded; absent means unknown, not none.'
+    ),
 });
 
 const RouteListResponse = z.object({
@@ -91,7 +97,7 @@ export function registerListInboundEmails(server: McpServer, config: MCPConfig):
     'list_inbound_emails',
     {
       description:
-        "List one page of parsed inbound emails that the customer's SES inbound bucket received, across the organization's connected AWS accounts. Use this to find an email (its emailId and awsAccountId), then get_inbound_email to read its body, headers and attachment metadata. Results come in S3 key order (the storage key), not received time, so the newest email is not necessarily first; compare receivedAt yourself if you need recency. Pagination: pass nextCursor back unchanged as cursor to read the next page, and keep going while nextCursor is not null; it is null on the last page. A page can be empty, or hold fewer than limit entries, while nextCursor is still set, so an empty page is not the end. Optional awsAccountId limits the listing to one account (Wraps account UUID); a page can span accounts, and each entry carries its awsAccountId. Truncation: limit defaults to 20 and is capped at 100 per page. The list carries only hasAttachments and attachmentCount; attachment contents cannot be downloaded through the API. deniedAccountIds lists accounts that refused access and unreachableAccountIds lists accounts that could not be read; when either is non-empty the listing is incomplete, so an email missing from it is not proof it was never received.",
+        "List one page of parsed inbound emails that the customer's SES inbound bucket received, across the organization's connected AWS accounts. Use this to find an email (its emailId and awsAccountId), then get_inbound_email to read its body, headers and attachment metadata. Results come in S3 key order (the storage key), not received time, so the newest email is not necessarily first; compare receivedAt yourself if you need recency. Pagination: pass nextCursor back unchanged as cursor to read the next page, and keep going while nextCursor is not null; it is null on the last page. A page can be empty, or hold fewer than limit entries, while nextCursor is still set, so an empty page is not the end. Optional awsAccountId limits the listing to one account (Wraps account UUID); a page can span accounts, and each entry carries its awsAccountId. Truncation: limit defaults to 20 and is capped at 100 per page. Each entry carries envelope recipients (when recorded). For attachments, the list carries only hasAttachments and attachmentCount; attachment contents cannot be downloaded through the API. deniedAccountIds lists accounts that refused access and unreachableAccountIds lists accounts that could not be read; when either is non-empty the listing is incomplete, so an email missing from it is not proof it was never received.",
       inputSchema: ListInboundEmailsInput,
       outputSchema: ListInboundEmailsOutput,
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },

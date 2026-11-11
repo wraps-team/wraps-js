@@ -113,6 +113,63 @@ describe('get_inbound_email', () => {
     await client.close();
   });
 
+  it('passes envelopeRecipients through when the API returns it', async () => {
+    mockApi([
+      {
+        method: 'GET',
+        path: '/v1/email/inbound/em_a1',
+        body: { ...DETAIL, envelopeRecipients: ['support@acme.example', 'bcc@acme.example'] },
+      },
+    ]);
+    const client = await connectTool(registerGetInboundEmail, makeApiConfig());
+
+    const result = await client.callTool({
+      name: 'get_inbound_email',
+      arguments: { emailId: 'em_a1' },
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toMatchObject({
+      envelopeRecipients: ['support@acme.example', 'bcc@acme.example'],
+    });
+    await client.close();
+  });
+
+  it('passes an explicit empty envelopeRecipients through as [], distinct from absent', async () => {
+    mockApi([
+      {
+        method: 'GET',
+        path: '/v1/email/inbound/em_a1',
+        body: { ...DETAIL, envelopeRecipients: [] },
+      },
+    ]);
+    const client = await connectTool(registerGetInboundEmail, makeApiConfig());
+
+    const result = await client.callTool({
+      name: 'get_inbound_email',
+      arguments: { emailId: 'em_a1' },
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toMatchObject({ envelopeRecipients: [] });
+    await client.close();
+  });
+
+  it('leaves envelopeRecipients absent (not an empty list) for legacy mail the API does not tag', async () => {
+    mockApi([{ method: 'GET', path: '/v1/email/inbound/em_a1', body: DETAIL }]);
+    const client = await connectTool(registerGetInboundEmail, makeApiConfig());
+
+    const result = await client.callTool({
+      name: 'get_inbound_email',
+      arguments: { emailId: 'em_a1' },
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toBeDefined();
+    expect(result.structuredContent as object).not.toHaveProperty('envelopeRecipients');
+    await client.close();
+  });
+
   it('is annotated read-only and its description states single record, truncation and metadata-only attachments', async () => {
     const client = await connectTool(registerGetInboundEmail, makeApiConfig());
 

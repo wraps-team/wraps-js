@@ -26,7 +26,8 @@ import { normalizeEmailAddress, normalizeEmailAddresses } from './utils/validati
  * WrapsInbox - Read and manage inbound emails stored in S3
  *
  * Emails are stored by the inbound Lambda processor:
- *   raw/{messageId}           - Raw MIME from SES
+ *   raw/{messageId}           - Raw MIME from SES (s3-notification trigger)
+ *   mail/{messageId}          - Raw MIME from SES (ses-lambda-action trigger; read rawS3Key, not the prefix)
  *   parsed/{emailId}.json     - Parsed email JSON
  *   attachments/{emailId}/    - Extracted attachments
  */
