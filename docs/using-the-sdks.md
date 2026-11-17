@@ -1,7 +1,7 @@
-# AGENTS.md — writing code that uses the Wraps SDKs
+# Using the Wraps JS SDKs (for agents)
 
 For agents **calling** these packages. If you are modifying this repository, read
-[CLAUDE.md](./CLAUDE.md) and [CONTRIBUTING.md](./CONTRIBUTING.md) instead.
+[AGENTS.md](../AGENTS.md) and [CONTRIBUTING.md](../CONTRIBUTING.md) instead.
 
 Read this before writing a line — the sharp edges below are the ones that compile clean and fail at
 runtime.
@@ -139,7 +139,7 @@ await client.track('purchase.completed', {
 Paths, params, bodies, and responses are typed from the OpenAPI schema, so wrong paths and misspelled
 fields are compile errors. The same package exports `defineConfig`, `defineBrand`, `defineWorkflow`,
 and the workflow step helpers — pure identity functions for the files the `wraps` CLI reads. Full
-detail in [packages/client/README.md](./packages/client/README.md).
+detail in [packages/client/README.md](../packages/client/README.md).
 
 ### `@wraps.dev/mcp`
 
@@ -255,32 +255,6 @@ Email `sendBatch` accepts up to 100 entries and chunks them 50 per SES call; `se
 rejects more than 50 destinations outright. SMS is one recipient per `send` — use `sendBatch` for
 more. The MCP server caps recipients at `WRAPS_MAX_RECIPIENTS` (default 50), and in enforced mode
 allows exactly one recipient per send.
-
-## Verify before release
-
-Every item below was verified against the working tree on 2026-08-18, while three other packages were
-being changed in parallel. Re-check each against the published artifact before a release, and against
-`node_modules` before trusting it in a user's project:
-
-- **Region chain** — `packages/email/src/utils/credentials.ts` (`resolveRegion`) and
-  `packages/sms/src/utils/region.ts`. Confirm `AWS_REGION` is honoured with no explicit `region`.
-- **`CredentialsError` wrapping** — email `errors.ts:isCredentialsChainError` /
-  `awsErrorToWrapsError`, and the sms equivalent. Confirm a no-credentials run throws
-  `CredentialsError`, not a raw `CredentialsProviderError`.
-- **`SandboxError` and `SES_SIMULATOR_SUCCESS`** — both exported from `@wraps.dev/email`; confirm
-  they survive to the published `dist`.
-- **`BatchError` gone from `@wraps.dev/email`** — absent from `src/index.ts` as of writing. This file
-  never documents it; confirm it is actually gone rather than re-added.
-- **SMS phantom types gone** — `ScheduleOptions`, `IncomingMessage`, `MediaOptions`,
-  `InboxListOptions`, `ScheduledMessage` are absent from `packages/sms/src/index.ts`.
-- **`SendEmailParams` union** — `packages/email/src/types.ts`; confirm a body-less send and an
-  `html` + `react` send are both compile errors in the published `.d.ts`, not just in source.
-- **User-agent tagging** — `wraps-email/<version>` / `wraps-sms/<version>` come from a build-time
-  `define`. Confirm the published bundle carries the real version, not `0.0.0-dev`.
-- **MCP tool inventory** — `packages/mcp/src/tools/index.ts`; seven tools always, plus
-  `check_send_status` in enforced mode. Re-read if tools were added or annotated.
-- **`@wraps.dev/client` schema** — regenerated from the live API with `pnpm generate`. The endpoint
-  table in the client README goes stale when the API adds routes.
 
 ## Docs
 

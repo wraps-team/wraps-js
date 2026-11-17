@@ -1,302 +1,122 @@
-# CLAUDE.md - Wraps JS SDKs
+# AGENTS.md - Wraps JS SDKs
 
-> Writing code that **uses** these packages (rather than changing them)? [AGENTS.md](./AGENTS.md)
-> is the consumer-facing entry point. This file is about working on the repo itself.
+`CLAUDE.md` is a symlink to this file; edit this one.
 
-## Project Overview
+> Writing code that **uses** these packages? Read [docs/using-the-sdks.md](./docs/using-the-sdks.md).
+> This file is for changing the repo.
 
-Monorepo containing four TypeScript packages, published under the `@wraps.dev` npm namespace:
+Four packages under the `@wraps.dev` npm namespace: `email` (SES), `sms` (End User Messaging),
+`client` (Wraps Platform API, OpenAPI-generated) and `mcp` (MCP server: SES tools over the email SDK,
+plus Wraps platform tools). Run what `.github/workflows/ci.yml` runs (lint, typecheck, build, test)
+before committing, and update the package `README.md` when you add public API.
 
-- **@wraps.dev/email** (see package.json) - Email SDK for AWS SES with React.email support
-- **@wraps.dev/sms** (see package.json) - SMS SDK for AWS End User Messaging (Pinpoint SMS Voice V2)
-- **@wraps.dev/client** (see package.json) - Type-safe API client for the Wraps Platform (OpenAPI-generated)
-- **@wraps.dev/mcp** (see package.json) - MCP server exposing the email SDK to agents
+## Rules
 
-## Key Principles
+### BYOC
 
-- **BYOC (Bring Your Own Credentials)**: SDKs call AWS APIs directly in the user's account
-- **Zero Vendor Lock-in**: Thin wrappers around AWS services, swap anytime
-- **Dual Module Support**: All packages export both CJS and ESM
-- **Type-Safe**: Strict TypeScript throughout
+`email` and `sms` call AWS directly in the user's account with the user's credentials. Nothing goes
+through Wraps and nothing reports back: the `wraps-email/<version>` user-agent only identifies
+traffic in the user's own CloudTrail. `mcp` does the same for its SES tools, and also calls the
+Wraps API for its platform tools (`packages/mcp/src/api-client.ts`). `client` talks only to Wraps,
+with an API key, and never touches AWS.
 
-## Package Structure
+### Credential resolution order
 
-```
-wraps-js/
-├── packages/
-│   ├── email/                 # @wraps.dev/email
-│   │   ├── src/
-│   │   │   ├── index.ts       # Public exports
-│   │   │   ├── client.ts      # WrapsEmail class
-│   │   │   ├── types.ts       # Type definitions
-│   │   │   ├── errors.ts      # Error classes
-│   │   │   ├── events.ts      # Email event history (DynamoDB)
-│   │   │   ├── inbox.ts       # Inbox API (S3)
-│   │   │   ├── react.ts       # React.email rendering
-│   │   │   ├── suppression.ts # Suppression list management
-│   │   │   ├── batch.ts       # Batch sending
-│   │   │   └── utils/         # Credentials, validation, MIME
-│   │   └── examples/          # Usage examples
-│   ├── sms/                   # @wraps.dev/sms
-│   │   ├── src/
-│   │   │   ├── index.ts
-│   │   │   ├── client.ts      # WrapsSMS class
-│   │   │   ├── types.ts
-│   │   │   ├── errors.ts
-│   │   │   └── utils/         # Credentials, E.164 validation
-│   │   └── examples/
-│   ├── client/                # @wraps.dev/client
-│   │   └── src/
-│   │       ├── index.ts
-│   │       ├── client.ts      # createPlatformClient (openapi-fetch)
-│   │       ├── config.ts      # defineConfig, defineBrand
-│   │       ├── workflow*.ts   # Workflow definitions
-│   │       └── schema.d.ts    # Auto-generated OpenAPI types
-│   └── mcp/                   # @wraps.dev/mcp
-│       └── src/
-│           ├── config.ts      # resolveRegion — canonical region chain
-│           └── tools/         # One file per MCP tool
-├── biome.json                 # Code style (100 char width, single quotes, 2-space indent)
-└── CONTRIBUTING.md
-```
+`email` and `sms` resolve credentials in this order. Keep it identical in both:
 
-## Critical Rules
+1. `client`: a pre-configured AWS client, used as-is
+2. `roleArn` (or `AWS_ROLE_ARN`): OIDC role assumption
+3. `credentials`: a static `{ accessKeyId, secretAccessKey, sessionToken? }` or a provider function
+4. Nothing: the AWS credential chain
 
-### 1. Credential Resolution Priority
+Accept `credentials` as either shape. A provider function (or any object without `accessKeyId`) goes
+to the AWS client untouched; only a static object is destructured.
 
-All SDKs follow the same credential chain. Never change this order:
+Region has the same first steps in three places (`packages/email/src/utils/credentials.ts`,
+`packages/sms/src/utils/region.ts`, `packages/mcp/src/config.ts`): explicit value, `AWS_REGION`,
+`AWS_DEFAULT_REGION`, then the profile or IMDS. Change them together. Hand the AWS client a lazy
+resolver (email) or no `region` at all (sms) when none was supplied: a hardcoded `region` turns off
+the SDK's own resolution chain, which is how `AWS_REGION` once got ignored.
 
-```typescript
-// Priority 1: Pre-configured AWS client
-const email = new WrapsEmail({ client: existingSESClient });
+### Errors
 
-// Priority 2: OIDC role assumption (Vercel, GitHub Actions, EKS)
-const email = new WrapsEmail({ roleArn: 'arn:aws:iam::123:role/MyRole' });
+- Every error a package throws extends its base class (`WrapsEmailError`, `WrapsSMSError`), so one
+  `instanceof` on the base catches all of them. Wrap AWS's `CredentialsProviderError` in
+  `CredentialsError` rather than passing it through.
+- Set `this.name` in every error constructor, and give AWS-facing errors a `retryable` boolean.
+- `sendBatch()` reports per-entry send failures in its result. A credential failure throws, because
+  nothing was attempted. There is no `BatchError`.
+- Tests assert error properties (`code`, `requestId`, `retryable`, `field`), not only the class.
 
-// Priority 3: Explicit credentials (static or provider function)
-const email = new WrapsEmail({ credentials: { accessKeyId, secretAccessKey } });
+### Dependencies
 
-// Priority 4: AWS credential chain (automatic — env vars, ~/.aws/credentials, etc.)
-const email = new WrapsEmail();
-```
+- Declare `@aws-sdk/*` under `dependencies` in email, sms and mcp, so consumers get them installed.
+  Keep the ranges wide (`^3.928.0`): a floor raise forces every BYOC consumer onto a newer AWS SDK.
+- `react` and `@react-email/components` are the only `peerDependencies`, optional and on email only:
+  React.email rendering is opt-in.
+- `dist` never inlines the AWS SDK or React. `@vercel/oidc-aws-credentials-provider` is a
+  `devDependency` loaded by dynamic import, so keep it in the `external` list of the email and sms
+  tsup configs; tsup would otherwise inline it.
 
-Credentials can be a static object OR a provider function. Detect with:
-```typescript
-if (typeof config.credentials === 'function' || !('accessKeyId' in config.credentials)) {
-  // Provider function — pass directly
-} else {
-  // Static credentials — destructure
-}
-```
+### JSDoc
 
-### 2. Error Hierarchy
+Every public method has JSDoc with `@param`, `@returns`, `@throws` and `@example`. `WrapsEmail.send`
+in `packages/email/src/client.ts` is the model.
 
-Both email and SMS follow the same pattern:
+### Optional features
 
-```
-WrapsEmailError / WrapsSMSError (base)
-├── ValidationError           (invalid input, has .field?)
-├── CredentialsError          (both — AWS credential chain produced nothing, has .cause?)
-├── SESError / SMSError       (AWS API error, has .code, .requestId, .retryable)
-│   └── SandboxError          (email only, extends SESError — identity not verified in
-│                              the region used, has .region?)
-├── DynamoDBError             (email only — email events, has .code, .requestId, .retryable)
-├── ConfigurationError        (SMS only — no region resolvable, has .cause?)
-├── SendingRestrictionError   (SMS only — account-level block, has .restriction)
-├── OptedOutError             (SMS only, has .phoneNumber)
-└── RateLimitError            (SMS only, has .retryAfter?)
-```
+Features that need extra config are nullable properties: `inbox` is `null` without
+`inboxBucketName`, `events` is `null` without `historyTableName`, `suppression` is always there.
+Follow that shape for new ones.
 
-Always set `this.name` in error constructors. Always include `retryable` boolean on AWS errors.
+### Generated client schema
 
-Every error a package throws must extend its base class — a single
-`catch (e) { if (e instanceof WrapsEmailError) }` has to cover all of them. AWS's own
-`CredentialsProviderError` does not, which is why it gets wrapped rather than passed through.
+`packages/client/src/schema.d.ts` is generated. Regenerate it with `pnpm generate` in
+`packages/client`; the weekly `.github/workflows/schema-drift.yml` also opens a PR when the API
+changes.
 
-`sendBatch()` reports per-entry send failures in its result rather than throwing, so there is
-no `BatchError`. A credential failure is not a send failure — nothing was attempted — so that
-one throws.
+## Releasing
 
-### 3. AWS SDK Is External — Never Bundle It
+Each package versions independently.
 
-All `@aws-sdk/*` packages are marked `external` in tsup, so they are never inlined into
-`dist`:
+1. Bump `version` in `packages/<pkg>/package.json` and commit as `chore(<pkg>): release vX.Y.Z`.
+   For `mcp`, also bump both versions in `packages/mcp/server.json` (top level and `packages[0]`)
+   and the version in `packages/mcp/mcpb-manifest.json`. CI checks `server.json`, not the manifest.
+2. Walk "Verify before release" below. `packages/email/PRE-PUBLISH-CHECKLIST.md` is the longer
+   checklist written for email's first publish.
+3. Create a GitHub release tagged `{package}-vX.Y.Z` (`email-v`, `sms-v`, `client-v`, `mcp-v`).
+   `.github/workflows/publish.yml` runs on `created`: it builds, tests, fails when the package
+   version differs from the tag, then runs `npm publish --access public --provenance` through npm
+   OIDC Trusted Publishing (there is no `NPM_TOKEN`). For `mcp` it also checks that both
+   `server.json` versions match, waits for npm to serve the version, then publishes to the MCP
+   Registry.
+4. If npm went out but a later step failed, run the Publish workflow by hand (workflow_dispatch)
+   with `package`, `version` and `skip_npm=true`. It checks out the release tag unless you pass
+   `ref`.
+5. A package's first publish is manual: `cd packages/<pkg> && pnpm clean && pnpm build && npm publish
+   --access public`. Then add Trusted Publishing for `wraps-team/wraps-js` and `publish.yml` on
+   npmjs.com, and add the package to the tag parser and the `package` options in `publish.yml`,
+   which know only the four above.
 
-```typescript
-// tsup.config.ts
-external: ['@aws-sdk/*', 'react', '@react-email/components'],
-```
+### Verify before release
 
-`external` only controls bundling — it says nothing about how the dependency is declared,
-and the entries above are not all the same kind:
+Check each against the published artifact, not only the source:
 
-- `@aws-sdk/*` are regular `dependencies` of email, sms and mcp, so consumers get them
-  installed automatically. Keep the declared ranges wide (`^3.928.0`) — a floor raise
-  forces every BYOC consumer onto a newer AWS SDK, and `^3.928.0` already admits later
-  3.x releases.
-- `react` and `@react-email/components` are the only true `peerDependencies`, on email
-  alone: React.email rendering is opt-in, so the consumer supplies those.
-
-### 4. Dual CJS + ESM Output
-
-```typescript
-// tsup.config.ts
-format: ['cjs', 'esm'],
-dts: true,
-```
-
-Output: `dist/index.js` (CJS), `dist/index.mjs` (ESM), `dist/index.d.ts` (types).
-
-### 5. All Public Methods Need JSDoc
-
-```typescript
-/**
- * Send an email via AWS SES
- *
- * @param params - Send options
- * @returns Promise resolving to send result with messageId
- * @throws {ValidationError} If email parameters are invalid
- * @throws {SESError} If AWS SES API call fails
- *
- * @example
- * ```typescript
- * const result = await email.send({
- *   from: 'sender@example.com',
- *   to: 'recipient@example.com',
- *   subject: 'Hello!',
- *   html: '<h1>Hello World</h1>',
- * });
- * ```
- */
-```
-
-## Public APIs
-
-### WrapsEmail
-```typescript
-class WrapsEmail {
-  send(params): Promise<SendEmailResult>;
-  sendBatch(params): Promise<SendBatchResult>;
-  sendTemplate(params): Promise<SendEmailResult>;
-  sendBulkTemplate(params): Promise<SendBulkTemplateResult>;
-
-  templates: {
-    create(params): Promise<void>;
-    createFromReact(params): Promise<void>;
-    update(params): Promise<void>;
-    get(name): Promise<Template>;
-    list(): Promise<TemplateMetadata[]>;
-    delete(name): Promise<void>;
-  };
-
-  inbox: WrapsInbox | null;          // Enabled when inboxBucketName provided
-  events: WrapsEmailEvents | null;   // Enabled when historyTableName provided
-  suppression: WrapsEmailSuppression;
-
-  destroy(): void;
-}
-```
-
-### WrapsSMS
-```typescript
-class WrapsSMS {
-  send(options): Promise<SendResult>;
-  sendBatch(options): Promise<BatchResult>;
-
-  numbers: {
-    list(): Promise<PhoneNumber[]>;
-    get(phoneNumberId): Promise<PhoneNumber | undefined>;
-  };
-
-  optOuts: {
-    list(optOutListName?): Promise<OptOutEntry[]>;
-    check(phoneNumber, optOutListName?): Promise<boolean>;
-    add(phoneNumber, optOutListName?): Promise<void>;
-    remove(phoneNumber, optOutListName?): Promise<void>;
-  };
-
-  destroy(): void;
-}
-```
-
-### Platform Client
-```typescript
-const client = createPlatformClient({ apiKey: 'sk_...' });
-const { data, error } = await client.GET('/v1/contacts/', {
-  params: { query: { page: '1', pageSize: '10' } },
-});
-```
-
-## Optional Features Pattern
-
-Features are enabled by config. Expose as nullable properties:
-
-```typescript
-constructor(config: WrapsEmailConfig = {}) {
-  this.inbox = config.inboxBucketName ? new WrapsInbox(...) : null;
-  this.events = config.historyTableName ? new WrapsEmailEvents(...) : null;
-  this.suppression = new WrapsEmailSuppression(...); // Always available
-}
-```
-
-Users check before using: `if (email.inbox) { ... }`
-
-## Type Exports
-
-Export types alongside implementations from `index.ts`:
-```typescript
-export { WrapsEmail };
-export { CredentialsError, SandboxError, SESError, ValidationError, WrapsEmailError };
-export type { SendEmailParams, SendEmailResult, Attachment, /* ... */ };
-export { calculateSegments, validatePhoneNumber }; // Utility exports for SMS
-```
-
-## Development
-
-```bash
-pnpm install            # Install deps
-pnpm build              # Build all packages
-pnpm test               # Run tests (Vitest)
-pnpm test:watch         # Watch mode
-pnpm test:coverage      # Coverage report
-pnpm lint               # Biome check
-pnpm lint:fix           # Auto-fix
-pnpm typecheck          # Type check
-```
-
-### Testing Pattern
-
-Mock AWS SDK at module level before importing the SDK:
-
-```typescript
-const mockSend = vi.fn();
-vi.mock('@aws-sdk/client-ses', () => ({
-  SESClient: class MockClient { send = mockSend; },
-  SendEmailCommand: class MockCommand {
-    constructor(input: unknown) { this.input = input; }
-  },
-}));
-```
-
-Always `vi.clearAllMocks()` in `afterEach()`.
-
-## Publishing
-
-Each package has independent versioning. GitHub Actions publishes on release.
-
-```bash
-# Tag format: {package}-v{version}
-# e.g., email-v0.9.1, sms-v0.1.3, client-v0.6.2
-```
-
-Manual: `cd packages/email && pnpm clean && pnpm build && npm publish --access public`
-
-## Notes for Claude
-
-- Follow established patterns in existing code — all 3 SDKs share conventions
-- All public methods need JSDoc with `@example`, `@throws`, `@param`, `@returns`
-- Test error properties (code, requestId, retryable, field) not just error types
-- Support both static credentials and provider functions
-- Never bundle AWS SDK or React — mark as external
-- Run `pnpm lint:fix`, `pnpm typecheck`, `pnpm test` before committing
-- Update README.md when adding public APIs
+- **Region chain**: `AWS_REGION` is honoured with no explicit `region` (the three files under
+  "Credential resolution order").
+- **`CredentialsError` wrapping**: a no-credentials run throws `CredentialsError`, not a raw
+  `CredentialsProviderError`. Email: `isCredentialsChainError` and `awsErrorToWrapsError` in
+  `packages/email/src/errors.ts`. SMS: `packages/sms/src/utils/aws-errors.ts`.
+- **`SandboxError` and `SES_SIMULATOR_SUCCESS`**: both exported from `@wraps.dev/email` and present
+  in the published `dist`.
+- **`BatchError`**: still absent from `packages/email/src/index.ts`.
+- **SMS phantom types**: `ScheduleOptions`, `IncomingMessage`, `MediaOptions`, `InboxListOptions`
+  and `ScheduledMessage` are still absent from `packages/sms/src/index.ts`.
+- **`SendEmailParams` union** (`packages/email/src/types.ts`): a body-less send and an `html` plus
+  `react` send are both compile errors against the published type declarations.
+- **User-agent version**: the published bundle carries the real version, not `0.0.0-dev`; the
+  build-time `define` in each tsup config sets it.
+- **MCP tool inventory**: re-read `packages/mcp/src/tools/index.ts`. When the tool set changed,
+  update the tool list in `docs/using-the-sdks.md`.
+- **`@wraps.dev/client` schema**: regenerate it, and update the endpoint list in
+  `packages/client/README.md` when the API added routes.

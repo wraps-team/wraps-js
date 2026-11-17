@@ -13,7 +13,7 @@
   "rules": [
     "BYOC (Bring Your Own Credentials) — SDKs call AWS APIs directly in the user's account, not a managed service",
     "Credential resolution order: pre-configured AWS client > OIDC role > explicit credentials > AWS credential chain",
-    "AWS SDK packages (@aws-sdk/*) are peer dependencies — never bundle them",
+    "AWS SDK packages (@aws-sdk/*) are regular dependencies (wide ^3.928.0 range), never peer dependencies, and are never bundled into dist",
     "Dual CJS + ESM output via tsup",
     "All public methods require JSDoc with @example, @throws, @param, @returns"
   ]
