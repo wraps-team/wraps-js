@@ -19,7 +19,7 @@
 
 ---
 
-**AI agents:** start with [AGENTS.md](./AGENTS.md) — which package to reach for, auth, the minimal correct call for each, and the sharp edges. For the full docs in one file, fetch [wraps.dev/llms-full.txt](https://wraps.dev/llms-full.txt), or [wraps.dev/llms.txt](https://wraps.dev/llms.txt) for an agent-oriented index.
+**AI agents:** start with [docs/using-the-sdks.md](./docs/using-the-sdks.md) — which package to reach for, auth, the minimal correct call for each, and the sharp edges. For the full docs in one file, fetch [wraps.dev/llms-full.txt](https://wraps.dev/llms-full.txt), or [wraps.dev/llms.txt](https://wraps.dev/llms.txt) for an agent-oriented index.
 
 ## Packages
 
