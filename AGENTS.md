@@ -15,10 +15,10 @@ before committing, and update the package `README.md` when you add public API.
 ### BYOC
 
 `email` and `sms` call AWS directly in the user's account with the user's credentials. Nothing goes
-through Wraps and nothing reports back: the `wraps-email/<version>` user-agent only identifies
-traffic in the user's own CloudTrail. `mcp` does the same for its SES tools, and also calls the
-Wraps API for its platform tools (`packages/mcp/src/api-client.ts`). `client` talks only to Wraps,
-with an API key, and never touches AWS.
+through Wraps and nothing reports back: the `wraps-email/<version>` and `wraps-sms/<version>`
+user-agents only identify traffic in the user's own CloudTrail. `mcp` does the same for its SES
+tools, and also calls the Wraps API for its platform tools (`packages/mcp/src/api-client.ts`).
+`client` talks only to Wraps, with an API key, and never touches AWS.
 
 ### Credential resolution order
 
@@ -32,11 +32,12 @@ with an API key, and never touches AWS.
 Accept `credentials` as either shape. A provider function (or any object without `accessKeyId`) goes
 to the AWS client untouched; only a static object is destructured.
 
-Region has the same first steps in three places (`packages/email/src/utils/credentials.ts`,
-`packages/sms/src/utils/region.ts`, `packages/mcp/src/config.ts`): explicit value, `AWS_REGION`,
-`AWS_DEFAULT_REGION`, then the profile or IMDS. Change them together. Hand the AWS client a lazy
-resolver (email) or no `region` at all (sms) when none was supplied: a hardcoded `region` turns off
-the SDK's own resolution chain, which is how `AWS_REGION` once got ignored.
+Region resolves in three places (`packages/email/src/utils/credentials.ts`,
+`packages/sms/src/utils/region.ts`, `packages/mcp/src/config.ts`): an explicit `region` first (email
+and sms; mcp has no such option), then `AWS_REGION`, `AWS_DEFAULT_REGION`, then the profile or IMDS.
+Change them together. Hand the AWS client a lazy resolver (email) or no `region` at all (sms) when
+none was supplied: a hardcoded `region` turns off the SDK's own resolution chain, which is how
+`AWS_REGION` once got ignored.
 
 ### Errors
 
@@ -82,8 +83,9 @@ Each package versions independently.
 1. Bump `version` in `packages/<pkg>/package.json` and commit as `chore(<pkg>): release vX.Y.Z`.
    For `mcp`, also bump both versions in `packages/mcp/server.json` (top level and `packages[0]`)
    and the version in `packages/mcp/mcpb-manifest.json`. CI checks `server.json`, not the manifest.
-2. Walk "Verify before release" below. `packages/email/PRE-PUBLISH-CHECKLIST.md` is the longer
-   checklist written for email's first publish.
+2. Walk "Verify before release" below.
+   [`packages/email/PRE-PUBLISH-CHECKLIST.md`](./packages/email/PRE-PUBLISH-CHECKLIST.md) is the
+   longer checklist written for email's first publish.
 3. Create a GitHub release tagged `{package}-vX.Y.Z` (`email-v`, `sms-v`, `client-v`, `mcp-v`).
    `.github/workflows/publish.yml` runs on `created`: it builds, tests, fails when the package
    version differs from the tag, then runs `npm publish --access public --provenance` through npm
