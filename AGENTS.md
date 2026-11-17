@@ -7,8 +7,8 @@
 
 Four packages under the `@wraps.dev` npm namespace: `email` (SES), `sms` (End User Messaging),
 `client` (Wraps Platform API, OpenAPI-generated) and `mcp` (MCP server: SES tools over the email SDK,
-plus Wraps platform tools). Run what `.github/workflows/ci.yml` runs (lint, typecheck, build, test)
-before committing, and update the package `README.md` when you add public API.
+plus Wraps platform tools). Run what `.github/workflows/ci.yml` runs before committing, and update
+the package `README.md` when you add public API.
 
 ## Rules
 
@@ -22,12 +22,18 @@ tools, and also calls the Wraps API for its platform tools (`packages/mcp/src/ap
 
 ### Credential resolution order
 
-`email` and `sms` resolve credentials in this order. Keep it identical in both:
+`email` and `sms` resolve credentials in this order. Keep this order, identical in both: it is public
+behaviour, documented in `docs/using-the-sdks.md` ("AWS credentials") and `context7.json`.
 
 1. `client`: a pre-configured AWS client, used as-is
 2. `roleArn` (or `AWS_ROLE_ARN`): OIDC role assumption
 3. `credentials`: a static `{ accessKeyId, secretAccessKey, sessionToken? }` or a provider function
 4. Nothing: the AWS credential chain
+
+Step 2 includes the `AWS_ROLE_ARN` environment variable, so that variable beats `credentials` passed
+in code (`packages/email/src/utils/credentials.ts:87` before `:124`,
+`packages/sms/src/utils/credentials.ts:35` before `:72`). That is the intended order, not a bug to fix
+by swapping steps 2 and 3: it would change which identity every consumer's calls run as.
 
 Accept `credentials` as either shape. A provider function (or any object without `accessKeyId`) goes
 to the AWS client untouched; only a static object is destructured.
@@ -35,9 +41,10 @@ to the AWS client untouched; only a static object is destructured.
 Region resolves in three places (`packages/email/src/utils/credentials.ts`,
 `packages/sms/src/utils/region.ts`, `packages/mcp/src/config.ts`): an explicit `region` first (email
 and sms; mcp has no such option), then `AWS_REGION`, `AWS_DEFAULT_REGION`, then the profile or IMDS.
-Change them together. Hand the AWS client a lazy resolver (email) or no `region` at all (sms) when
-none was supplied: a hardcoded `region` turns off the SDK's own resolution chain, which is how
-`AWS_REGION` once got ignored.
+Change the shared steps together. The fallbacks differ on purpose: email falls back to `us-east-1`,
+sms leaves the region to the AWS SDK, and mcp exits with a `ConfigError`. Hand the AWS client a lazy
+resolver (email) or no `region` at all (sms) when none was supplied: a hardcoded `region` turns off
+the SDK's own resolution chain, which is how `AWS_REGION` once got ignored.
 
 ### Errors
 
@@ -84,14 +91,12 @@ Each package versions independently.
    For `mcp`, also bump both versions in `packages/mcp/server.json` (top level and `packages[0]`)
    and the version in `packages/mcp/mcpb-manifest.json`. CI checks `server.json`, not the manifest.
 2. Walk "Verify before release" below.
-   [`packages/email/PRE-PUBLISH-CHECKLIST.md`](./packages/email/PRE-PUBLISH-CHECKLIST.md) is the
-   longer checklist written for email's first publish.
 3. Create a GitHub release tagged `{package}-vX.Y.Z` (`email-v`, `sms-v`, `client-v`, `mcp-v`).
    `.github/workflows/publish.yml` runs on `created`: it builds, tests, fails when the package
    version differs from the tag, then runs `npm publish --access public --provenance` through npm
-   OIDC Trusted Publishing (there is no `NPM_TOKEN`). For `mcp` it also checks that both
-   `server.json` versions match, waits for npm to serve the version, then publishes to the MCP
-   Registry.
+   OIDC Trusted Publishing (there is no `NPM_TOKEN`). For `mcp` it first checks that both
+   `server.json` versions match (before npm, so a mismatch can't leave npm ahead of the registry),
+   and after the publish waits for npm to serve the version, then publishes to the MCP Registry.
 4. If npm went out but a later step failed, run the Publish workflow by hand (workflow_dispatch)
    with `package`, `version` and `skip_npm=true`. It checks out the release tag unless you pass
    `ref`.
@@ -99,10 +104,14 @@ Each package versions independently.
    --access public`. Then add Trusted Publishing for `wraps-team/wraps-js` and `publish.yml` on
    npmjs.com, and add the package to the tag parser and the `package` options in `publish.yml`,
    which know only the four above.
+   [`packages/email/PRE-PUBLISH-CHECKLIST.md`](./packages/email/PRE-PUBLISH-CHECKLIST.md) is the
+   checklist email used for its first publish. Its "Publishing Commands" and "Create GitHub release"
+   sections predate `publish.yml`; this step replaces them.
 
 ### Verify before release
 
-Check each against the published artifact, not only the source:
+Check each against the built package (`pnpm build`, then `npm pack --dry-run`), not only the
+source:
 
 - **Region chain**: `AWS_REGION` is honoured with no explicit `region` (the three files under
   "Credential resolution order").
@@ -110,15 +119,17 @@ Check each against the published artifact, not only the source:
   `CredentialsProviderError`. Email: `isCredentialsChainError` and `awsErrorToWrapsError` in
   `packages/email/src/errors.ts`. SMS: `packages/sms/src/utils/aws-errors.ts`.
 - **`SandboxError` and `SES_SIMULATOR_SUCCESS`**: both exported from `@wraps.dev/email` and present
-  in the published `dist`.
+  in the built `dist`.
 - **`BatchError`**: still absent from `packages/email/src/index.ts`.
 - **SMS phantom types**: `ScheduleOptions`, `IncomingMessage`, `MediaOptions`, `InboxListOptions`
   and `ScheduledMessage` are still absent from `packages/sms/src/index.ts`.
 - **`SendEmailParams` union** (`packages/email/src/types.ts`): a body-less send and an `html` plus
-  `react` send are both compile errors against the published type declarations.
-- **User-agent version**: the published bundle carries the real version, not `0.0.0-dev`; the
-  build-time `define` in each tsup config sets it.
+  `react` send are both compile errors against the built type declarations.
+- **User-agent version**: the built bundle carries the real version, not `0.0.0-dev`; the
+  build-time `define` in the email and sms tsup configs sets it. mcp reads its `package.json` at
+  runtime (`packages/mcp/src/server.ts:12`, `packages/mcp/src/api-client.ts:60`).
 - **MCP tool inventory**: re-read `packages/mcp/src/tools/index.ts`. When the tool set changed,
-  update the tool list in `docs/using-the-sdks.md`.
+  update the tool lists in `docs/using-the-sdks.md`, `packages/mcp/README.md` and the `tools` array
+  in `packages/mcp/mcpb-manifest.json`.
 - **`@wraps.dev/client` schema**: regenerate it, and update the endpoint list in
   `packages/client/README.md` when the API added routes.
