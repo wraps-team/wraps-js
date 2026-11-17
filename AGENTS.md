@@ -1,292 +1,302 @@
-# AGENTS.md — writing code that uses the Wraps SDKs
+# CLAUDE.md - Wraps JS SDKs
 
-For agents **calling** these packages. If you are modifying this repository, read
-[CLAUDE.md](./CLAUDE.md) and [CONTRIBUTING.md](./CONTRIBUTING.md) instead.
+> Writing code that **uses** these packages (rather than changing them)? [AGENTS.md](./AGENTS.md)
+> is the consumer-facing entry point. This file is about working on the repo itself.
 
-Read this before writing a line — the sharp edges below are the ones that compile clean and fail at
-runtime.
+## Project Overview
 
-## Pick a package
+Monorepo containing four TypeScript packages, published under the `@wraps.dev` npm namespace:
 
-| Task | Package | Talks to |
-|---|---|---|
-| Send transactional email, manage SES templates, read inbound mail, read send events, manage the suppression list | `@wraps.dev/email` | AWS SES (your account) |
-| Send SMS, manage phone numbers and opt-outs | `@wraps.dev/sms` | AWS End User Messaging (your account) |
-| Contacts, event tracking, broadcasts, workflow/template sync, agent mailboxes | `@wraps.dev/client` | `api.wraps.dev` |
-| Give an MCP host (Claude Code, Claude Desktop) email tools | `@wraps.dev/mcp` | AWS SES (your account) |
+- **@wraps.dev/email** (see package.json) - Email SDK for AWS SES with React.email support
+- **@wraps.dev/sms** (see package.json) - SMS SDK for AWS End User Messaging (Pinpoint SMS Voice V2)
+- **@wraps.dev/client** (see package.json) - Type-safe API client for the Wraps Platform (OpenAPI-generated)
+- **@wraps.dev/mcp** (see package.json) - MCP server exposing the email SDK to agents
 
-Two credential worlds, and they do not overlap:
+## Key Principles
 
-- `email`, `sms`, `mcp` are **BYOC** — they call AWS in the user's account with AWS credentials.
-  Nothing is proxied through Wraps.
-- `client` uses a **Wraps API key** and never touches AWS.
+- **BYOC (Bring Your Own Credentials)**: SDKs call AWS APIs directly in the user's account
+- **Zero Vendor Lock-in**: Thin wrappers around AWS services, swap anytime
+- **Dual Module Support**: All packages export both CJS and ESM
+- **Type-Safe**: Strict TypeScript throughout
 
-Sending an email needs `@wraps.dev/email`; `@wraps.dev/client` cannot send one.
+## Package Structure
 
-## Install and authenticate
-
-```bash
-pnpm add @wraps.dev/email    # or npm install / yarn add / bun add
-pnpm add @wraps.dev/sms
-pnpm add @wraps.dev/client
+```
+wraps-js/
+├── packages/
+│   ├── email/                 # @wraps.dev/email
+│   │   ├── src/
+│   │   │   ├── index.ts       # Public exports
+│   │   │   ├── client.ts      # WrapsEmail class
+│   │   │   ├── types.ts       # Type definitions
+│   │   │   ├── errors.ts      # Error classes
+│   │   │   ├── events.ts      # Email event history (DynamoDB)
+│   │   │   ├── inbox.ts       # Inbox API (S3)
+│   │   │   ├── react.ts       # React.email rendering
+│   │   │   ├── suppression.ts # Suppression list management
+│   │   │   ├── batch.ts       # Batch sending
+│   │   │   └── utils/         # Credentials, validation, MIME
+│   │   └── examples/          # Usage examples
+│   ├── sms/                   # @wraps.dev/sms
+│   │   ├── src/
+│   │   │   ├── index.ts
+│   │   │   ├── client.ts      # WrapsSMS class
+│   │   │   ├── types.ts
+│   │   │   ├── errors.ts
+│   │   │   └── utils/         # Credentials, E.164 validation
+│   │   └── examples/
+│   ├── client/                # @wraps.dev/client
+│   │   └── src/
+│   │       ├── index.ts
+│   │       ├── client.ts      # createPlatformClient (openapi-fetch)
+│   │       ├── config.ts      # defineConfig, defineBrand
+│   │       ├── workflow*.ts   # Workflow definitions
+│   │       └── schema.d.ts    # Auto-generated OpenAPI types
+│   └── mcp/                   # @wraps.dev/mcp
+│       └── src/
+│           ├── config.ts      # resolveRegion — canonical region chain
+│           └── tools/         # One file per MCP tool
+├── biome.json                 # Code style (100 char width, single quotes, 2-space indent)
+└── CONTRIBUTING.md
 ```
 
-### AWS credentials (`email`, `sms`, `mcp`)
+## Critical Rules
 
-Resolution order, highest first:
+### 1. Credential Resolution Priority
 
-1. `client` — a pre-configured AWS SDK client you pass in
-2. `roleArn` — OIDC role assumption (Vercel, GitHub Actions, EKS)
-3. `credentials` — a static `{ accessKeyId, secretAccessKey, sessionToken? }` or a provider function
-4. Nothing — the standard AWS credential chain (env vars, `~/.aws/credentials`, `AWS_PROFILE`,
-   instance role)
-
-Never tell a user which of these to use. All four are valid; the right one depends on where the code
-runs.
-
-**Region** resolves as: explicit `region` in the constructor → `AWS_REGION` → `AWS_DEFAULT_REGION`
-→ the active profile in `~/.aws/config` or IMDS. The tail differs: `@wraps.dev/email` falls back to
-`us-east-1` when the whole chain comes up empty, while `@wraps.dev/sms` leaves `region` unset and
-lets the AWS SDK raise its own "region not configured" error. Passing `region` explicitly is always
-unambiguous and is what to do when you know it.
-
-Published versions before this chain landed hardcoded `us-east-1` and silently ignored `AWS_REGION`,
-so a user on an older install can be sending to the wrong region without knowing it. The symptom is
-not a region error: SES in the wrong region has never heard of their domain, so the failure reads
-"Email address is not verified" and points at the wrong problem. `SandboxError.region` (email)
-records the region actually used — read it before believing a verification error.
-
-### Wraps API key (`client`)
-
-One env var, `WRAPS_API_KEY`. Keys are prefixed `wraps_`, created at
-`https://app.wraps.dev/<org>/settings/api-keys`, and carry organization scope — there is no org
-parameter. Server-side only.
-
-## The minimal correct call
-
-### `@wraps.dev/email`
+All SDKs follow the same credential chain. Never change this order:
 
 ```typescript
-import { WrapsEmail } from '@wraps.dev/email';
+// Priority 1: Pre-configured AWS client
+const email = new WrapsEmail({ client: existingSESClient });
 
-const email = new WrapsEmail({ region: 'us-east-1' });
+// Priority 2: OIDC role assumption (Vercel, GitHub Actions, EKS)
+const email = new WrapsEmail({ roleArn: 'arn:aws:iam::123:role/MyRole' });
 
-const { messageId } = await email.send({
-  from: 'hello@yourdomain.com',   // must be a verified SES identity
-  to: 'user@example.com',
-  subject: 'Welcome',
-  html: '<h1>Hello</h1>',         // at least one of html / text / react
-});
+// Priority 3: Explicit credentials (static or provider function)
+const email = new WrapsEmail({ credentials: { accessKeyId, secretAccessKey } });
+
+// Priority 4: AWS credential chain (automatic — env vars, ~/.aws/credentials, etc.)
+const email = new WrapsEmail();
 ```
 
-`send()` returns `{ messageId, requestId }`. `from` may be `'Name <a@b.com>'` or
-`{ email, name }`; `to`, `cc`, `bcc`, `replyTo` each accept one address or an array.
-
-Other surface on the instance: `sendBatch`, `sendTemplate`, `sendBulkTemplate`, `templates.*`
-(`create`, `createFromReact`, `update`, `get`, `list`, `delete`), `suppression.*`, and `destroy()`.
-`email.inbox` and `email.events` are `null` unless you construct with `inboxBucketName` /
-`historyTableName` — check for null before use.
-
-For Cloudflare Workers and other `workerd` runtimes, import `@wraps.dev/email/workers`. That entry
-requires both `region` and `credentials` (no credential chain at the edge) and drops `react`,
-`attachments`, templates, inbox, events, and reply threading. The main entry does not run on Workers.
-
-### `@wraps.dev/sms`
-
+Credentials can be a static object OR a provider function. Detect with:
 ```typescript
-import { WrapsSMS } from '@wraps.dev/sms';
-
-const sms = new WrapsSMS({ region: 'us-east-1' });
-
-const result = await sms.send({
-  to: '+14155551234',            // E.164, single recipient
-  message: 'Your code is 123456',
-});
-```
-
-The whole public surface is `send`, `sendBatch`, `numbers.list` / `numbers.get`, `optOuts.list` /
-`check` / `add` / `remove`, and `destroy()`, plus the standalone `calculateSegments`,
-`validatePhoneNumber`, and `sanitizePhoneNumber` helpers. **There is no inbound, no MMS, and no
-scheduling.** Older versions exported types (`ScheduleOptions`, `IncomingMessage`, `MediaOptions`,
-`InboxListOptions`, `ScheduledMessage`) with no implementation behind them; they are gone.
-
-`sms.send` throws `OptedOutError` when the recipient opted out and `RateLimitError` when throttled;
-both are real and both are exported.
-
-An SMS account needs `npx @wraps.dev/cli sms init` first — phone number, opt-out list, and the rest are
-infrastructure the CLI provisions.
-
-### `@wraps.dev/client`
-
-```typescript
-import { createPlatformClient } from '@wraps.dev/client';
-
-const client = createPlatformClient({ apiKey: process.env.WRAPS_API_KEY });
-
-// Typed REST — resolves with { data, error, response }, never throws on HTTP errors
-const { data, error } = await client.GET('/v1/contacts/', {
-  params: { query: { page: '1', pageSize: '20', emailStatus: 'active' } },
-});
-
-// Event tracking — unwraps the response and DOES throw on API errors
-await client.track('purchase.completed', {
-  contactEmail: 'ada@example.com',
-  createIfMissing: true,
-  properties: { orderId: 'ord_123' },
-});
-```
-
-Paths, params, bodies, and responses are typed from the OpenAPI schema, so wrong paths and misspelled
-fields are compile errors. The same package exports `defineConfig`, `defineBrand`, `defineWorkflow`,
-and the workflow step helpers — pure identity functions for the files the `wraps` CLI reads. Full
-detail in [packages/client/README.md](./packages/client/README.md).
-
-### `@wraps.dev/mcp`
-
-An MCP stdio server, run as `npx -y @wraps.dev/mcp` (binary name `wraps-mcp`). Host config:
-
-```json
-{
-  "mcpServers": {
-    "wraps": {
-      "command": "npx",
-      "args": ["-y", "@wraps.dev/mcp"],
-      "env": {
-        "AWS_REGION": "us-east-1",
-        "AWS_PROFILE": "your-profile",
-        "WRAPS_FROM_EMAIL": "hello@yourdomain.com"
-      }
-    }
-  }
+if (typeof config.credentials === 'function' || !('accessKeyId' in config.credentials)) {
+  // Provider function — pass directly
+} else {
+  // Static credentials — destructure
 }
 ```
 
-`AWS_REGION` is required in practice — without it, and without a region in the active profile, the
-server refuses to start with an actionable message. Tools: `send_email`, `list_recent_sends`,
-`get_email_event_log`, `verify_domain_status`, `list_suppressions`, `get_setup_status`,
-`estimate_cost`, and `check_send_status` (enforced mode only). `estimate_cost` needs no AWS access.
+### 2. Error Hierarchy
 
-Sending is off by default: `send_email` refuses unless `WRAPS_WRITE_ENABLED=true`. Other env:
-`WRAPS_HISTORY_TABLE_NAME` (default `wraps-email-history`), `WRAPS_CONFIGURATION_SET`,
-`WRAPS_ALLOWED_RECIPIENTS`, `WRAPS_ALLOWED_RECIPIENT_DOMAINS`, `WRAPS_MAX_RECIPIENTS` (default 50),
-`WRAPS_ALLOW_FROM_OVERRIDE`, `WRAPS_ACCOUNT_ID`. Setting both `WRAPS_AGENT_ID` and
-`WRAPS_AGENT_ENFORCER_ARN` switches to enforced mode, where a customer-side Lambda decides every
-send and results come back as `sent`, `pending_approval`, or `blocked`.
+Both email and SMS follow the same pattern:
 
-## Sharp edges
+```
+WrapsEmailError / WrapsSMSError (base)
+├── ValidationError           (invalid input, has .field?)
+├── CredentialsError          (both — AWS credential chain produced nothing, has .cause?)
+├── SESError / SMSError       (AWS API error, has .code, .requestId, .retryable)
+│   └── SandboxError          (email only, extends SESError — identity not verified in
+│                              the region used, has .region?)
+├── DynamoDBError             (email only — email events, has .code, .requestId, .retryable)
+├── ConfigurationError        (SMS only — no region resolvable, has .cause?)
+├── SendingRestrictionError   (SMS only — account-level block, has .restriction)
+├── OptedOutError             (SMS only, has .phoneNumber)
+└── RateLimitError            (SMS only, has .retryAfter?)
+```
 
-### The SES sandbox is the most likely reason a first send fails
+Always set `this.name` in error constructors. Always include `retryable` boolean on AWS errors.
 
-Every new AWS SES account starts in the sandbox: it can send **only to verified identities**, capped
-at 200 messages/day and 1/second. A sandboxed send to an unverified recipient fails at the API with
-a message about unverified addresses — which is also what a wrong-region send says, so the error
-alone does not tell you which one you hit.
+Every error a package throws must extend its base class — a single
+`catch (e) { if (e instanceof WrapsEmailError) }` has to cover all of them. AWS's own
+`CredentialsProviderError` does not, which is why it gets wrapped rather than passed through.
 
-Prove the pipeline without waiting on AWS by sending to the mailbox simulator:
+`sendBatch()` reports per-entry send failures in its result rather than throwing, so there is
+no `BatchError`. A credential failure is not a send failure — nothing was attempted — so that
+one throws.
+
+### 3. AWS SDK Is External — Never Bundle It
+
+All `@aws-sdk/*` packages are marked `external` in tsup, so they are never inlined into
+`dist`:
 
 ```typescript
-await email.send({
-  from: 'hello@yourdomain.com',       // sender must still be verified
-  to: 'success@simulator.amazonses.com',
-  subject: 'Pipeline test',
-  text: 'Hello',
+// tsup.config.ts
+external: ['@aws-sdk/*', 'react', '@react-email/components'],
+```
+
+`external` only controls bundling — it says nothing about how the dependency is declared,
+and the entries above are not all the same kind:
+
+- `@aws-sdk/*` are regular `dependencies` of email, sms and mcp, so consumers get them
+  installed automatically. Keep the declared ranges wide (`^3.928.0`) — a floor raise
+  forces every BYOC consumer onto a newer AWS SDK, and `^3.928.0` already admits later
+  3.x releases.
+- `react` and `@react-email/components` are the only true `peerDependencies`, on email
+  alone: React.email rendering is opt-in, so the consumer supplies those.
+
+### 4. Dual CJS + ESM Output
+
+```typescript
+// tsup.config.ts
+format: ['cjs', 'esm'],
+dts: true,
+```
+
+Output: `dist/index.js` (CJS), `dist/index.mjs` (ESM), `dist/index.d.ts` (types).
+
+### 5. All Public Methods Need JSDoc
+
+```typescript
+/**
+ * Send an email via AWS SES
+ *
+ * @param params - Send options
+ * @returns Promise resolving to send result with messageId
+ * @throws {ValidationError} If email parameters are invalid
+ * @throws {SESError} If AWS SES API call fails
+ *
+ * @example
+ * ```typescript
+ * const result = await email.send({
+ *   from: 'sender@example.com',
+ *   to: 'recipient@example.com',
+ *   subject: 'Hello!',
+ *   html: '<h1>Hello World</h1>',
+ * });
+ * ```
+ */
+```
+
+## Public APIs
+
+### WrapsEmail
+```typescript
+class WrapsEmail {
+  send(params): Promise<SendEmailResult>;
+  sendBatch(params): Promise<SendBatchResult>;
+  sendTemplate(params): Promise<SendEmailResult>;
+  sendBulkTemplate(params): Promise<SendBulkTemplateResult>;
+
+  templates: {
+    create(params): Promise<void>;
+    createFromReact(params): Promise<void>;
+    update(params): Promise<void>;
+    get(name): Promise<Template>;
+    list(): Promise<TemplateMetadata[]>;
+    delete(name): Promise<void>;
+  };
+
+  inbox: WrapsInbox | null;          // Enabled when inboxBucketName provided
+  events: WrapsEmailEvents | null;   // Enabled when historyTableName provided
+  suppression: WrapsEmailSuppression;
+
+  destroy(): void;
+}
+```
+
+### WrapsSMS
+```typescript
+class WrapsSMS {
+  send(options): Promise<SendResult>;
+  sendBatch(options): Promise<BatchResult>;
+
+  numbers: {
+    list(): Promise<PhoneNumber[]>;
+    get(phoneNumberId): Promise<PhoneNumber | undefined>;
+  };
+
+  optOuts: {
+    list(optOutListName?): Promise<OptOutEntry[]>;
+    check(phoneNumber, optOutListName?): Promise<boolean>;
+    add(phoneNumber, optOutListName?): Promise<void>;
+    remove(phoneNumber, optOutListName?): Promise<void>;
+  };
+
+  destroy(): void;
+}
+```
+
+### Platform Client
+```typescript
+const client = createPlatformClient({ apiKey: 'sk_...' });
+const { data, error } = await client.GET('/v1/contacts/', {
+  params: { query: { page: '1', pageSize: '10' } },
 });
 ```
 
-AWS pre-verifies that address, so it is deliverable from a sandbox account and produces a real
-Delivery event. The email package exports it as `SES_SIMULATOR_SUCCESS`. Sending to anyone else
-requires production access — an AWS support review that neither Wraps nor you can shortcut. If the
-MCP server is available, `get_setup_status` reports sandbox state and the recommended next step.
+## Optional Features Pattern
 
-The email SDK raises `SandboxError` (a subclass of `SESError`) for this rejection, with `.region`
-attached, because the same AWS error is produced by a region mismatch.
+Features are enabled by config. Expose as nullable properties:
 
-### Region
+```typescript
+constructor(config: WrapsEmailConfig = {}) {
+  this.inbox = config.inboxBucketName ? new WrapsInbox(...) : null;
+  this.events = config.historyTableName ? new WrapsEmailEvents(...) : null;
+  this.suppression = new WrapsEmailSuppression(...); // Always available
+}
+```
 
-Covered above, and worth repeating because it is silent: pass `region` explicitly. The symptom of
-getting it wrong is a verification error, not a region error.
+Users check before using: `if (email.inbox) { ... }`
 
-### Email body invariants
+## Type Exports
 
-`SendEmailParams` is a union: a send needs at least one of `html`, `text`, or `react`, and `html`
-together with `react` is rejected. Both invariants are type errors in TypeScript and are re-checked
-at runtime for JavaScript callers. When you pass `html` without `text`, plain text is generated
-automatically.
+Export types alongside implementations from `index.ts`:
+```typescript
+export { WrapsEmail };
+export { CredentialsError, SandboxError, SESError, ValidationError, WrapsEmailError };
+export type { SendEmailParams, SendEmailResult, Attachment, /* ... */ };
+export { calculateSegments, validatePhoneNumber }; // Utility exports for SMS
+```
 
-### Errors
+## Development
 
-Both AWS-facing SDKs root everything at `WrapsEmailError` / `WrapsSMSError`, so one `instanceof`
-check on the base class catches every error the SDK throws.
+```bash
+pnpm install            # Install deps
+pnpm build              # Build all packages
+pnpm test               # Run tests (Vitest)
+pnpm test:watch         # Watch mode
+pnpm test:coverage      # Coverage report
+pnpm lint               # Biome check
+pnpm lint:fix           # Auto-fix
+pnpm typecheck          # Type check
+```
 
-| Error | Package | Carries |
-|---|---|---|
-| `ValidationError` | both | `.field` |
-| `SESError` / `SMSError` | email / sms | `.code`, `.requestId`, `.retryable` |
-| `SandboxError` (extends `SESError`) | email | `.region` — the region the request actually used |
-| `CredentialsError` | both | `.cause` — the underlying AWS error |
-| `DynamoDBError` | email | `.code`, `.requestId`, `.retryable` |
-| `OptedOutError` | sms | `.phoneNumber` |
-| `RateLimitError` | sms | `.retryAfter` |
-| `ConfigurationError`, `SendingRestrictionError` | sms | setup and sending-restriction failures |
+### Testing Pattern
 
-Credential-chain failures are wrapped in `CredentialsError` rather than escaping as a raw AWS
-`CredentialsProviderError`. Its message lists every way credentials can be supplied without ranking
-them — when relaying it, do not pick a favourite either.
+Mock AWS SDK at module level before importing the SDK:
 
-`@wraps.dev/client` has no error classes at all. Its REST methods resolve with `{ error }` and never
-throw for HTTP status; `track` / `trackBatch` throw a plain `Error`. And `error` is typed `never` on
-most endpoints because the OpenAPI schema declares no non-2xx response for them — branch on
-`response.status` there.
+```typescript
+const mockSend = vi.fn();
+vi.mock('@aws-sdk/client-ses', () => ({
+  SESClient: class MockClient { send = mockSend; },
+  SendEmailCommand: class MockCommand {
+    constructor(input: unknown) { this.input = input; }
+  },
+}));
+```
 
-### Nothing is proxied, nothing is metered
+Always `vi.clearAllMocks()` in `afterEach()`.
 
-These SDKs make direct AWS API calls from the user's process with the user's credentials. No traffic
-passes through Wraps and no telemetry is sent anywhere. AWS clients are tagged
-`wraps-email/<version>` / `wraps-sms/<version>` in the User-Agent so the user can tell Wraps traffic
-apart in their own CloudTrail — identification in their account, not reporting to ours.
+## Publishing
 
-A send that fails, fails in the user's AWS account, and the AWS-side error is the whole truth. Do not
-suggest checking a Wraps dashboard to diagnose an SDK-level send failure — check CloudWatch and the
-SES console.
+Each package has independent versioning. GitHub Actions publishes on release.
 
-### Bulk limits
+```bash
+# Tag format: {package}-v{version}
+# e.g., email-v0.9.1, sms-v0.1.3, client-v0.6.2
+```
 
-Email `sendBatch` accepts up to 100 entries and chunks them 50 per SES call; `sendBulkTemplate`
-rejects more than 50 destinations outright. SMS is one recipient per `send` — use `sendBatch` for
-more. The MCP server caps recipients at `WRAPS_MAX_RECIPIENTS` (default 50), and in enforced mode
-allows exactly one recipient per send.
+Manual: `cd packages/email && pnpm clean && pnpm build && npm publish --access public`
 
-## Verify before release
+## Notes for Claude
 
-Every item below was verified against the working tree on 2026-08-18, while three other packages were
-being changed in parallel. Re-check each against the published artifact before a release, and against
-`node_modules` before trusting it in a user's project:
-
-- **Region chain** — `packages/email/src/utils/credentials.ts` (`resolveRegion`) and
-  `packages/sms/src/utils/region.ts`. Confirm `AWS_REGION` is honoured with no explicit `region`.
-- **`CredentialsError` wrapping** — email `errors.ts:isCredentialsChainError` /
-  `awsErrorToWrapsError`, and the sms equivalent. Confirm a no-credentials run throws
-  `CredentialsError`, not a raw `CredentialsProviderError`.
-- **`SandboxError` and `SES_SIMULATOR_SUCCESS`** — both exported from `@wraps.dev/email`; confirm
-  they survive to the published `dist`.
-- **`BatchError` gone from `@wraps.dev/email`** — absent from `src/index.ts` as of writing. This file
-  never documents it; confirm it is actually gone rather than re-added.
-- **SMS phantom types gone** — `ScheduleOptions`, `IncomingMessage`, `MediaOptions`,
-  `InboxListOptions`, `ScheduledMessage` are absent from `packages/sms/src/index.ts`.
-- **`SendEmailParams` union** — `packages/email/src/types.ts`; confirm a body-less send and an
-  `html` + `react` send are both compile errors in the published `.d.ts`, not just in source.
-- **User-agent tagging** — `wraps-email/<version>` / `wraps-sms/<version>` come from a build-time
-  `define`. Confirm the published bundle carries the real version, not `0.0.0-dev`.
-- **MCP tool inventory** — `packages/mcp/src/tools/index.ts`; seven tools always, plus
-  `check_send_status` in enforced mode. Re-read if tools were added or annotated.
-- **`@wraps.dev/client` schema** — regenerated from the live API with `pnpm generate`. The endpoint
-  table in the client README goes stale when the API adds routes.
-
-## Docs
-
-- Quickstart — <https://wraps.dev/docs/quickstart>
-- Email SDK — <https://wraps.dev/docs/sdk-reference>
-- SMS SDK — <https://wraps.dev/docs/sms-sdk-reference>
-- Platform SDK — <https://wraps.dev/docs/client-sdk-reference>
-- CLI — <https://wraps.dev/docs/cli-reference>
-- Everything in one file, for agents — <https://wraps.dev/llms-full.txt>
+- Follow established patterns in existing code — all 3 SDKs share conventions
+- All public methods need JSDoc with `@example`, `@throws`, `@param`, `@returns`
+- Test error properties (code, requestId, retryable, field) not just error types
+- Support both static credentials and provider functions
+- Never bundle AWS SDK or React — mark as external
+- Run `pnpm lint:fix`, `pnpm typecheck`, `pnpm test` before committing
+- Update README.md when adding public APIs
